@@ -166,16 +166,27 @@ namespace InventoryKamera
 
         public async void QueueScan(int id)
 		{
+			Logger.Debug("QueueScan starting for artifact #{0}", id);
+			Logger.Debug("  Capturing item card...");
 			var card = GetItemCard();
+			Logger.Debug("  Item card captured successfully");
             Bitmap name, gearSlot, mainStat, subStats, level, equipped, locked;
 
+			Logger.Debug("  Extracting name bitmap...");
 			name = GetItemNameBitmap(card);
+			Logger.Debug("  Extracting locked bitmap...");
 			locked = GetLockedBitmap(card);
+			Logger.Debug("  Extracting equipped bitmap...");
 			equipped = GetEquippedBitmap(card);
+			Logger.Debug("  Extracting gear slot bitmap...");
 			gearSlot = GetGearSlotBitmap(card);
+			Logger.Debug("  Extracting main stat bitmap...");
 			mainStat = GetMainStatBitmap(card);
+			Logger.Debug("  Extracting level bitmap...");
 			level = GetLevelBitmap(card);
+			Logger.Debug("  Extracting substats bitmap...");
 			subStats = GetSubstatsBitmap(card);
+			Logger.Debug("  All bitmaps extracted successfully");
 
 
 			//Navigation.DisplayBitmap(name);
@@ -198,17 +209,21 @@ namespace InventoryKamera
 				card
 			};
 
+			Logger.Debug("  Checking rarity and level filters...");
             bool belowRarity = GetRarity(name) < Properties.Settings.Default.MinimumArtifactRarity;
             bool belowLevel = ScanArtifactLevel(level) < Properties.Settings.Default.MinimumArtifactLevel;
             StopScanning = (SortByLevel && belowLevel) || (!SortByLevel && belowRarity);
 
 			if (StopScanning || belowRarity || belowLevel)
             {
+				Logger.Debug("  Artifact #{0} filtered out (belowRarity={1}, belowLevel={2})", id, belowRarity, belowLevel);
 				artifactImages.ForEach(i => i.Dispose());
 				return;
             }
             // Send images to Worker Queue
+			Logger.Debug("  Enqueueing artifact #{0} to worker queue...", id);
             InventoryKamera.workerQueue.Enqueue(new OCRImageCollection(artifactImages, "artifact", id));
+			Logger.Debug("  Artifact #{0} enqueued successfully", id);
         }
 
         private Bitmap GetSubstatsBitmap(Bitmap card)
@@ -249,6 +264,7 @@ namespace InventoryKamera
 
         public static async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
 		{
+			Logger.Debug("CatalogueFromBitmapsAsync starting for artifact #{0}", id);
 			// Init Variables
 			string gearSlot = null;
 			string mainStat = null;
@@ -261,6 +277,7 @@ namespace InventoryKamera
 
 			if (bm.Count >= 6)
 			{
+				Logger.Debug("  Processing artifact #{0} with {1} bitmaps", id, bm.Count);
 				int a_name = 0; int a_gearSlot = 1; int a_mainStat = 2; int a_level = 3; int a_subStats = 4; int a_equippedCharacter = 5; int a_lock = 6; 
 				// Get Rarity
 				rarity = GetRarity(bm[a_name]);
@@ -276,6 +293,7 @@ namespace InventoryKamera
 				_lock = GenshinProcesor.CompareColors(lockedColor, lockStatus);
 
 				// Improved Scanning using multi threading
+				Logger.Debug("  Starting OCR tasks for artifact #{0}...", id);
 				List<Task> tasks = new List<Task>();
 
 				var taskGear  = Task.Run(() => gearSlot = ScanArtifactGearSlot(bm[a_gearSlot]));
@@ -295,8 +313,11 @@ namespace InventoryKamera
 					tasks.Add(taskEquip);
 				}
 
+				Logger.Debug("  Waiting for {0} OCR tasks to complete for artifact #{1}...", tasks.Count, id);
 				await Task.WhenAll(tasks.ToArray());
+				Logger.Debug("  All OCR tasks completed for artifact #{0}", id);
 			}
+			Logger.Debug("  Creating Artifact object for #{0}: set={1}, rarity={2}, level={3}, slot={4}", id, setName, rarity, level, gearSlot);
 			return new Artifact(setName, rarity, level, gearSlot, mainStat, subStats, equippedCharacter, id, _lock);
 		}
 
