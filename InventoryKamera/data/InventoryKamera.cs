@@ -270,8 +270,16 @@ namespace InventoryKamera
 
 							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
 
-							// Scan as weapon
-							Weapon weapon = weaponScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id).Result;
+							// Scan as weapon with 30 second timeout
+							var weaponTask = weaponScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
+							if (!weaponTask.Wait(TimeSpan.FromSeconds(30)))
+							{
+								Logger.Error("Weapon #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
+								UserInterface.AddError($"Weapon #{imageCollection.Id} scan timed out - possibly problematic weapon data");
+								imageCollection.Bitmaps.ForEach(b => b.Dispose());
+								break;
+							}
+							Weapon weapon = weaponTask.Result;
 							UserInterface.SetGear(imageCollection.Bitmaps.Last(), weapon);
 
 							string weaponPath = $"./logging/weapons/weapon{weapon.Id}/";
@@ -334,8 +342,16 @@ namespace InventoryKamera
 							}
 
 							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
-							// Scan as artifact
-							Artifact artifact = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id).Result;
+							// Scan as artifact with 30 second timeout
+							var artifactTask = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
+							if (!artifactTask.Wait(TimeSpan.FromSeconds(30)))
+							{
+								Logger.Error("Artifact #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
+								UserInterface.AddError($"Artifact #{imageCollection.Id} scan timed out - possibly problematic artifact data");
+								imageCollection.Bitmaps.ForEach(b => b.Dispose());
+								break;
+							}
+							Artifact artifact = artifactTask.Result;
 							UserInterface.SetGear(imageCollection.Bitmaps.Last(), artifact);
 
 							string artifactPath = $"./logging/artifacts/artifact{artifact.Id}/";

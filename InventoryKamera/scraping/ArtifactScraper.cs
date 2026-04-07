@@ -184,8 +184,10 @@ namespace InventoryKamera
 			mainStat = GetMainStatBitmap(card);
 			Logger.Debug("  Extracting level bitmap...");
 			level = GetLevelBitmap(card);
+			Logger.Debug("  Level bitmap extracted");
 			Logger.Debug("  Extracting substats bitmap...");
 			subStats = GetSubstatsBitmap(card);
+			Logger.Debug("  Substats bitmap extracted");
 			Logger.Debug("  All bitmaps extracted successfully");
 
 
@@ -245,8 +247,11 @@ namespace InventoryKamera
 			var sanctifyBitmap = GetSanctifyBitmap(card);
 			Color purple = Color.FromArgb(255, 138, 107, 197); // Purple sanctifying indicator color
 			Color pixelColor = sanctifyBitmap.GetPixel(sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2);
+			bool isSanctified = GenshinProcesor.CompareColors(purple, pixelColor, 30); // 30 tolerance for color matching
+			Logger.Debug("    IsSanctified check: expected RGB({0},{1},{2}), got RGB({3},{4},{5}), result={6}",
+				purple.R, purple.G, purple.B, pixelColor.R, pixelColor.G, pixelColor.B, isSanctified);
 			sanctifyBitmap.Dispose();
-			return GenshinProcesor.CompareColors(purple, pixelColor, 30); // 30 tolerance for color matching
+			return isSanctified;
 		}
 
 		private Bitmap GetSanctifyBitmap(Bitmap card)
