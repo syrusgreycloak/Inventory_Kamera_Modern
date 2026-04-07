@@ -175,7 +175,7 @@ namespace InventoryKamera
 			Logger.Debug("  Extracting name bitmap...");
 			name = GetItemNameBitmap(card);
 			Logger.Debug("  Extracting locked bitmap...");
-			locked = GetLockedBitmap(card);
+			locked = GetArtifactLockedBitmap(card);
 			Logger.Debug("  Extracting equipped bitmap...");
 			equipped = GetEquippedBitmap(card);
 			Logger.Debug("  Extracting gear slot bitmap...");
@@ -228,12 +228,49 @@ namespace InventoryKamera
 
         private Bitmap GetSubstatsBitmap(Bitmap card)
         {
+			bool isSanctified = IsSanctified(card);
+			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0471;
+			double yShift = isSanctified ? sanctifiedShift : 0.0;
+
             return GenshinProcesor.CopyBitmap(card,new Rectangle(
 				x:(int)(card.Width * 0.0911),
-				y:(int)(card.Height * (Navigation.IsNormal ? 0.4216 : 0.3682)),
+				y:(int)(card.Height * ((Navigation.IsNormal ? 0.4216 : 0.3682) + yShift)),
 				width:(int)(card.Width * 0.8097),
 				height:(int)(card.Height * (Navigation.IsNormal ? 0.1841 : 0.1573))));
         }
+
+		private bool IsSanctified(Bitmap card)
+		{
+			// Check for purple sanctifying indicator bar
+			var sanctifyBitmap = GetSanctifyBitmap(card);
+			Color purple = Color.FromArgb(255, 138, 107, 197); // Purple sanctifying indicator color
+			Color pixelColor = sanctifyBitmap.GetPixel(sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2);
+			sanctifyBitmap.Dispose();
+			return GenshinProcesor.CompareColors(purple, pixelColor, 30); // 30 tolerance for color matching
+		}
+
+		private Bitmap GetSanctifyBitmap(Bitmap card)
+		{
+			return GenshinProcesor.CopyBitmap(card, new Rectangle(
+				x: (int)(card.Width * 0.40),
+				y: (int)(card.Height * (Navigation.IsNormal ? 0.3333 : 0.2941)),
+				width: (int)(card.Width * 0.20),
+				height: (int)(card.Height * (Navigation.IsNormal ? 0.0526 : 0.0470))));
+		}
+
+		private Bitmap GetArtifactLockedBitmap(Bitmap card)
+		{
+			bool isSanctified = IsSanctified(card);
+			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0471;
+			double yShift = isSanctified ? sanctifiedShift : 0.0;
+
+			return GenshinProcesor.CopyBitmap(card,
+				new Rectangle(
+					x: (int)(card.Width * 0.75),
+					y: (int)(card.Height * ((Navigation.IsNormal ? 0.353 : 0.309) + yShift)),
+					width: (int)(card.Width * 0.0955),
+					height: (int)(card.Height * (Navigation.IsNormal ? 0.055 : 0.0495))));
+		}
 
         private Bitmap GetMainStatBitmap(Bitmap card)
         {
@@ -246,9 +283,13 @@ namespace InventoryKamera
 
         private Bitmap GetLevelBitmap(Bitmap card)
         {
+			bool isSanctified = IsSanctified(card);
+			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0465;
+			double yShift = isSanctified ? sanctifiedShift : 0.0;
+
             return GenshinProcesor.CopyBitmap(card, new Rectangle(
                 x: (int)(card.Width * 0.0506),
-                y: (int)(card.Height * (Navigation.IsNormal ? 0.3634 : 0.3197)),
+                y: (int)(card.Height * ((Navigation.IsNormal ? 0.3634 : 0.3197) + yShift)),
                 width: (int)(card.Width * 0.1417),
                 height: (int)(card.Height * (Navigation.IsNormal ? 0.0416 : 0.0347))));
         }
