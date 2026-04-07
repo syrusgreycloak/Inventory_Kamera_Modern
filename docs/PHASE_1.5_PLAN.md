@@ -57,7 +57,7 @@ InventoryKamera.sln
 │   ├── ImageSharp/                    # ImageSharpProcessor
 │   └── Tesseract/                     # TesseractOcrEngine wrapper
 │
-├── InventoryKamera/                   # Existing: WinForms UI (.NET Framework 4.7.2)
+├── InventoryKamera/                   # Existing: WinForms UI (.NET 8 - Windows target)
 │   └── (References Core + Infrastructure, adapts to new interfaces)
 │
 └── InventoryKamera.Tests/             # New: Unit tests (.NET 8)
@@ -82,18 +82,26 @@ InventoryKamera.sln
 
 **Success Criteria:** ImageSharp prototype matches current accuracy within 1%
 
-#### 1.2 Tesseract Package Evaluation
-Test three options:
-- [ ] **Option A:** Stay with `Tesseract 5.2.0` (known multithreading issues)
-- [ ] **Option B:** Migrate to `TesseractOCR 5.5.2` (different API, needs testing)
-- [ ] **Option C:** Try `Tesseract.Net.SDK` (unified wrapper)
+#### 1.2 Tesseract Package Evaluation ⚠️ CRITICAL
 
-**Test Plan:**
-1. OCR accuracy with custom trained data files (`genshin_best_eng.traineddata`)
-2. Multithreading stability (8 engine pool, 2-3 worker threads)
-3. Cross-platform compatibility (Windows first, macOS/Linux later)
+**Primary candidate:** `TesseractOCR 5.5.2` (more actively maintained fork with better async support)
 
-**Success Criteria:** New package eliminates 30-second timeout issues, maintains accuracy
+**Validation checklist (Week 1 priority):**
+- [ ] Loads `genshin_best_eng.traineddata` without errors
+- [ ] OCR accuracy matches `Tesseract 5.2.0` baseline (within 1%)
+- [ ] Multithreading stability: 8 engine pool, 2-3 workers, 100+ items
+- [ ] No deadlocks during overnight stress test (500+ artifacts)
+- [ ] Cross-platform: Verify on Windows first, macOS/Linux in Phase 2
+- [ ] API compatibility: Document migration path from 5.2.0 to 5.5.2
+
+**Fallback options if TesseractOCR 5.5.2 fails:**
+- **Option B:** Stay with `Tesseract 5.2.0` but serialize OCR calls (lock/semaphore)
+- **Option C:** Try `Tesseract.Net.SDK` (unified wrapper)
+- **Option D:** Hybrid approach - use 5.2.0 single-threaded
+
+**Success Criteria:** Eliminates 30-second timeout issues, maintains or improves accuracy
+
+**Risk:** Highest-risk item in Phase 1.5. If validation fails, may impact timeline.
 
 #### 1.3 Dependency Injection Setup
 - [ ] Prototype `Microsoft.Extensions.DependencyInjection` in console app
@@ -236,7 +244,13 @@ public interface IImage : IDisposable
 {
     int Width { get; }
     int Height { get; }
-    byte[] GetBytes(); // For passing to OCR
+
+    // Hot path: Direct pixel access (sanctified detection, color checks)
+    Color GetPixel(int x, int y);
+
+    // Cold path: For OCR engine (avoid allocations in hot path)
+    byte[] GetBytes();
+    Stream GetStream(); // Alternative for Tesseract
 }
 ```
 
@@ -274,10 +288,14 @@ public interface IImage : IDisposable
 
 **Goal:** Update existing WinForms app to use Core library (proof of concept).
 
-#### 5.1 Reference New Libraries
+#### 5.1 Migrate WinForms to .NET 8
+- [ ] Update project file to `<TargetFramework>net8.0-windows</TargetFramework>`
+- [ ] Add `<UseWindowsForms>true</UseWindowsForms>`
+- [ ] Test WinForms compatibility (.NET 8 supports WinForms on Windows)
 - [ ] Add project reference to InventoryKamera.Core
 - [ ] Add project reference to InventoryKamera.Infrastructure
-- [ ] Keep .NET Framework 4.7.2 target (for now)
+
+**Rationale:** Avoid multi-targeting friction between .NET Framework 4.7.2 and .NET 8. Microsoft officially supports WinForms on .NET 8 with Windows-specific target. This eliminates API compatibility issues and allows use of modern C# features throughout.
 
 #### 5.2 Dependency Injection Adapter
 WinForms doesn't have built-in DI. Create adapter:
@@ -316,16 +334,82 @@ public static class ServiceProviderFactory
 
 ---
 
-### Task 6: Testing Infrastructure
+### Task 6: Error Handling & Cancellation
+
+**Goal:** Robust error handling and graceful cancellation throughout scanning pipeline.
+
+#### 6.1 CancellationToken Propagation
+- [ ] Add `CancellationToken` parameter to all async methods
+- [ ] Thread CancellationToken through entire pipeline:
+  - `ScanOrchestrator.ScanAllAsync(options, progress, cancellationToken)`
+  - `IArtifactScraper.ScanArtifactsAsync(cancellationToken)`
+  - `IOcrEngine.RecognizeAsync(image, options, cancellationToken)`
+- [ ] Respect cancellation in tight loops (after each item)
+- [ ] Clean up resources (dispose images, return OCR engines to pool) on cancellation
+
+**Example:**
+```csharp
+public async Task<Inventory> ScanAllAsync(
+    ScanOptions options,
+    IProgress<ScanProgress> progress,
+    CancellationToken cancellationToken = default)
+{
+    foreach (var category in options.Categories)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await ScanCategoryAsync(category, progress, cancellationToken);
+    }
+}
+```
+
+#### 6.2 Error Recovery Strategies
+- [ ] **OCR Timeout:** Skip item, log error, continue scan (existing behavior, keep)
+- [ ] **Game Window Lost:** Pause scan, prompt user to restore game, resume when ready
+- [ ] **Navigation Failure:** Retry 3 times with exponential backoff, then skip item
+- [ ] **Validation Failure:** Log to `./logging/`, save debug screenshots, continue scan
+- [ ] **Critical Errors:** Save partial results, allow user to resume later
+
+#### 6.3 Progress Reporting with Errors
+- [ ] Extend `ScanProgress` to include error information:
+```csharp
+public class ScanProgress
+{
+    public int Current { get; set; }
+    public int Total { get; set; }
+    public string CurrentItem { get; set; }
+    public ScanStatus Status { get; set; } // Scanning, Paused, Error, Complete
+    public List<ScanError> Errors { get; set; } // Accumulated errors
+}
+
+public class ScanError
+{
+    public int ItemId { get; set; }
+    public string ItemName { get; set; }
+    public string ErrorMessage { get; set; }
+    public ScanErrorType Type { get; set; } // Timeout, Validation, Navigation, OCR
+}
+```
+
+#### 6.4 Graceful Shutdown
+- [ ] On cancellation: Finish current OCR task, don't start new items
+- [ ] Dispose all borrowed OCR engines
+- [ ] Save partial scan results (allow user to resume or export what was scanned)
+- [ ] Return to Idle state
+
+**See also:** `docs/plantuml/12-error-handling-flow.puml` for detailed flow diagram
+
+---
+
+### Task 7: Testing Infrastructure
 
 **Goal:** Enable unit testing of business logic.
 
-#### 6.1 Create Test Project
+#### 7.1 Create Test Project
 - [ ] New .NET 8 xUnit project
 - [ ] Reference InventoryKamera.Core (not Infrastructure)
 - [ ] Create mock implementations of abstractions
 
-#### 6.2 Mock Implementations
+#### 7.2 Mock Implementations
 ```csharp
 public class MockScreenCapture : IScreenCapture
 {
@@ -340,7 +424,7 @@ public class MockScreenCapture : IScreenCapture
 }
 ```
 
-#### 6.3 Test Cases
+#### 7.3 Test Cases
 - [ ] **DatabaseManager:** Test parsing GenshinData JSON
 - [ ] **ArtifactScraper:** Test sanctified detection with mock images
 - [ ] **ScanProfileManager:** Test profile loading and aspect ratio matching
@@ -376,16 +460,25 @@ public class MockScreenCapture : IScreenCapture
 - Refactor Scraper.cs to use abstractions
 - Migrate ArtifactScraper (most complex)
 - Migrate WeaponScraper, CharacterScraper, MaterialScraper
+- Add CancellationToken support throughout
 
 **Week 11-12: WinForms Adapter**
+- Migrate WinForms to .NET 8 (net8.0-windows)
 - Wire up DI in MainForm
 - Test full scan workflow
 - Compare output with pre-migration version (should be identical)
 
-**Week 13-14: Testing & Polish**
+**Week 13-14: Error Handling & Testing**
+- Implement error recovery strategies
+- Add graceful cancellation support
 - Write unit tests
 - Create test data set (captured screenshots)
+
+**Week 15-16: Polish & Documentation**
 - Bug fixes, performance tuning
+- Update architecture diagrams
+- API documentation
+- Migration guide for contributors
 
 ---
 
@@ -395,9 +488,12 @@ public class MockScreenCapture : IScreenCapture
 - [ ] Core library has zero dependencies on System.Windows.Forms or System.Drawing
 - [ ] All business logic uses abstractions (IScreenCapture, IOcrEngine, etc.)
 - [ ] Scan regions loaded from ScanProfile.json (no hard-coded coordinates)
+- [ ] WinForms migrated to .NET 8 (net8.0-windows target)
 - [ ] WinForms UI works identically to before (same accuracy, same output)
-- [ ] Unit tests cover core scanning logic
-- [ ] Documentation updated (architecture diagrams, API docs)
+- [ ] CancellationToken support throughout async pipeline
+- [ ] Error recovery strategies implemented (timeout, validation, navigation failures)
+- [ ] Unit tests cover core scanning logic with >70% code coverage
+- [ ] Documentation updated (architecture diagrams, API docs, migration guide)
 
 ### Non-Goals for Phase 1.5:
 - ❌ Cross-platform UI (that's Phase 2)
@@ -422,13 +518,13 @@ public class MockScreenCapture : IScreenCapture
 ## Dependencies & Tools
 
 ### Required NuGet Packages (Core)
-- `System.Text.Json` - JSON parsing (replace Newtonsoft.Json?)
+- `Newtonsoft.Json` - JSON parsing (decision: keep for GOOD format compatibility)
 - `Microsoft.Extensions.DependencyInjection` - DI container
-- `Microsoft.Extensions.Logging` - Logging abstraction (replace NLog?)
+- `Microsoft.Extensions.Logging` - Logging abstraction (or keep NLog - TBD)
 
 ### Required NuGet Packages (Infrastructure)
 - `SixLabors.ImageSharp` - Cross-platform image processing
-- `Tesseract` / `TesseractOCR` / `Tesseract.Net.SDK` - OCR (decision needed)
+- `TesseractOCR 5.5.2` - OCR engine (pending Week 1 validation)
 - `WindowsInput` - Windows input simulation (existing)
 
 ### Development Tools
@@ -439,22 +535,37 @@ public class MockScreenCapture : IScreenCapture
 
 ---
 
-## Open Questions
+## Architectural Decisions
 
-1. **JSON Library:** Stick with Newtonsoft.Json or migrate to System.Text.Json?
-   - **Pro System.Text.Json:** Modern, faster, built-in
-   - **Pro Newtonsoft.Json:** Existing, compatible with GOOD format generators
+### Decided
 
-2. **Logging:** Keep NLog or switch to Microsoft.Extensions.Logging?
+1. **JSON Library: Newtonsoft.Json** ✅
+   - **Decision:** Keep Newtonsoft.Json
+   - **Rationale:** GOOD format has polymorphic types and custom converters that work reliably with Newtonsoft.Json. System.Text.Json has subtle behavioral differences that could break GOOD export compatibility. Not worth the risk during structural refactor.
+   - **Future:** Can migrate to System.Text.Json in a later phase if needed
+
+2. **WinForms Target: .NET 8** ✅
+   - **Decision:** Migrate WinForms from .NET Framework 4.7.2 to .NET 8 (Windows target)
+   - **Rationale:** Eliminates multi-targeting friction between Core (.NET 8) and WinForms. Microsoft officially supports WinForms on .NET 8 with `net8.0-windows` target. Allows use of modern APIs throughout.
+   - **Timeline:** Include in Week 11-12 (WinForms Adapter task)
+
+3. **Tesseract Package: TesseractOCR 5.5.2** ⚠️
+   - **Decision:** Migrate to TesseractOCR 5.5.2 (pending Week 1 validation)
+   - **Rationale:** More actively maintained fork with better async support. Should eliminate known deadlock issues in Tesseract 5.2.0.
+   - **Fallback:** If validation fails, serialize OCR calls or stay with 5.2.0
+   - **Risk:** High - requires thorough validation with custom trained data
+
+### Open Questions
+
+1. **Logging:** Keep NLog or switch to Microsoft.Extensions.Logging?
    - **Pro NLog:** Existing, powerful, already configured
    - **Pro MEL:** Standard, works with DI, cross-platform
+   - **Decision needed by:** Week 5 (Core Library Foundation)
 
-3. **Tesseract Package:** Which one?
-   - Needs prototype testing to decide
-
-4. **Async/Await:** Add async throughout, or keep synchronous?
+2. **Async/Await:** Add async throughout, or keep synchronous?
    - Current code is mostly synchronous with background threads
    - Async would be cleaner but requires more refactoring
+   - **Decision needed by:** Week 9 (Scraper Migration)
 
 ---
 

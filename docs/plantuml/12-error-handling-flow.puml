@@ -1,0 +1,253 @@
+@startuml Error Handling & Cancellation Flow
+
+title Phase 1.5 - Error Handling and Cancellation Strategy
+
+skinparam backgroundColor #FAFAFA
+
+' Entities
+actor User
+participant "MainForm\n(UI)" as UI
+participant "ScanOrchestrator" as Orchestrator
+participant "ArtifactScraper" as Scraper
+participant "IOcrEngine" as OCR
+participant "IScreenCapture" as Screen
+queue "Error Log" as ErrorLog
+
+' Normal flow start
+User -> UI : Click "Scan Inventory"
+activate UI
+
+UI -> UI : Create CancellationTokenSource
+UI -> Orchestrator : ScanAllAsync(options, progress, **cancellationToken**)
+activate Orchestrator
+
+== Normal Scanning Flow ==
+
+Orchestrator -> Scraper : ScanArtifactsAsync(**cancellationToken**)
+activate Scraper
+
+loop For each artifact
+  Scraper -> Scraper : Check cancellationToken.IsCancellationRequested
+  note right: Check before each item
+
+  alt Not cancelled
+    Scraper -> Screen : CaptureRegionAsync(region, **cancellationToken**)
+    activate Screen
+    Screen --> Scraper : IImage
+    deactivate Screen
+
+    Scraper -> OCR : RecognizeAsync(image, options, **cancellationToken**)
+    activate OCR
+
+    ' Success path
+    alt OCR succeeds within timeout
+      OCR --> Scraper : OcrResult
+      deactivate OCR
+      Scraper -> Scraper : ParseArtifact(ocrResult)
+      Scraper -> Scraper : ValidateArtifact(artifact)
+
+      alt Validation passes
+        Scraper -> Orchestrator : Add artifact to inventory
+        Scraper -> UI : Report progress (Current: 237/895)
+      else Validation fails
+        Scraper -> ErrorLog : Log validation error
+        note right: Error type: Validation\nItem: Artifact #237\nDetails: Invalid main stat
+        Scraper -> Scraper : SaveDebugScreenshots()
+        Scraper -> UI : Report error (non-blocking)
+        note right: Continue to next item
+      end
+
+    ' Timeout path
+    else OCR times out (30 seconds)
+      OCR --> Scraper : OperationCanceledException
+      deactivate OCR
+      Scraper -> ErrorLog : Log OCR timeout
+      note right: Error type: Timeout\nItem: Artifact #237\nAction: Skip and continue
+      Scraper -> UI : Report error (non-blocking)
+      note right: "Artifact #237 timed out - skipping"
+
+    ' OCR failure path
+    else OCR throws exception
+      OCR --> Scraper : TesseractException
+      deactivate OCR
+      Scraper -> ErrorLog : Log OCR exception
+      Scraper -> UI : Report error (non-blocking)
+      note right: Try to continue
+    end
+
+  else User cancelled
+    Scraper -> Scraper : ThrowIfCancellationRequested()
+    note right: Throws OperationCanceledException
+  end
+end
+
+Scraper --> Orchestrator : List<Artifact> (may be partial)
+deactivate Scraper
+
+== User Cancellation ==
+
+group User clicks "Stop Scan"
+  User -> UI : Click "Stop Scan"
+  UI -> UI : cancellationTokenSource.Cancel()
+  note right: Signals all operations to cancel
+
+  Orchestrator -> Orchestrator : Catch OperationCanceledException
+  note right: Graceful shutdown begins
+
+  Orchestrator -> Orchestrator : Finish current OCR task
+  note right: Don't start new items,\nlet current item complete
+
+  Orchestrator -> Orchestrator : Dispose resources
+  note right: - Return borrowed OCR engines\n- Dispose images\n- Clean up temp files
+
+  Orchestrator -> Orchestrator : Build partial inventory
+  note right: Save what was successfully scanned
+
+  Orchestrator --> UI : Return partial Inventory + status "Cancelled"
+  deactivate Orchestrator
+
+  UI -> UI : Display "Scan cancelled\n237 of 895 artifacts scanned"
+  UI -> User : Prompt: "Save partial results?"
+
+  alt User saves partial
+    UI -> UI : Export partial GOOD JSON
+    note right: Includes successfully scanned items
+  else User discards
+    UI -> UI : Discard results
+  end
+
+  UI -> UI : Return to Idle state
+  deactivate UI
+end
+
+== Navigation Failure ==
+
+group Navigation Error (e.g., game window lost)
+  Scraper -> Screen : CaptureRegionAsync(region, cancellationToken)
+  activate Screen
+  Screen -> Screen : Find game window
+
+  alt Game window not found
+    Screen --> Scraper : GameWindowNotFoundException
+    deactivate Screen
+
+    Scraper -> ErrorLog : Log navigation error
+    Scraper -> UI : Report error "Game window lost"
+
+    ' Retry logic
+    loop Retry up to 3 times
+      Scraper -> Scraper : Wait 2 seconds (exponential backoff)
+      Scraper -> Screen : Try CaptureRegionAsync again
+      activate Screen
+
+      alt Game window found
+        Screen --> Scraper : IImage (success!)
+        deactivate Screen
+        note right: Resume scanning
+        Scraper -> Scraper : Continue normal flow
+      else Still not found
+        Screen --> Scraper : GameWindowNotFoundException
+        deactivate Screen
+        note right: Retry again
+      end
+    end
+
+    ' All retries failed
+    Scraper -> UI : Pause scan, prompt user
+    note right: "Game window lost.\nPlease restore Genshin Impact\nand click Resume."
+
+    User -> UI : Restore game window
+    User -> UI : Click "Resume"
+    UI -> Scraper : Resume scanning
+    note right: Reset retry counter, continue
+  end
+end
+
+== Critical Error ==
+
+group Critical Error (unrecoverable)
+  Scraper -> OCR : RecognizeAsync(image, options, cancellationToken)
+  activate OCR
+  OCR --> Scraper : OutOfMemoryException
+  deactivate OCR
+
+  Scraper -> ErrorLog : Log critical error
+  note right: Error type: Critical\nDetails: OutOfMemoryException\nAction: Abort scan
+
+  Scraper -> Scraper : Dispose resources
+  Scraper -> Scraper : Build partial inventory
+
+  Scraper --> Orchestrator : Throw ScanAbortedException
+  deactivate Scraper
+
+  Orchestrator -> Orchestrator : Catch ScanAbortedException
+  Orchestrator -> Orchestrator : Save partial results
+
+  Orchestrator --> UI : Return partial + status "Aborted"
+  deactivate Orchestrator
+
+  UI -> User : Display error:\n"Scan aborted due to critical error.\n237 of 895 artifacts scanned.\nPartial results saved."
+  deactivate UI
+end
+
+== Error Summary ==
+
+note bottom
+  **Error Types and Handling:**
+
+  1. **OCR Timeout (30s)**
+     - Action: Skip item, log error, continue
+     - User impact: Item missing from export
+     - Recovery: User can manually rescan
+
+  2. **Validation Failure**
+     - Action: Save debug screenshots, log error, continue
+     - User impact: Item missing from export
+     - Recovery: Check ./logging/ for debug info
+
+  3. **Navigation Failure** (game window lost)
+     - Action: Retry 3x with exponential backoff
+     - If all fail: Pause scan, prompt user
+     - User impact: Scan pauses until user restores game
+     - Recovery: User restores game, clicks Resume
+
+  4. **User Cancellation**
+     - Action: Finish current item, graceful shutdown
+     - User impact: Partial results available
+     - Recovery: User can save partial or discard
+
+  5. **Critical Error** (OOM, native crash)
+     - Action: Save partial results, abort scan
+     - User impact: Scan stops immediately
+     - Recovery: Report issue, restart application
+
+  **CancellationToken Threading:**
+  - All async methods accept CancellationToken
+  - Check token before each loop iteration
+  - Pass token to all child operations
+  - Respect cancellation in OCR, screen capture, file I/O
+end note
+
+note bottom
+  **Resource Cleanup Guarantee:**
+
+  try
+  {
+      await ScanAllAsync(options, progress, cancellationToken);
+  }
+  catch (OperationCanceledException)
+  {
+      // User cancelled - expected
+  }
+  finally
+  {
+      // ALWAYS runs:
+      - Dispose all IImage instances
+      - Return all borrowed OCR engines to pool
+      - Close file handles
+      - Save error log
+      - Update UI state to Idle
+  }
+end note
+
+@enduml
