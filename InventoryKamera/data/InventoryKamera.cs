@@ -343,14 +343,17 @@ namespace InventoryKamera
 
 							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
 							// Scan as artifact with 30 second timeout
+							Logger.Debug("Starting OCR for artifact #{0}", imageCollection.Id);
 							var artifactTask = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
-							if (!artifactTask.Wait(TimeSpan.FromSeconds(30)))
+							var completedTask = Task.WhenAny(artifactTask, Task.Delay(30000)).Result;
+							if (completedTask != artifactTask)
 							{
 								Logger.Error("Artifact #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
 								UserInterface.AddError($"Artifact #{imageCollection.Id} scan timed out - possibly problematic artifact data");
 								imageCollection.Bitmaps.ForEach(b => b.Dispose());
 								break;
 							}
+							Logger.Debug("OCR completed for artifact #{0}", imageCollection.Id);
 							Artifact artifact = artifactTask.Result;
 							UserInterface.SetGear(imageCollection.Bitmaps.Last(), artifact);
 

@@ -244,14 +244,19 @@ namespace InventoryKamera
 		private bool IsSanctified(Bitmap card)
 		{
 			// Check for purple sanctifying indicator bar
+			// The purple color varies in brightness, so check if it's in the purple range
 			var sanctifyBitmap = GetSanctifyBitmap(card);
-			Color purple = Color.FromArgb(255, 138, 107, 197); // Purple sanctifying indicator color
 			Color pixelColor = sanctifyBitmap.GetPixel(sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2);
-			bool isSanctified = GenshinProcesor.CompareColors(purple, pixelColor); // CompareColors uses tolerance of 10 for each channel
-			Logger.Debug("    IsSanctified check: expected RGB({0},{1},{2}), got RGB({3},{4},{5}), result={6}",
-				purple.R, purple.G, purple.B, pixelColor.R, pixelColor.G, pixelColor.B, isSanctified);
+
+			// Purple range: Blue should be highest, Red should be moderate, Green lowest
+			// Check if this is a purple-ish color (Blue > Red > Green pattern)
+			bool isPurple = pixelColor.B > pixelColor.R && pixelColor.R >= pixelColor.G &&
+			                pixelColor.B > 150; // Blue channel must be reasonably high
+
+			Logger.Debug("    IsSanctified check: got RGB({0},{1},{2}), isPurple={3}",
+				pixelColor.R, pixelColor.G, pixelColor.B, isPurple);
 			sanctifyBitmap.Dispose();
-			return isSanctified;
+			return isPurple;
 		}
 
 		private Bitmap GetSanctifyBitmap(Bitmap card)
