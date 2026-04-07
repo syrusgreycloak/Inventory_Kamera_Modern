@@ -37,18 +37,18 @@ namespace InventoryKamera
 		private const string MaterialsCompleteJson = "allmaterials.json";
 
 		// This is the best place I think we can find easily accessible and up-to-date lists of information
-		private const string CharactersURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/AvatarExcelConfigData.json";
-		private const string ConstellationsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/AvatarTalentExcelConfigData.json";
-		private const string SkillsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/AvatarSkillExcelConfigData.json";
+		private const string CharactersURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/AvatarExcelConfigData.json";
+		private const string ConstellationsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/AvatarTalentExcelConfigData.json";
+		private const string SkillsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/AvatarSkillExcelConfigData.json";
 
-		private const string ArtifactsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/DisplayItemExcelConfigData.json";
-		private const string ArtifactsCodex = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
-		private const string SetArtifacts = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/ReliquaryExcelConfigData.json";
+		private const string ArtifactsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/DisplayItemExcelConfigData.json";
+		private const string ArtifactsCodex = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
+		private const string SetArtifacts = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/ReliquaryExcelConfigData.json";
 
-		private const string WeaponsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/WeaponExcelConfigData.json";
-		private const string MaterialsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/ExcelBinOutput/MaterialExcelConfigData.json";
-		
-		private const string MappingsURL = "https://raw.githubusercontent.com/Dimbreath/GenshinData/master/TextMap/TextMapEN.json";
+		private const string WeaponsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/WeaponExcelConfigData.json";
+		private const string MaterialsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/ExcelBinOutput/MaterialExcelConfigData.json";
+
+		private const string MappingsURL = "https://raw.githubusercontent.com/DimbreathBot/AnimeGameData/master/TextMap/TextMapEN.json";
 
 
 		private Dictionary<string, string> Mappings = new Dictionary<string, string>();
