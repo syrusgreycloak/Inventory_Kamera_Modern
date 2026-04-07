@@ -898,7 +898,7 @@ namespace InventoryKamera
 			using (WebClient client = new WebClient())
 			{
 				client.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)");
-				var text = client.DownloadString("https://api.github.com/repos/Dimbreath/GenshinData/commits");
+				var text = client.DownloadString("https://api.github.com/repos/DimbreathBot/AnimeGameData/commits");
 				var response = JArray.Parse(text);
 				var commitsChecked = 0;
 				foreach (var commit in response.Children())
