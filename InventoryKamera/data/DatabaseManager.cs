@@ -346,7 +346,15 @@ namespace InventoryKamera
                 Logger.Debug("Found {0} playable characters available", characters.Count);
                 characters.AsParallel().ForAll(character =>
                 {
-                    string name = Mappings[character["nameTextMapHash"].ToString()].ToString();
+                    // Check if character name mapping exists (skip unreleased characters)
+                    string nameHash = character["nameTextMapHash"].ToString();
+                    if (!Mappings.ContainsKey(nameHash))
+                    {
+                        Logger.Warn("Character hash {0} not found in Mappings. It's likely unreleased.", nameHash);
+                        return;
+                    }
+
+                    string name = Mappings[nameHash].ToString();
 
                     try
                     {
@@ -395,9 +403,20 @@ namespace InventoryKamera
 
                                     if (elementSkill == null) continue;
 
-                                    skill = Mappings[elementSkill["nameTextMapHash"].ToString()].ToString();
+                                    string skillHash = elementSkill["nameTextMapHash"].ToString();
+                                    if (!Mappings.ContainsKey(skillHash))
+                                    {
+                                        Logger.Warn("Character {0} traveler skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skillHash);
+                                        continue;
+                                    }
+                                    skill = Mappings[skillHash].ToString();
 
                                     const3Description = talents.Where(entry => entry["openConfig"].ToString().Contains($"Player_{element.Key}")).ElementAt(2)["descTextMapHash"].ToString();
+                                    if (!Mappings.ContainsKey(const3Description))
+                                    {
+                                        Logger.Warn("Character {0} traveler constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);
+                                        continue;
+                                    }
                                     const3Description = Mappings[const3Description].ToString();
 
                                     if (const3Description.Contains(skill))
@@ -414,6 +433,11 @@ namespace InventoryKamera
                             else // Any other character that isn't traveler
                             {
                                 skill = skills.First(entry => entry["skillIcon"].ToString().Contains($"Skill_S_{name}"))["nameTextMapHash"].ToString();
+                                if (!Mappings.ContainsKey(skill))
+                                {
+                                    Logger.Warn("Character {0} skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skill);
+                                    return;
+                                }
                                 skill = Mappings[skill].ToString();
 
 
@@ -426,6 +450,11 @@ namespace InventoryKamera
 
                                 // The skill/burst name is always mentioned in the constellation's description so we'll check for it
                                 const3Description = talents.Where(entry => entry["icon"].ToString().Contains(name)).ElementAt(2)["descTextMapHash"].ToString();
+                                if (!Mappings.ContainsKey(const3Description))
+                                {
+                                    Logger.Warn("Character {0} constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);
+                                    return;
+                                }
                                 const3Description = Mappings[const3Description].ToString();
 
                                 if (const3Description.Contains(skill))
@@ -547,7 +576,14 @@ namespace InventoryKamera
                                     foreach (var artifact in sets.Where(s => artifactIDs.Values.Contains((int)s["id"])))
                                     {
                                         var slot = artifactIDs.First(x => x.Value != null && (int)x.Value == (int)artifact["id"]).Key;
-                                        var artifactName = Mappings[artifact["nameTextMapHash"].ToString()];                                  // Goblet of the Sojourner
+                                        string artifactHash = artifact["nameTextMapHash"].ToString();
+                                        // Check if artifact piece mapping exists (skip unreleased artifacts)
+                                        if (!Mappings.ContainsKey(artifactHash))
+                                        {
+                                            Logger.Warn("Artifact piece hash {0} not found in Mappings. It's likely unreleased.", artifactHash);
+                                            continue;
+                                        }
+                                        var artifactName = Mappings[artifactHash];                                  // Goblet of the Sojourner
                                         string artifactNamePascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(artifactName);  // Goblet Of The Sojourner
                                         string artifactNameGOOD = Regex.Replace(artifactNamePascalCase, @"[\W]", string.Empty);               // GobletOfTheSojourner
                                         string artifactNormalized = artifactNameGOOD.ToLower();                                               // gobletofthesojourner
