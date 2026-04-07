@@ -375,7 +375,16 @@ namespace InventoryKamera
 				{
 					try
 					{
-						string name = Mappings[character["nameTextMapHash"].ToString()].ToString();
+						// Check if character name mapping exists (skip unreleased characters)
+						string nameHash = character["nameTextMapHash"].ToString();
+						if (!Mappings.ContainsKey(nameHash))
+						{
+							Logger.Warn("Character hash {0} not found in Mappings. It's likely unreleased.", nameHash);
+							++CharactersCompleted;
+							continue;
+						}
+
+						string name = Mappings[nameHash].ToString();
 						string PascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(name);
 						string nameGOOD = Regex.Replace(PascalCase, @"[\W]", string.Empty);
 						string nameKey = nameGOOD.ToLower();
@@ -389,10 +398,26 @@ namespace InventoryKamera
 							name = name.ToLower() == "PlayerBoy".ToLower() || name.ToLower() == "PlayerGirl".ToLower() ? "A" : name; // The name suddenly switches to "A" for travelers
 
 							var skill = skills.Where(entry => entry["skillIcon"].ToString().Contains($"Skill_S_{name}")).First()["nameTextMapHash"].ToString();
+
+							// Check if skill mapping exists
+							if (!Mappings.ContainsKey(skill))
+							{
+								Logger.Warn("Character {0} skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skill);
+								++CharactersCompleted;
+								continue;
+							}
 							skill = Mappings[skill].ToString();
 
 							// The skill/burst name is always mentioned in the constellation's description so we'll check for it
 							var constellation = constellations.Where(entry => entry["icon"].ToString().Contains(name)).ElementAt(2)["descTextMapHash"].ToString();
+
+							// Check if constellation mapping exists
+							if (!Mappings.ContainsKey(constellation))
+							{
+								Logger.Warn("Character {0} constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, constellation);
+								++CharactersCompleted;
+								continue;
+							}
 
 							var constOrder = new JArray();
 
@@ -582,7 +607,15 @@ namespace InventoryKamera
                                         {
 											if (artifactIDs.TryGetValue(setArtifact["id"], out string slot))
                                             {
-												var artifactName = Mappings[setArtifact["nameTextMapHash"].ToString()];                               // Goblet of the Sojourner
+												string artifactHash = setArtifact["nameTextMapHash"].ToString();
+												// Check if artifact piece mapping exists (skip unreleased artifacts)
+												if (!Mappings.ContainsKey(artifactHash))
+												{
+													Logger.Warn("Artifact piece hash {0} not found in Mappings. It's likely unreleased.", artifactHash);
+													continue;
+												}
+
+												var artifactName = Mappings[artifactHash];                               // Goblet of the Sojourner
 												string artifactNamePascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(artifactName);  // Goblet Of The Sojourner
 												string artifactNameGOOD = Regex.Replace(artifactNamePascalCase, @"[\W]", string.Empty);               // GobletOfTheSojourner
 												string artifactNormalized = artifactNameGOOD.ToLower();
