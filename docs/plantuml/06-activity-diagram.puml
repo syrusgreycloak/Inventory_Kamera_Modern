@@ -1,0 +1,279 @@
+@startuml Activity Diagram - Full Scan Workflow
+
+title Inventory Kamera - Complete Scanning Workflow (Phase 1.5)
+
+|User|
+start
+:Open Inventory Kamera;
+:Configure scan options\n(Characters, Weapons, Artifacts, Materials);
+note right
+  **User Options:**
+  - Categories to scan
+  - Min rarity/level filters
+  - Scan speed (Fast/Medium/Slow)
+  - Output directory
+end note
+
+|Application|
+:Load ScanProfile.json;
+:Load datasources.json;
+:Initialize DatabaseManager;
+
+if (Database needs update?) then (yes)
+  :Fetch latest game data from GitHub;
+  :Update inventorylists/*.json;
+  note right: Defensive checks for unreleased content
+else (no)
+  :Use cached inventorylists;
+endif
+
+:Initialize DI container;
+:Register IScreenCapture, IOcrEngine, etc.;
+
+|User|
+:Click "Scan Inventory";
+
+|Application|
+:Find Genshin Impact process;
+if (Game found and Paimon menu open?) then (yes)
+  :Detect resolution and aspect ratio;
+  :Select ScanProfile (16:9, 16:10, etc.);
+else (no)
+  #Pink:Show error: "Game not found"\nOr wrong aspect ratio;
+  stop
+endif
+
+:Initialize ScanOrchestrator;
+:Create worker threads (2-3);
+:Initialize OCR engine pool (8 engines);
+
+partition "Weapons Scan" {
+  if (Scan weapons enabled?) then (yes)
+    |Navigation|
+    :Navigate to Inventory → Weapons;
+    :Apply filters (rarity, equipped);
+
+    |Scanning|
+    repeat
+      :Capture weapon card screenshot;
+      :Check if enhancement material;
+      if (Is material?) then (yes)
+        #LightBlue:Stop weapons scan;
+        break
+      endif
+
+      :Crop regions:\n- Name\n- Level\n- Refinement\n- Equipped character;
+
+      :Queue for OCR processing;
+
+      |Worker Thread|
+      :Dequeue OCR task;
+      :Borrow Tesseract engine from pool;
+
+      repeat :OCR region text;
+      repeat while (More regions?) is (yes)
+
+      :Return engine to pool;
+      :Parse OCR results;
+      :Create Weapon object;
+
+      if (Weapon valid?) then (yes)
+        :Add to Inventory;
+        :Report progress to UI;
+      else (no)
+        #Pink:Log error;
+        :Save debug screenshots;
+      endif
+
+      |Navigation|
+      :Scroll to next weapon;
+    repeat while (More weapons?) is (yes)
+    ->done;
+  endif
+}
+
+partition "Artifacts Scan" {
+  if (Scan artifacts enabled?) then (yes)
+    |Navigation|
+    :Navigate to Inventory → Artifacts;
+    :Apply filters (rarity, level);
+    :Detect artifact count;
+
+    |Scanning|
+    repeat
+      :Capture artifact card screenshot;
+      :Check if enhancement material;
+      if (Is material?) then (yes)
+        #LightBlue:Stop artifacts scan;
+        break
+      endif
+
+      :Detect sanctifying elixir\n(purple indicator bar);
+
+      if (Is sanctified?) then (yes)
+        :Apply coordinate shift\nfrom ScanProfile.sanctifyShift;
+        note right: Y-offset: +0.0520 (16:9)
+      else (no)
+        :Use standard coordinates;
+      endif
+
+      :Crop regions:\n- Name, Slot, Set\n- Main stat\n- Sub stats (adjusted if sanctified)\n- Level, Locked, Equipped;
+
+      :Queue for OCR processing;
+
+      |Worker Thread|
+      :Dequeue OCR task;
+      :Borrow Tesseract engine from pool;
+
+      repeat :OCR region text;
+        note right: 30-second timeout per region
+      repeat while (More regions?) is (yes)
+
+      :Return engine to pool;
+      :Parse OCR results:\n- Main stat (e.g., ATK% 46.6%)\n- Sub stats (e.g., CRIT Rate +3.5%);
+
+      if (OCR timed out?) then (yes)
+        #Pink:Log timeout error;
+        :Skip artifact;
+      else (no)
+        :Create Artifact object;
+        if (Artifact valid?) then (yes)
+          :Add to Inventory;
+          :Report progress to UI;
+        else (no)
+          #Pink:Log validation error;
+          :Save debug screenshots;
+        endif
+      endif
+
+      |Navigation|
+      :Scroll to next artifact;
+    repeat while (More artifacts?) is (yes)
+    ->done;
+  endif
+}
+
+partition "Characters Scan" {
+  if (Scan characters enabled?) then (yes)
+    |Navigation|
+    :Navigate to Characters screen;
+
+    |Scanning|
+    :Detect character count;
+
+    repeat
+      :Click character portrait;
+      :Capture character details screen;
+
+      :Crop regions:\n- Name\n- Level, Constellation\n- Talents (Normal, E, Q)\n- Equipped weapon\n- Equipped artifacts (5 slots);
+
+      :Queue for OCR processing;
+
+      |Worker Thread|
+      :OCR character name;
+
+      if (Name == Traveler?) then (yes)
+        :Use custom Traveler name\nfrom settings;
+      endif
+
+      if (Name == Wanderer?) then (yes)
+        :Use custom Wanderer name\nfrom settings;
+      endif
+
+      :OCR level, constellation, talents;
+      :Create Character object;
+      :Add to character list;
+
+      |Navigation|
+      :Navigate to next character;
+    repeat while (More characters?) is (yes)
+    ->done;
+
+    |Application|
+    :Match equipped weapons to characters;
+    :Match equipped artifacts to characters;
+    note right: Uses EquippedCharacter field
+  endif
+}
+
+partition "Materials Scan" {
+  if (Scan character dev items enabled?) then (yes)
+    |Navigation|
+    :Navigate to Inventory → Character Development;
+
+    |Scanning|
+    repeat :Scan material name and count;
+    repeat while (More materials?) is (yes)
+  endif
+
+  if (Scan general materials enabled?) then (yes)
+    |Navigation|
+    :Navigate to Inventory → Materials;
+
+    |Scanning|
+    repeat :Scan material name and count;
+    repeat while (More materials?) is (yes)
+  endif
+}
+
+|Application|
+:Wait for all worker threads to complete;
+:Dispose OCR engines;
+
+:Build final Inventory object;
+:Assign equipped items to characters;
+
+partition "Export" {
+  :Generate GOOD JSON format;
+  note right
+    GOOD v2 format:
+    - format: "GOOD"
+    - version: 2
+    - source: "Inventory Kamera"
+    - characters: [...]
+    - weapons: [...]
+    - artifacts: [...]
+    - materials: {...}
+  end note
+
+  :Save to file:\ngenshinData_GOOD_YYYY_MM_DD_HH_MM.json;
+}
+
+|User|
+:View scan results;
+:Import to Genshin Optimizer;
+
+stop
+
+note right of "Weapons Scan"
+  **Parallel Processing:**
+  Main thread: Navigation + Screenshot capture
+  Worker threads (2-3): OCR processing
+  OCR engine pool (8): Tesseract engines
+
+  Benefits:
+  - Navigation doesn't wait for OCR
+  - Multiple OCR tasks processed concurrently
+  - No thread starvation
+end note
+
+note right of "Artifacts Scan"
+  **Sanctified Artifacts:**
+  Purple indicator bar shifts layout
+  Detection: Color range (B>R>=G, B>150)
+  Handles both light and dark purple variants
+
+  Coordinate adjustment from ScanProfile:
+  - 16:9: +0.0520
+  - 16:10: +0.0471
+end note
+
+note right of Export
+  **Error Handling:**
+  - Validation errors: Saved to ./logging/
+  - OCR timeouts: Skip item, continue scan
+  - Navigation errors: Retry 3 times
+  - Game window lost: Pause and prompt user
+end note
+
+@enduml

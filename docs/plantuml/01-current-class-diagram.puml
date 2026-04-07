@@ -1,0 +1,203 @@
+@startuml Current Architecture - Class Diagram
+
+title Current Inventory Kamera Architecture (v1.3.17)
+note as N1
+  **Problems:**
+  - Tight coupling to WinForms
+  - System.Drawing (Windows-only)
+  - Hard-coded coordinates
+  - No abstraction for testing
+end note
+
+package "WinForms UI" {
+  class MainForm {
+    - inventoryKamera : InventoryKamera
+    + StartScan() : void
+    + UpdateProgress(int, int) : void
+    + ShowErrors(string) : void
+  }
+
+  class UserInterface <<static>> {
+    + SetGearPictureBox(Bitmap) : void
+    + IncrementArtifactCount() : void
+    + AddError(string) : void
+    {note: Thread-safe UI updates from workers}
+  }
+}
+
+package "Data & Models" {
+  class InventoryKamera {
+    + Characters : List<Character>
+    + Inventory : Inventory
+    - workerQueue : Queue<OCRImageCollection>
+    - ImageProcessors : List<Thread>
+    + GatherData() : void
+    - ImageProcessorWorker() : void
+    {note: Orchestrates multi-threaded scanning}
+  }
+
+  class Inventory {
+    + Weapons : List<Weapon>
+    + Artifacts : List<Artifact>
+    + Materials : List<Material>
+    + Size : int
+  }
+
+  class Character {
+    + Name : string
+    + Level : int
+    + Constellation : int
+    + Weapon : Weapon
+    + Artifacts : Artifact[]
+  }
+
+  class Weapon {
+    + Name : string
+    + Level : int
+    + Refinement : int
+    + Rarity : int
+    + EquippedCharacter : string
+  }
+
+  class Artifact {
+    + SetName : string
+    + Slot : string
+    + Level : int
+    + Rarity : int
+    + MainStat : Stat
+    + SubStats : List<Stat>
+    + EquippedCharacter : string
+    + Locked : bool
+  }
+
+  class GOOD {
+    + Export(InventoryKamera) : string
+    {note: Generates GOOD JSON format}
+  }
+}
+
+package "Scanning" {
+  abstract class Scraper {
+    # {static} engines : ConcurrentBag<TesseractEngine>
+    # {static} GenshinProcesor : GenshinProcesor
+    + {static} InitializeScrapers() : void
+    # GetEngine() : TesseractEngine
+    # ReturnEngine(TesseractEngine) : void
+    {note: Manages pool of 8 Tesseract engines}
+  }
+
+  class ArtifactScraper {
+    + ScanArtifacts() : void
+    + QueueScan(int) : void
+    + CatalogueFromBitmapsAsync(List<Bitmap>, int) : Task<Artifact>
+    - IsSanctified(Bitmap) : bool
+    - GetSubstatsBitmap(Bitmap) : Bitmap
+    {note: Hard-coded coordinates for 16:9 and 16:10}
+  }
+
+  class WeaponScraper {
+    + ScanWeapons() : void
+    + CatalogueFromBitmapsAsync(List<Bitmap>, int) : Task<Weapon>
+  }
+
+  class CharacterScraper <<static>> {
+    + ScanCharacters(ref List<Character>) : void
+    + ScanMainCharacterName() : string
+  }
+
+  class MaterialScraper {
+    + Scan_Materials(ref Inventory) : void
+  }
+
+  class OCRImageCollection {
+    + Bitmaps : List<Bitmap>
+    + Type : string
+    + Id : int
+    {note: Wrapper for queueing to worker threads}
+  }
+}
+
+package "Game Integration" {
+  class Navigation <<static>> {
+    + {static} GetItemCard() : Bitmap
+    + {static} CaptureWindow() : Bitmap
+    + {static} SystemClick(int, int) : void
+    + {static} SendKey(Keys) : void
+    + {static} IsNormal : bool
+    {note: Windows-specific: Graphics.CopyFromScreen}
+  }
+
+  class GenshinProcesor <<static>> {
+    + {static} CompareColors(Color, Color) : bool
+    + {static} CopyBitmap(Bitmap, Rectangle) : Bitmap
+    + {static} Mappings : Dictionary<ulong, string>
+    + {static} UpdateCharacterName(string, string) : void
+    {note: Image processing using System.Drawing}
+  }
+}
+
+package "Data Management" {
+  class DatabaseManager <<static>> {
+    + {static} UpdateAll() : void
+    - {static} UpdateCharacters() : void
+    - {static} UpdateArtifacts() : void
+    - {static} UpdateWeapons() : void
+    - {static} UpdateMaterials() : void
+    {note: Fetches from GitHub, parses JSON}
+  }
+}
+
+' Relationships
+MainForm --> InventoryKamera : creates/owns
+MainForm ..> UserInterface : updates UI
+
+InventoryKamera --> Inventory : manages
+InventoryKamera --> Character : collects
+InventoryKamera --> OCRImageCollection : enqueues
+InventoryKamera ..> ArtifactScraper : calls
+InventoryKamera ..> WeaponScraper : calls
+InventoryKamera ..> CharacterScraper : calls
+InventoryKamera ..> MaterialScraper : calls
+
+Inventory *-- Weapon : contains
+Inventory *-- Artifact : contains
+Character --> Weapon : equipped
+Character --> Artifact : equipped
+
+ArtifactScraper --|> Scraper
+WeaponScraper --|> Scraper
+MaterialScraper --|> Scraper
+
+Scraper ..> Navigation : uses
+Scraper ..> GenshinProcesor : uses
+Scraper --> OCRImageCollection : creates
+
+ArtifactScraper ..> UserInterface : updates UI
+WeaponScraper ..> UserInterface : updates UI
+
+DatabaseManager ..> GenshinProcesor : loads Mappings
+
+GOOD ..> InventoryKamera : reads data
+
+note bottom of Navigation
+  **Windows-Only Dependencies:**
+  - Graphics.CopyFromScreen()
+  - WindowsInput library
+  - System.Drawing.Bitmap
+end note
+
+note bottom of Scraper
+  **Threading Issues:**
+  - Tesseract 5.2.0 deadlocks
+  - 8 engine pool, 2-3 workers
+  - 30-second timeout workaround
+end note
+
+note bottom of ArtifactScraper
+  **Hard-coded Coordinates:**
+  Lines 250-350 have magic numbers
+  for 16:9 (0.4216) and 16:10 (0.3682)
+  Sanctified shift: 0.0520 / 0.0471
+end note
+
+@enduml

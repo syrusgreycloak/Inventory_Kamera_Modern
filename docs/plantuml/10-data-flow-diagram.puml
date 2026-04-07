@@ -1,0 +1,248 @@
+@startuml Data Flow Diagram
+
+title Inventory Kamera - Data Flow from Game to GOOD JSON
+
+skinparam backgroundColor #FAFAFA
+
+' External Entities
+rectangle "Genshin Impact\nGame Process" as Game #LightBlue
+rectangle "GitHub Repository\n(DimbreathBot/AnimeGameData)" as GitHub #LightYellow
+rectangle "User\n(Game Player)" as User #LightGreen
+rectangle "Genshin Optimizer\n(Import Tool)" as Optimizer #LightCoral
+
+' Data Stores
+database "ScanProfile.json" as ScanProfile {
+  note: Scan region coordinates\nResolution profiles\nSanctified shifts
+}
+
+database "datasources.json" as DataSource {
+  note: GitHub repository URLs\nFallback sources\nEndpoints
+}
+
+database "inventorylists/\n*.json" as InventoryLists {
+  note: Character names\nWeapon names\nArtifact sets\nMaterial names\nText hash mappings
+}
+
+database "GOOD JSON Export" as GOOD {
+  note: genshinData_GOOD_*.json\nStandardized format\nImportable by optimizers
+}
+
+' Processes
+rectangle "P1: Database Update" as P1 {
+  process "1. Fetch Game Data" as P1_1
+  process "2. Parse JSON" as P1_2
+  process "3. Convert to GOOD" as P1_3
+  process "4. Save to inventorylists" as P1_4
+
+  P1_1 -> P1_2
+  P1_2 -> P1_3
+  P1_3 -> P1_4
+}
+
+rectangle "P2: Screen Capture" as P2 {
+  process "1. Find Game Window" as P2_1
+  process "2. Detect Resolution" as P2_2
+  process "3. Select Scan Profile" as P2_3
+  process "4. Capture Screenshot" as P2_4
+
+  P2_1 -> P2_2
+  P2_2 -> P2_3
+  P2_3 -> P2_4
+}
+
+rectangle "P3: Image Processing" as P3 {
+  process "1. Crop Regions" as P3_1
+  process "2. Detect Sanctified" as P3_2
+  process "3. Apply Adjustments" as P3_3
+  process "4. Preprocess for OCR" as P3_4
+
+  P3_1 -> P3_2
+  P3_2 -> P3_3
+  P3_3 -> P3_4
+}
+
+rectangle "P4: OCR Processing" as P4 {
+  process "1. Borrow Engine" as P4_1
+  process "2. Recognize Text" as P4_2
+  process "3. Return Engine" as P4_3
+
+  P4_1 -> P4_2
+  P4_2 -> P4_3
+}
+
+rectangle "P5: Data Parsing" as P5 {
+  process "1. Parse OCR Text" as P5_1
+  process "2. Lookup Names" as P5_2
+  process "3. Create Objects" as P5_3
+  process "4. Validate" as P5_4
+
+  P5_1 -> P5_2
+  P5_2 -> P5_3
+  P5_3 -> P5_4
+}
+
+rectangle "P6: Inventory Assembly" as P6 {
+  process "1. Collect Items" as P6_1
+  process "2. Match Equipment" as P6_2
+  process "3. Build Inventory" as P6_3
+
+  P6_1 -> P6_2
+  P6_2 -> P6_3
+}
+
+rectangle "P7: GOOD Export" as P7 {
+  process "1. Serialize to JSON" as P7_1
+  process "2. Format GOOD" as P7_2
+  process "3. Save File" as P7_3
+
+  P7_1 -> P7_2
+  P7_2 -> P7_3
+}
+
+' Data Flows
+User --> P1 : "Update Database" (manual)
+GitHub --> P1_1 : Game data JSON\n(characters, weapons, etc.)
+DataSource --> P1_1 : Repository URLs
+P1_4 --> InventoryLists : Parsed game data
+
+User --> P2 : "Start Scan"
+Game --> P2_1 : Window handle
+Game --> P2_4 : Screenshot pixels
+ScanProfile --> P2_3 : Region coordinates
+P2_4 --> P3 : Raw screenshot (Bitmap/IImage)
+
+P3_1 --> P3_1 : Read region coords from ScanProfile
+ScanProfile --> P3_1 : Artifact regions
+P3_2 --> P3_3 : Is sanctified?\n(purple detected)
+ScanProfile --> P3_3 : Sanctified shift value
+P3_4 --> P4 : Processed image regions
+
+P4_2 --> P4_2 : Tesseract engine
+P4_2 --> P5 : Raw OCR text\n("Cinder City Sands")
+
+P5_2 --> InventoryLists : Lookup item names
+InventoryLists --> P5_2 : Matched GOOD IDs
+P5_4 --> P6 : Validated objects\n(Weapon, Artifact, etc.)
+
+P6_1 --> P6_1 : Accumulate scanned items
+P6_2 --> P6_2 : Match by EquippedCharacter field
+P6_3 --> P7 : Complete Inventory object
+
+P7_2 --> GOOD : GOOD v2 JSON
+GOOD --> User : Download/save file
+User --> Optimizer : Import GOOD JSON
+
+' Error Flows
+P2 ..> User : Error: Game not found
+P4 ..> P5 : Timeout: Skip item
+P5 ..> User : Error: Validation failed
+P7 ..> User : Error: File save failed
+
+' Notes
+note bottom of P1
+  **Database Update Flow:**
+  - User initiates manually (optional)
+  - Fetches from GitHub (fallback to alternatives)
+  - Parses game data JSON (characters, weapons, etc.)
+  - Converts IDs to GOOD format
+  - Saves to local inventorylists/*.json
+  - Defensive checks: Skip unreleased content
+
+  **Update Frequency:**
+  - After major game updates (6.4, 6.5, etc.)
+  - When new characters/weapons released
+  - If data repository URL changes
+end note
+
+note bottom of P3
+  **Image Processing Flow:**
+  1. Crop regions from full screenshot
+     - Uses ScanProfile coordinates
+     - Different profiles for 16:9, 16:10, Steam Deck
+  2. Detect sanctified artifact (purple bar)
+     - Color range check: B>R>=G, B>150
+     - Handles light and dark purple variants
+  3. Apply coordinate adjustments if sanctified
+     - Add sanctifyShift to Y-coordinates
+     - 16:9: +0.0520, 16:10: +0.0471
+  4. Preprocess for OCR
+     - Grayscale, contrast enhancement
+     - Noise reduction
+end note
+
+note bottom of P4
+  **OCR Engine Pool:**
+  - 8 pre-initialized Tesseract engines
+  - ConcurrentBag for thread-safe access
+  - Workers borrow/return engines
+  - Custom trained data: genshin_best_eng.traineddata
+
+  **Timeout Handling:**
+  - 30-second timeout per OCR task
+  - If timeout: Skip item, log error, continue
+  - Prevents application freeze
+end note
+
+note bottom of P5
+  **Data Parsing Flow:**
+  1. Parse OCR text
+     - Regex patterns for stats (e.g., "ATK% +46.6%")
+     - Split substats by line breaks
+  2. Lookup names in inventorylists
+     - Match character names (handle Traveler/Wanderer)
+     - Match weapon/artifact names
+     - Use text hash if available
+  3. Create game objects
+     - Weapon(name, level, refinement, rarity)
+     - Artifact(set, slot, mainStat, subStats, level, rarity)
+  4. Validate
+     - Check required fields populated
+     - Verify stat values in valid ranges
+     - Log errors if validation fails
+end note
+
+note bottom of P6
+  **Inventory Assembly:**
+  1. Collect all scanned items
+     - Weapons, Artifacts, Characters, Materials
+     - Accumulated during scan process
+  2. Match equipped items to characters
+     - Use EquippedCharacter field from OCR
+     - Match by character GOOD name
+     - Assign to character.Weapon, character.Artifacts[]
+  3. Build final Inventory object
+     - Inventory { Weapons, Artifacts, Materials }
+     - Characters with equipped items
+     - Ready for GOOD export
+end note
+
+note bottom of P7
+  **GOOD Export Format:**
+  {
+    "format": "GOOD",
+    "version": 2,
+    "source": "Inventory Kamera",
+    "characters": [
+      {
+        "key": "HuTao",
+        "level": 90,
+        "constellation": 1,
+        "ascension": 6,
+        "talent": { "auto": 10, "skill": 10, "burst": 9 }
+      }
+    ],
+    "weapons": [
+      {
+        "key": "StaffOfHoma",
+        "level": 90,
+        "ascension": 6,
+        "refinement": 1,
+        "location": "HuTao",
+        "lock": true
+      }
+    ],
+    "artifacts": [ ... ]
+  }
+end note
+
+@enduml
