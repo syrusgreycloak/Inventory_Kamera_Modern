@@ -40,6 +40,7 @@ namespace InventoryKamera
         private const string commitsAPIURL = "https://gitlab.com/api/v4/projects/53216109/repository/commits";
         private const string repoBaseURL = "https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master/";
         private const string TextMapEnURL = repoBaseURL + "TextMap/TextMapEN.json";
+        private const string TextMapMediumEnURL = repoBaseURL + "TextMap/TextMap_MediumEN.json";
         private const string CharactersURL = repoBaseURL + "ExcelBinOutput/AvatarExcelConfigData.json";
         private const string ConstellationsURL = repoBaseURL + "ExcelBinOutput/FetterInfoExcelConfigData.json";
         private const string TalentsURL = repoBaseURL + "ExcelBinOutput/AvatarTalentExcelConfigData.json";
@@ -260,10 +261,22 @@ namespace InventoryKamera
             {
                 if (!Mappings.Any())
                 {
-                    Mappings = new ConcurrentDictionary<string, string>(JObject.Parse(LoadJsonFromURLAsync(TextMapEnURL))
+                    var mapping = JObject.Parse(LoadJsonFromURLAsync(TextMapEnURL))
                         .ToObject<Dictionary<string, string>>()
                         .Where(e => !string.IsNullOrWhiteSpace(e.Value)) // Remove any mapping with empty
-                        .ToDictionary(i => i.Key, i => i.Value));
+                        .ToDictionary(i => i.Key, i => i.Value);
+
+                    var mediumMapping = JObject.Parse(LoadJsonFromURLAsync(TextMapMediumEnURL))
+                        .ToObject<Dictionary<string, string>>()
+                        .Where(e => !string.IsNullOrWhiteSpace(e.Value)) // Remove any mapping with empty
+                        .ToDictionary(i => i.Key, i => i.Value);
+
+                    foreach (var entry in mediumMapping)
+                    {
+                        mapping[entry.Key] = entry.Value; // Should be no overlap
+                    }
+
+                    Mappings = new ConcurrentDictionary<string, string>(mapping);
                 }
             }
         }
