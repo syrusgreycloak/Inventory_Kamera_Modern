@@ -37,6 +37,7 @@ All diagrams are in the `plantuml/` directory. To view them:
 | **OCR Engine Pool Pattern** | [09-ocr-engine-pool-pattern.puml](plantuml/09-ocr-engine-pool-pattern.puml) | Thread-safe engine pool implementation |
 | **Data Flow Diagram** | [10-data-flow-diagram.puml](plantuml/10-data-flow-diagram.puml) | Data flow from game to GOOD JSON export |
 | **Before/After Comparison** | [11-before-after-comparison.puml](plantuml/11-before-after-comparison.puml) | Side-by-side comparison of current vs Phase 1.5 |
+| **Error Handling Flow** | [12-error-handling-flow.puml](plantuml/12-error-handling-flow.puml) | Error handling and cancellation strategies |
 
 ## Quick Start Guide to Diagrams
 
@@ -61,8 +62,9 @@ These diagrams show the target architecture:
 Reference these during coding:
 
 1. **04-proposed-sequence-diagram.puml** - Async workflow patterns
-2. **06-activity-diagram.puml** - Complete scanning logic
-3. **08-state-diagram.puml** - State management
+2. **12-error-handling-flow.puml** - Error handling and cancellation
+3. **06-activity-diagram.puml** - Complete scanning logic
+4. **08-state-diagram.puml** - State management
 
 ### For Cross-Platform Planning (Phase 2)
 

@@ -59,8 +59,8 @@ package "InventoryKamera.Core" <<Cloud>> {
 
   package "Abstractions" {
     interface IScreenCapture {
-      + CaptureRegionAsync(Rectangle) : Task<IImage>
-      + CaptureFullScreenAsync() : Task<IImage>
+      + CaptureRegionAsync(Rectangle, CancellationToken) : Task<IImage>
+      + CaptureFullScreenAsync(CancellationToken) : Task<IImage>
       + GetGameWindowSize() : Size
       {note: Platform-specific implementation}
     }
@@ -74,23 +74,24 @@ package "InventoryKamera.Core" <<Cloud>> {
 
     interface IImageProcessor {
       + Crop(IImage, Rectangle) : IImage
-      + GetPixel(IImage, int, int) : Color
       + ApplyGrayscale(IImage) : IImage
       + ApplyContrast(IImage, double) : IImage
       {note: ImageSharp implementation}
     }
 
     interface IOcrEngine {
-      + RecognizeAsync(IImage, OcrOptions) : Task<OcrResult>
+      + RecognizeAsync(IImage, OcrOptions, CancellationToken) : Task<OcrResult>
       {note: Tesseract wrapper}
     }
 
     interface IImage {
       + Width : int
       + Height : int
+      + GetPixel(int, int) : Color
       + GetBytes() : byte[]
+      + GetStream() : Stream
       + Dispose() : void
-      {note: Wraps ImageSharp Image<Rgba32>}
+      {note: Hot path: GetPixel() for color checks\nCold path: GetBytes()/GetStream() for OCR}
     }
   }
 
@@ -130,8 +131,8 @@ package "InventoryKamera.Core" <<Cloud>> {
 
   package "Scanning" {
     interface IArtifactScraper {
-      + ScanArtifactsAsync() : Task<List<Artifact>>
-      + CatalogueAsync(IImage) : Task<Artifact>
+      + ScanArtifactsAsync(IProgress, CancellationToken) : Task<List<Artifact>>
+      + CatalogueAsync(IImage, CancellationToken) : Task<Artifact>
     }
 
     class ArtifactScraper {
@@ -139,10 +140,10 @@ package "InventoryKamera.Core" <<Cloud>> {
       - imageProcessor : IImageProcessor
       - ocrEngine : IOcrEngine
       - scanProfile : ScanProfile
-      + ScanArtifactsAsync() : Task<List<Artifact>>
+      + ScanArtifactsAsync(IProgress, CancellationToken) : Task<List<Artifact>>
       - IsSanctified(IImage) : bool
       - GetSubstatsRegion(bool) : Rectangle
-      {note: Uses injected dependencies}
+      {note: Uses injected dependencies\nCancellationToken for graceful shutdown}
     }
 
     class OcrEnginePool {
@@ -158,9 +159,17 @@ package "InventoryKamera.Core" <<Cloud>> {
       - weaponScraper : IWeaponScraper
       - characterScraper : ICharacterScraper
       - materialScraper : IMaterialScraper
-      + ScanAllAsync(ScanOptions) : Task<Inventory>
-      + ProgressChanged : IProgress<ScanProgress>
-      {note: Coordinates multi-category scanning}
+      + ScanAllAsync(ScanOptions, IProgress, CancellationToken) : Task<Inventory>
+      {note: Coordinates multi-category scanning\nPropagates CancellationToken to all scrapers}
+    }
+
+    class ScanProgress {
+      + Current : int
+      + Total : int
+      + CurrentItem : string
+      + Status : ScanStatus
+      + Errors : List<ScanError>
+      {note: Progress reporting with error tracking}
     }
   }
 
