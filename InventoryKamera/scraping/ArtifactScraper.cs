@@ -247,7 +247,7 @@ namespace InventoryKamera
 			var sanctifyBitmap = GetSanctifyBitmap(card);
 			Color purple = Color.FromArgb(255, 138, 107, 197); // Purple sanctifying indicator color
 			Color pixelColor = sanctifyBitmap.GetPixel(sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2);
-			bool isSanctified = GenshinProcesor.CompareColors(purple, pixelColor, 30); // 30 tolerance for color matching
+			bool isSanctified = GenshinProcesor.CompareColors(purple, pixelColor); // CompareColors uses tolerance of 10 for each channel
 			Logger.Debug("    IsSanctified check: expected RGB({0},{1},{2}), got RGB({3},{4},{5}), result={6}",
 				purple.R, purple.G, purple.B, pixelColor.R, pixelColor.G, pixelColor.B, isSanctified);
 			sanctifyBitmap.Dispose();
