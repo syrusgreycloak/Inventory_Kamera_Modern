@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(msbuild:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix update failure when encountering unreleased game content\n\nThe database updater was crashing when trying to process unreleased\ncontent \\(6.5.0 data\\) because it directly accessed the Mappings\ndictionary without checking if keys existed first.\n\nChanges:\n- UpdateCharacters: Add defensive checks for character name, skill,\n  and constellation hashes before accessing Mappings dictionary\n- UpdateArtifacts: Add defensive check for artifact piece hashes\n- UpdateWeapons and UpdateMaterials already had proper checks\n\nThis allows the updater to:\n- Skip unreleased content with warnings instead of crashing\n- Save all successfully processed released content \\(6.4\\)\n- Complete updates successfully even when remote data contains\n  unreleased items\n\nFixes issue where update would fail completely and roll back all\nchanges when encountering missing mapping keys, leaving users stuck\non outdated game data versions.\nEOF\n\\)\")",
+      "Bash(powershell.exe -Command \"Get-EventLog -LogName Application -Source ''Application Error'' -Newest 5 | Where-Object {$_Message -like ''*InventoryKamera*''} | Select-Object TimeGenerated, Message | Format-List\")",
+      "Bash(git commit:*)"
+    ]
+  }
+}

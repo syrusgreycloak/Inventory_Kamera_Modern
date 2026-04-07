@@ -687,12 +687,12 @@
             this.characterToolStripTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.OptionsMenuItem_KeyDown);
             // 
             // DatabaseUpdateMenuItem
-            // 
-            this.DatabaseUpdateMenuItem.Enabled = false;
+            //
+            this.DatabaseUpdateMenuItem.Enabled = true;
             this.DatabaseUpdateMenuItem.Name = "DatabaseUpdateMenuItem";
             this.DatabaseUpdateMenuItem.Size = new System.Drawing.Size(190, 22);
             this.DatabaseUpdateMenuItem.Text = "Update Lookup Tables";
-            this.DatabaseUpdateMenuItem.ToolTipText = "Auto Updater is disabled for now";
+            this.DatabaseUpdateMenuItem.ToolTipText = "Update game data from remote repository";
             this.DatabaseUpdateMenuItem.Click += new System.EventHandler(this.DatabaseUpdateMenuItem_Click);
             // 
             // toolStripMenuItem1
