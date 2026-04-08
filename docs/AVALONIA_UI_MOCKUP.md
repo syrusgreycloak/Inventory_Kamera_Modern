@@ -123,11 +123,47 @@ Here's a modern, spacious layout that keeps the useful parts and fixes the cramp
 
 - **Proper spacing:** 16px padding, 8px margins
 - **Readable fonts:** Default system font, proper sizes
-- **Color-coded status:** Green for success, red for errors, yellow for warnings
+- **Status indicators:** Icons + color for accessibility (see section below)
 - **Material Design influence:** Cards, shadows, proper elevation
 - **Light/Dark mode support:** Switch based on system theme
 
-### 4. Scan Progress Enhancements
+### 4. Accessibility Requirements
+
+**Current WinForms Issue:** The lower right feedback section uses straight red/green text for errors and success messages. This is not ADA compliant and creates problems for users with color vision deficiencies (colorblindness affects ~8% of males, ~0.5% of females).
+
+**Accessible Alternatives:**
+
+1. **Color + Icon** (Recommended)
+   - ✓ Success (with green color)
+   - ⚠ Warning (with yellow/orange color)
+   - ✗ Error (with red color)
+   - ℹ Info (with blue color)
+   - Icons convey meaning even without color
+
+2. **Color + Text Prefix**
+   - "SUCCESS: Artifact scanned"
+   - "WARNING: Could not read refinement level, defaulting to R1"
+   - "ERROR: Invalid weapon name"
+   - Text label provides context independent of color
+
+3. **Colorblind-Safe Palettes**
+   - Use blue/orange instead of red/green
+   - Ensure sufficient brightness contrast (WCAG AA: 4.5:1 ratio)
+   - Test with colorblind simulation tools
+
+4. **Alternative Visual Indicators**
+   - Different background patterns or textures
+   - Border styles (solid for success, dashed for warning, dotted for error)
+   - Font weight (bold for errors, regular for success)
+
+**Implementation Strategy:**
+- Use icon + color combination for all status messages
+- Ensure console output includes text prefixes
+- Test with Windows High Contrast mode
+- Validate contrast ratios meet WCAG 2.1 Level AA standards
+- Consider adding colorblind mode toggle in settings
+
+### 5. Scan Progress Enhancements
 
 Current WinForms UI has basic counters. New UI adds:
 - **Per-category progress bars** with percentages
