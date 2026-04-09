@@ -35,29 +35,14 @@ def normalize_key(name: str) -> str:
     return normalized
 
 def to_good_name(name: str) -> str:
-    """Convert name to GOOD format (remove spaces, keep capitalization)"""
-    # Remove spaces and hyphens
-    return name.replace(" ", "").replace("-", "")
+    """Convert name to GOOD format (remove spaces, hyphens, apostrophes)"""
+    # Remove spaces, hyphens, and apostrophes
+    return name.replace(" ", "").replace("-", "").replace("'", "")
 
-def convert_dvaJi_to_IK(weapon_data: dict) -> dict:
-    """Convert dvaJi weapon format to InventoryKamera format"""
+def convert_dvaJi_to_IK(weapon_data: dict) -> str:
+    """Convert dvaJi weapon format to InventoryKamera format (GOOD name string)"""
     name = weapon_data.get("name", "")
-
-    # Extract weapon type (it's an object with "id" and "name" fields)
-    weapon_type_obj = weapon_data.get("weapon_type", {})
-    weapon_type_name = weapon_type_obj.get("name", "") if isinstance(weapon_type_obj, dict) else ""
-
-    # Extract rarity
-    rarity = weapon_data.get("rarity", 1)
-
-    # Create InventoryKamera format
-    ik_weapon = {
-        "GOOD": to_good_name(name),
-        "WeaponType": WEAPON_TYPE_MAP.get(weapon_type_name, 0),
-        "Rarity": rarity
-    }
-
-    return ik_weapon
+    return to_good_name(name)
 
 def fetch_weapon_list() -> List[str]:
     """Fetch list of all weapon files from dvaJi repository"""
