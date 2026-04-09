@@ -37,6 +37,9 @@ namespace InventoryKamera
 		[JsonIgnore]
 		public WeaponType WeaponType { get; private set; }
 
+		[JsonIgnore]
+		public bool RefinementDefaulted { get; set; } = false;
+
 		public Weapon()
 		{
 			RefinementLevel = -1;

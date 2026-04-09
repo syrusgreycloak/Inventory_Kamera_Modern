@@ -277,13 +277,17 @@ namespace InventoryKamera
 				await Task.WhenAll(tasks.ToArray());
 
 				// Default to refinement 1 if OCR failed to prevent losing high-rarity/equipped weapons
+				bool refinementDefaulted = false;
 				if (refinementLevel == -1)
 				{
 					refinementLevel = 1;
+					refinementDefaulted = true;
 					UserInterface.AddError($"Warning: Could not read refinement level for weapon ID#{id}, defaulting to R1");
 				}
 			}
-			return new Weapon(name, level, ascended, refinementLevel, locked, equippedCharacter, id, rarity);
+			var weapon = new Weapon(name, level, ascended, refinementLevel, locked, equippedCharacter, id, rarity);
+			weapon.RefinementDefaulted = refinementDefaulted;
+			return weapon;
 		}
 
         public bool IsEnhancementMaterial(Bitmap nameBitmap)
