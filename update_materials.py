@@ -43,23 +43,14 @@ def normalize_key(name: str) -> str:
     return normalized
 
 def to_good_name(name: str) -> str:
-    """Convert name to GOOD format (remove spaces, keep capitalization)"""
-    # Remove spaces and hyphens
-    return name.replace(" ", "").replace("-", "")
+    """Convert name to GOOD format (remove spaces, hyphens, apostrophes)"""
+    # Remove spaces, hyphens, and apostrophes
+    return name.replace(" ", "").replace("-", "").replace("'", "")
 
-def convert_dvaJi_to_IK(material_data: dict) -> dict:
-    """Convert dvaJi material format to InventoryKamera format"""
+def convert_dvaJi_to_IK(material_data: dict) -> str:
+    """Convert dvaJi material format to InventoryKamera format (GOOD name string)"""
     name = material_data.get("name", "")
-
-    # Extract rarity
-    rarity = material_data.get("rarity", 1)
-
-    # Create InventoryKamera format (simple: just GOOD name)
-    ik_material = {
-        "GOOD": to_good_name(name)
-    }
-
-    return ik_material
+    return to_good_name(name)
 
 def fetch_materials_from_directory(dir_name: str) -> List[Tuple[str, str]]:
     """Fetch all materials from a specific directory"""

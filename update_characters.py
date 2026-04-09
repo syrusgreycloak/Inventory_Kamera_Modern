@@ -38,9 +38,9 @@ def normalize_key(name: str) -> str:
 
 def to_camel_case(name: str) -> str:
     """Convert name to GOOD CamelCase format"""
-    # Remove spaces and hyphens, capitalize each word
+    # Remove spaces, hyphens, and apostrophes, capitalize each word
     words = re.split(r'[\s\-]', name)
-    return ''.join(word.capitalize() for word in words if word)
+    return ''.join(word.capitalize() for word in words if word).replace("'", "")
 
 def convert_dvaJi_to_IK(char_data: dict) -> dict:
     """Convert dvaJi character format to InventoryKamera format"""

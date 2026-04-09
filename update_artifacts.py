@@ -26,9 +26,9 @@ def normalize_key(name: str) -> str:
     return normalized
 
 def to_good_name(name: str) -> str:
-    """Convert name to GOOD format (remove spaces, keep capitalization)"""
-    # Remove spaces and hyphens
-    return name.replace(" ", "").replace("-", "")
+    """Convert name to GOOD format (remove spaces, hyphens, apostrophes)"""
+    # Remove spaces, hyphens, and apostrophes
+    return name.replace(" ", "").replace("-", "").replace("'", "")
 
 def convert_dvaJi_to_IK(artifact_data: dict) -> dict:
     """Convert dvaJi artifact format to InventoryKamera format"""
