@@ -312,7 +312,7 @@ namespace InventoryKamera
 								}
 							}
 
-                            if (!weapon.IsValid() || Properties.Settings.Default.LogScreenshots)
+                            if (!weapon.IsValid() || weapon.RefinementDefaulted || Properties.Settings.Default.LogScreenshots)
                             {
                                 Directory.CreateDirectory(weaponPath + "name");
                                 imageCollection.Bitmaps[0].Save(weaponPath + "name/name.png");
