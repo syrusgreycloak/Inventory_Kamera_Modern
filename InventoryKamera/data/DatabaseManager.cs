@@ -380,6 +380,8 @@ namespace InventoryKamera
                         string nameKey = nameGOOD.ToLower();
                         int characterID = (int)character["id"];
 
+                        if (characterID > 10000900) return; // Not playable characters
+
                         string const3Description = "";
                         string const5Description = "";
                         string skill = "";
