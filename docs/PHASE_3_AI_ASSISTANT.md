@@ -1,14 +1,17 @@
 # Phase 3: AI Assistant Integration
 
-**Status:** Planned (Post-Avalonia Migration)
-**Dependencies:** Phase 2 Avalonia UI complete, Phase 1.5 ScanProfile.json system
-**Goal:** Transform Inventory Kamera from a data extraction tool into an intelligent assistant that helps players make informed decisions about gear, teams, and progression
+**Status:** Optional Enhancement (Post-Avalonia Migration)
+**Dependencies:** Phase 1.6 SQLite database complete
+**Goal:** Enable AI-powered inventory analysis through MCP server integration
 
 ---
 
 ## Overview
 
-Phase 3 adds an AI-powered chat interface that allows users to query their inventory data and receive personalized recommendations based on current game meta information. Instead of just exporting JSON files for external tools, users can directly ask questions like "What's the best build for my Raiden?" and get answers based on their actual inventory.
+Phase 3 exposes the inventory database via Model Context Protocol (MCP), allowing users to chat with their inventory using Claude Desktop, Claude Max, or any MCP-compatible client. Instead of building a chat UI, we leverage existing AI clients and let users bring their own AI subscription.
+
+**Primary Approach:** MCP Server (Phase 3.1)
+**Alternative Approach:** Embedded Chat UI (Phase 3.2+, optional)
 
 ---
 
@@ -17,85 +20,73 @@ Phase 3 adds an AI-powered chat interface that allows users to query their inven
 ### Current Limitations
 
 After scanning, users must:
-1. **Export GOOD JSON** to external optimizer tools
-2. **Manually compare** optimizer recommendations against game guides
-3. **Context switch** between multiple websites/tools
-4. **Learn complex tools** (Genshin Optimizer, Frzyc calculator, etc.)
-5. **No conversational help** - can't ask follow-up questions
+1. **Export GOOD JSON** manually
+2. **Upload JSON to Claude.ai** or other AI chat
+3. **Re-upload on every scan** (no persistent context)
+4. **Manually describe database schema** for AI to understand
+5. **Cannot query database directly** - AI can only see JSON snapshot
 
-### Target Experience (Phase 3)
+### Target Experience (Phase 3.1 - MCP Server)
 
 Users should be able to:
-1. **Scan inventory** as usual
-2. **Open AI Assistant tab** in the same app
-3. **Ask natural language questions**: "What artifacts should I give Raiden?"
-4. **Get personalized answers** based on their actual inventory
-5. **Receive meta-aware advice** (current Abyss, team synergies, farming priorities)
-6. **Have conversations** with follow-up questions and refinements
-7. **Choose their AI provider** (Claude, Gemini, future: local LLMs)
+1. **Scan inventory** as usual (auto-saves to SQLite)
+2. **Open Claude Desktop** (or any MCP client)
+3. **Ask questions directly**: "What artifacts should I give Raiden?"
+4. **AI queries live database** - always current, no manual export
+5. **Use existing AI subscription** - No separate API costs
+6. **Persistent context** - Conversation history maintained by Claude Desktop
+
+### Alternative Experience (Phase 3.2+ - Embedded Chat)
+
+For users who prefer in-app experience:
+1. **AI chat tab** within Inventory Kamera
+2. **Configure API key** (Claude, Gemini, Ollama)
+3. **Pay-per-use API costs** (separate from AI subscription)
+4. **More integration work** to build and maintain UI
 
 ---
 
 ## Feature Scope
 
-### Phase 3.1: Database Foundation
+### Phase 3.1: MCP Server (Primary Approach)
 
 **In Scope:**
-- SQLite database schema for characters, weapons, artifacts, materials
-- Export to SQLite alongside existing GOOD JSON export
-- Database viewer tab (read-only grid view of tables)
-- Historical scan tracking (optional)
-- Database migration from GOOD JSON (for existing users)
+- MCP server exposing SQLite database to AI clients
+- Core MCP tools: query_inventory, get_character_details, find_best_artifacts
+- Meta tools: get_build_guide, analyze_team, get_abyss_meta
+- Web scraping with caching (game8.com, KeqingMains)
+- Configuration file for MCP server settings
+- Documentation for Claude Desktop integration
+
+**Benefits:**
+- ✅ Zero UI development (leverage Claude Desktop/Max)
+- ✅ No API costs (users bring own subscription)
+- ✅ Less maintenance burden
+- ✅ Works with existing Claude Max subscriptions
+- ✅ MCP client handles conversation history
+- ✅ Much smaller codebase (~500 lines vs 5000+ for embedded chat)
 
 **Out of Scope:**
-- ❌ Manual editing of database (read-only in UI)
-- ❌ Advanced SQL query interface for users
-- ❌ Multi-user or cloud sync
+- ❌ Embedded chat UI (see Phase 3.2+)
+- ❌ In-app conversation interface
+- ❌ Token usage tracking (handled by MCP client)
 
-### Phase 3.2: AI Chat Interface
+### Phase 3.2+: Embedded Chat UI (Optional Alternative)
 
-**In Scope:**
-- AI provider configuration (API key, model selection)
-- Chat interface with message history
-- Core AI tools: database queries, character details
-- Conversation persistence (save/load chat sessions)
-- Token usage tracking and cost estimation
-- Support for Claude (Anthropic), Gemini (Google), and Ollama APIs
+**In Scope (if implemented):**
+- Avalonia chat tab within Inventory Kamera
+- API provider configuration (Claude, Gemini, Ollama)
+- Direct API integration with token tracking
+- Conversation persistence
+- Cost management and budget limits
 
-**Out of Scope:**
-- ❌ Self-hosted local LLM integration (Phase 4+)
-- ❌ Voice input/output
-- ❌ Image generation
-- ❌ Multi-user chat rooms
-
-### Phase 3.3: Meta Intelligence
-
-**In Scope:**
-- Web scraping/fetching for character build guides (game8.com, KeqingMains)
-- Artifact set recommendations
-- Team composition analysis
-- Weapon recommendations
-- Basic stat optimization (CR/CD ratios, ER requirements)
-- Caching of meta information
-
-**Out of Scope:**
-- ❌ Real-time damage calculations (too complex for Phase 3)
-- ❌ Automatic game data updates (manual cache refresh only)
-- ❌ Community tier lists integration
-
-### Phase 3.4: Advanced Features
-
-**In Scope:**
-- Historical progression tracking ("You've gained 15 artifacts since last week")
-- Farming priority recommendations
-- Quick action buttons ("Optimize Current Team", "Best Builds")
-- Export recommendations as text/markdown
-- Monthly budget limits for API costs
-
-**Out of Scope:**
-- ❌ Automatic artifact locking/unlocking in-game (not possible)
-- ❌ Predictive analytics (ML-based progression forecasting)
-- ❌ Social features (sharing builds with friends)
+**Tradeoffs:**
+- ✅ More integrated user experience
+- ✅ No need for separate Claude Desktop installation
+- ❌ Requires building and maintaining chat UI
+- ❌ Separate API costs (can't use Claude Max subscription)
+- ❌ More code to maintain
+- ❌ Slower to implement
 
 ---
 
@@ -219,7 +210,427 @@ CREATE INDEX idx_meta_cache_key ON meta_cache(cache_key);
 
 ---
 
-## User Interface Design
+## MCP Server Implementation (Primary Approach)
+
+### What is MCP?
+
+Model Context Protocol (MCP) is an open standard that allows AI applications to securely access external data sources and tools. Instead of building a custom chat UI, we implement an MCP server that:
+- Exposes the SQLite inventory database
+- Provides tools for querying and analyzing data
+- Fetches meta information (build guides, team analysis)
+- Works with any MCP-compatible client (Claude Desktop, etc.)
+
+### Architecture
+
+```
+┌─────────────────────┐
+│  Claude Desktop     │ ← User chats here
+│  (MCP Client)       │
+└──────────┬──────────┘
+           │ MCP Protocol (stdio)
+           ↓
+┌─────────────────────┐
+│ MCP Server          │ ← We build this
+│ (TypeScript/Node)   │
+└──────────┬──────────┘
+           │ SQLite
+           ↓
+┌─────────────────────┐
+│ inventory.db        │ ← Phase 1.6 database
+│ (SQLite)            │
+└─────────────────────┘
+```
+
+### MCP Server Implementation
+
+```typescript
+// mcp-server-genshin/src/index.ts
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import Database from "better-sqlite3";
+import fetch from "node-fetch";
+
+// Initialize server
+const server = new Server(
+  {
+    name: "genshin-inventory",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Open database
+const dbPath = process.env.GENSHIN_DB_PATH || "./inventory.db";
+const db = new Database(dbPath, { readonly: true });
+
+// Tool: Query inventory database
+server.setRequestHandler("tools/list", async () => {
+  return {
+    tools: [
+      {
+        name: "query_inventory",
+        description: "Execute a read-only SQL query against the Genshin Impact inventory database. " +
+                     "Tables: characters, weapons, artifacts, artifact_substats, materials. " +
+                     "Example: SELECT key, level FROM characters WHERE constellation >= 6",
+        inputSchema: {
+          type: "object",
+          properties: {
+            sql: {
+              type: "string",
+              description: "SQL SELECT query (read-only)"
+            }
+          },
+          required: ["sql"]
+        }
+      },
+      {
+        name: "get_character_details",
+        description: "Get complete details for a character including equipped weapon and artifacts",
+        inputSchema: {
+          type: "object",
+          properties: {
+            character_key: {
+              type: "string",
+              description: "Character internal key (e.g., 'RaidenShogun', 'HuTao')"
+            }
+          },
+          required: ["character_key"]
+        }
+      },
+      {
+        name: "find_best_artifacts",
+        description: "Search inventory for best artifact pieces matching desired set and main stats",
+        inputSchema: {
+          type: "object",
+          properties: {
+            set_key: {
+              type: "string",
+              description: "Artifact set key (e.g., 'EmblemOfSeveredFate')"
+            },
+            desired_main_stats: {
+              type: "object",
+              description: "Desired main stats by slot: {sands: 'ener_', goblet: 'electro_dmg_', circlet: 'critRate_'}",
+              additionalProperties: { type: "string" }
+            }
+          },
+          required: ["set_key"]
+        }
+      },
+      {
+        name: "get_build_guide",
+        description: "Fetch character build guide from game8.co or cached data",
+        inputSchema: {
+          type: "object",
+          properties: {
+            character_key: {
+              type: "string",
+              description: "Character key"
+            }
+          },
+          required: ["character_key"]
+        }
+      },
+      {
+        name: "analyze_team",
+        description: "Analyze a team of 4 characters for synergies and resonance",
+        inputSchema: {
+          type: "object",
+          properties: {
+            character_keys: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 4,
+              maxItems: 4,
+              description: "Array of 4 character keys"
+            }
+          },
+          required: ["character_keys"]
+        }
+      }
+    ]
+  };
+});
+
+// Tool call handler
+server.setRequestHandler("tools/call", async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    switch (name) {
+      case "query_inventory":
+        return await queryInventory(args.sql);
+
+      case "get_character_details":
+        return await getCharacterDetails(args.character_key);
+
+      case "find_best_artifacts":
+        return await findBestArtifacts(args.set_key, args.desired_main_stats);
+
+      case "get_build_guide":
+        return await getBuildGuide(args.character_key);
+
+      case "analyze_team":
+        return await analyzeTeam(args.character_keys);
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`
+        }
+      ],
+      isError: true
+    };
+  }
+});
+
+// Implementation functions
+async function queryInventory(sql: string) {
+  // Validate it's a SELECT query only
+  if (!sql.trim().toLowerCase().startsWith("select")) {
+    throw new Error("Only SELECT queries are allowed");
+  }
+
+  const rows = db.prepare(sql).all();
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(rows, null, 2)
+      }
+    ]
+  };
+}
+
+async function getCharacterDetails(characterKey: string) {
+  // Get character
+  const character = db.prepare(`
+    SELECT * FROM characters WHERE key = ?
+  `).get(characterKey);
+
+  if (!character) {
+    throw new Error(`Character not found: ${characterKey}`);
+  }
+
+  // Get equipped weapon
+  const weapon = db.prepare(`
+    SELECT * FROM weapons WHERE id = ?
+  `).get(character.equipped_weapon_id);
+
+  // Get equipped artifacts
+  const artifacts = db.prepare(`
+    SELECT * FROM artifacts WHERE location = ?
+  `).all(characterKey);
+
+  // Get substats for each artifact
+  for (const artifact of artifacts) {
+    artifact.substats = db.prepare(`
+      SELECT stat_key, stat_value FROM artifact_substats WHERE artifact_id = ?
+    `).all(artifact.id);
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          character,
+          weapon,
+          artifacts
+        }, null, 2)
+      }
+    ]
+  };
+}
+
+async function findBestArtifacts(setKey: string, desiredMainStats: Record<string, string> = {}) {
+  const artifacts = db.prepare(`
+    SELECT * FROM artifacts WHERE set_key = ?
+  `).all(setKey);
+
+  const result: Record<string, any> = {};
+
+  for (const slot of ["flower", "plume", "sands", "goblet", "circlet"]) {
+    let candidates = artifacts.filter((a: any) => a.slot === slot);
+
+    // Filter by desired main stat if specified
+    if (desiredMainStats[slot]) {
+      candidates = candidates.filter((a: any) => a.main_stat_key === desiredMainStats[slot]);
+    }
+
+    // Get substats and rank by crit value (CR*2 + CD)
+    const ranked = candidates
+      .map((artifact: any) => {
+        const substats = db.prepare(`
+          SELECT stat_key, stat_value FROM artifact_substats WHERE artifact_id = ?
+        `).all(artifact.id);
+
+        const cr = substats.find((s: any) => s.stat_key === "critRate_")?.stat_value || 0;
+        const cd = substats.find((s: any) => s.stat_key === "critDMG_")?.stat_value || 0;
+        const critValue = cr * 2 + cd;
+
+        return {
+          ...artifact,
+          substats,
+          crit_value: critValue
+        };
+      })
+      .sort((a: any, b: any) => b.crit_value - a.crit_value);
+
+    if (ranked.length > 0) {
+      result[slot] = {
+        best: ranked[0],
+        alternatives: ranked.slice(1, 4)
+      };
+    }
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }
+    ]
+  };
+}
+
+// Meta information (simplified, would use caching in production)
+async function getBuildGuide(characterKey: string) {
+  // This would normally scrape game8.co or use cached data
+  // For now, return a placeholder
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          character: characterKey,
+          recommended_artifacts: ["EmblemOfSeveredFate"],
+          recommended_weapons: ["EngulfingLightning", "TheCatch"],
+          main_stats: {
+            sands: "ener_",
+            goblet: "electro_dmg_",
+            circlet: "critRate_"
+          },
+          substats_priority: ["critRate_", "critDMG_", "ener_", "atk_"],
+          note: "Full guide would be scraped from game8.co with caching"
+        }, null, 2)
+      }
+    ]
+  };
+}
+
+async function analyzeTeam(characterKeys: string[]) {
+  if (characterKeys.length !== 4) {
+    throw new Error("Team must have exactly 4 characters");
+  }
+
+  // Get character elements
+  const characters = db.prepare(`
+    SELECT key, element, weapon_type FROM characters WHERE key IN (?, ?, ?, ?)
+  `).all(...characterKeys);
+
+  // Determine elemental resonance
+  const elements = characters.map((c: any) => c.element);
+  const elementCounts: Record<string, number> = {};
+  for (const element of elements) {
+    elementCounts[element] = (elementCounts[element] || 0) + 1;
+  }
+
+  const resonance = [];
+  for (const [element, count] of Object.entries(elementCounts)) {
+    if (count >= 2) {
+      resonance.push(element);
+    }
+  }
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          characters: characters.map((c: any) => c.key),
+          elements: elements,
+          resonance: resonance.length > 0 ? resonance : ["None"],
+          note: "Full analysis would include synergies, role coverage, etc."
+        }, null, 2)
+      }
+    ]
+  };
+}
+
+// Start server
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+### Claude Desktop Configuration
+
+Users add the MCP server to their Claude Desktop config:
+
+```json
+// ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)
+// %APPDATA%\Claude\claude_desktop_config.json (Windows)
+
+{
+  "mcpServers": {
+    "genshin-inventory": {
+      "command": "node",
+      "args": [
+        "C:/Users/karlp/AppData/Local/InventoryKamera/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "GENSHIN_DB_PATH": "C:/Users/karlp/AppData/Local/InventoryKamera/inventory.db"
+      }
+    }
+  }
+}
+```
+
+### User Experience
+
+1. **User scans inventory** with Inventory Kamera (saves to SQLite)
+2. **Opens Claude Desktop** (or Claude Max web interface)
+3. **Asks questions** directly:
+   - "What artifacts should I give my Raiden Shogun?"
+   - "Analyze my current team composition"
+   - "What should I farm next?"
+4. **Claude uses MCP tools** to query database and fetch meta info
+5. **Conversation persists** in Claude Desktop history
+6. **No API costs** - uses existing Claude subscription
+
+### Benefits vs. Embedded Chat
+
+**MCP Server Advantages:**
+- ✅ ~500 lines of code vs 5000+ for embedded chat
+- ✅ Zero UI development (no Avalonia chat tab)
+- ✅ Users bring own subscription (no API cost management needed)
+- ✅ Works with Claude Max subscriptions directly
+- ✅ Conversation history managed by Claude Desktop
+- ✅ Faster to implement (~1-2 weeks vs 11-15 weeks)
+- ✅ Less maintenance burden
+- ✅ Cross-platform by default (Node.js runs everywhere)
+
+**Embedded Chat Advantages:**
+- ✅ More integrated feel (all in one app)
+- ✅ No separate app installation required
+- ❌ Requires building chat UI
+- ❌ Separate API costs (can't use Max subscription)
+- ❌ More code to maintain
+
+---
+
+## User Interface Design (Embedded Chat - Optional)
 
 ### Main Window Layout (Avalonia)
 
@@ -1454,130 +1865,75 @@ Would you like me to create a weekly resin schedule for these priorities?
 
 ---
 
-## Implementation Phases
+## Implementation Timeline
 
-### Phase 3.1: Database Foundation (2-3 weeks)
+### Phase 3.1: MCP Server (1-2 weeks) - RECOMMENDED
 
-**Tasks:**
-- [ ] Design and implement SQLite schema
-- [ ] Create database service layer (CRUD operations)
-- [ ] Modify GOOD export to also write SQLite
-- [ ] Implement GOOD JSON → SQLite migration tool
-- [ ] Add Database Viewer tab (Avalonia DataGrid)
-- [ ] Add scan history tracking
-- [ ] Write unit tests for database layer
+**Prerequisites:**
+- Phase 1.6 SQLite database complete
 
-**Deliverables:**
-- Working SQLite database export alongside GOOD JSON
-- Database viewer UI in Avalonia app
-- Migration tool for existing users
+**Week 1:**
+- [ ] Create Node.js/TypeScript project structure
+- [ ] Install dependencies (`@modelcontextprotocol/sdk`, `better-sqlite3`, `zod`)
+- [ ] Implement MCP server with stdio transport
+- [ ] Implement `query_inventory` tool (read-only SQL)
+- [ ] Implement `get_character_details` tool (with FK joins)
+- [ ] Implement `find_best_artifacts` tool (crit value ranking)
+- [ ] Write tests for core tools
 
-### Phase 3.2: AI Chat Interface (3-4 weeks)
-
-**Tasks:**
-- [ ] Create AI service abstraction (IAIService interface)
-- [ ] Implement ClaudeService (Anthropic API)
-- [ ] Implement GeminiService (Google API)
-- [ ] Implement OllamaService (Ollama API)
-- [ ] Design and build AI Chat tab UI (Avalonia)
-- [ ] Implement conversation persistence (save/load sessions)
-- [ ] Add API configuration UI (settings dialog)
-- [ ] Implement secure API key storage (DPAPI)
-- [ ] Add token usage tracking and cost estimation
-- [ ] Implement basic DatabaseTools (query_inventory, get_character_details)
-- [ ] Add budget limits and warnings
-- [ ] Write integration tests for AI services
+**Week 2:**
+- [ ] Implement `get_build_guide` tool with web scraping
+- [ ] Implement `analyze_team` tool (resonance, synergies)
+- [ ] Add caching layer (file-based cache for meta data)
+- [ ] Create setup documentation for Claude Desktop
+- [ ] Test with real inventory database
+- [ ] Package MCP server with installer
+- [ ] Write user guide with example prompts
 
 **Deliverables:**
-- Working chat interface with Claude/Gemini support
-- Secure API key management
-- Basic inventory querying capability
-- Cost tracking and budget management
+- Working MCP server exposing inventory database
+- Documentation for Claude Desktop configuration
+- Example conversation prompts
+- Installation script
 
-### Phase 3.3: Meta Intelligence (4-5 weeks)
+**Estimated Time:** 1-2 weeks (single developer, part-time)
 
-**Tasks:**
-- [ ] Implement MetaTools class
-- [ ] Build Game8 web scraper
-- [ ] Build KeqingMains guide scraper (optional)
-- [ ] Implement meta information caching
-- [ ] Add get_character_build_guide tool
-- [ ] Add analyze_team_composition tool
-- [ ] Add get_current_abyss_meta tool
-- [ ] Add calculate_stat_requirements tool
-- [ ] Implement find_best_artifacts ranking algorithm
-- [ ] Add artifact substat scoring (CV, efficiency)
-- [ ] Respect robots.txt and implement rate limiting
-- [ ] Add cache management UI (clear, refresh, expiry settings)
-- [ ] Write tests for scrapers and meta tools
+### Phase 3.2+: Embedded Chat UI (11-15 weeks) - OPTIONAL
 
-**Deliverables:**
-- Working build guide fetching and caching
-- Team analysis capabilities
-- Artifact recommendation engine
-- Ethical web scraping with caching
+**Only implement if:**
+- Users strongly prefer in-app chat over Claude Desktop
+- Community requests it despite higher cost
+- Willing to maintain significantly more code
 
-### Phase 3.4: Advanced Features (2-3 weeks)
+**Prerequisites:**
+- Phase 2 Avalonia UI complete
 
-**Tasks:**
-- [ ] Implement UtilityTools class
-- [ ] Add get_farming_priorities tool
-- [ ] Add get_progression_delta tool
-- [ ] Implement quick action buttons in UI
-- [ ] Add export conversation as markdown
-- [ ] Add conversation search/filter
-- [ ] Implement historical progression charts (optional)
-- [ ] Add farming schedule generator
-- [ ] Create comprehensive user documentation
-- [ ] Add tutorial/walkthrough for first-time users
-- [ ] Performance optimization (query caching, lazy loading)
-- [ ] Write end-to-end tests
+See full embedded chat implementation plan in previous versions of this document.
 
-**Deliverables:**
-- Farming priority recommendations
-- Progression tracking
-- Quick action buttons for common queries
-- Complete feature set with documentation
+**Estimated Time:** 11-15 weeks (vs 1-2 weeks for MCP)
 
 ---
 
 ## Success Criteria
 
-### Phase 3.1 Complete When:
-- [ ] Inventory data exports to SQLite database
-- [ ] Database viewer shows characters, weapons, artifacts in grid
-- [ ] Existing GOOD JSON files can be migrated to database
-- [ ] Scan history is tracked and viewable
-- [ ] Unit test coverage >80% for database layer
-- [ ] Documentation for database schema
+### Phase 3.1 (MCP Server) Complete When:
+- [ ] MCP server runs and connects to Claude Desktop
+- [ ] `query_inventory` tool executes SQL queries correctly
+- [ ] `get_character_details` tool returns character with weapon and artifacts
+- [ ] `find_best_artifacts` tool ranks by crit value
+- [ ] `get_build_guide` tool fetches and caches game8.co data
+- [ ] `analyze_team` tool identifies resonance and basic synergies
+- [ ] Documentation includes Claude Desktop config example
+- [ ] At least 3 users successfully configure and use MCP server
+- [ ] Example prompts guide users to useful queries
+- [ ] Caching reduces duplicate web scraping requests
+- [ ] Installation integrated with main Inventory Kamera installer
 
-### Phase 3.2 Complete When:
-- [ ] Users can configure Claude, Gemini, or Ollama API keys
-- [ ] All three AI providers (Claude, Gemini, Ollama) are fully supported
-- [ ] Chat interface sends/receives messages with conversation history
-- [ ] AI can query inventory database and return results
-- [ ] Token usage and costs are tracked per session
-- [ ] Budget warnings prevent overspending
-- [ ] API keys are encrypted at rest
-- [ ] At least 3 users successfully use the feature in beta (one per provider)
-
-### Phase 3.3 Complete When:
-- [ ] AI can fetch build guides from game8.co
-- [ ] Build guides are cached locally (7-day expiry)
-- [ ] AI can analyze team compositions for synergies
-- [ ] AI can recommend best available artifacts from inventory
-- [ ] Artifact ranking considers crit value and character needs
-- [ ] Web scraping respects rate limits and robots.txt
-- [ ] Users can disable web scraping and use cache-only mode
-
-### Phase 3.4 Complete When:
-- [ ] AI can recommend farming priorities based on inventory gaps
-- [ ] Progression tracking shows changes between scans
-- [ ] Quick action buttons work (Optimize Team, Best Builds, etc.)
-- [ ] Users can export conversations as markdown
-- [ ] Comprehensive documentation with examples
-- [ ] Beta testing with 5+ users shows positive feedback
-- [ ] Performance: chat responses under 10 seconds for complex queries
+### Phase 3.2+ (Embedded Chat) Complete When (if implemented):
+- [ ] All Phase 3.1 functionality works via embedded chat
+- [ ] API keys encrypted and cost tracking implemented
+- [ ] Conversation history persists across app restarts
+- [ ] At least 5 users prefer embedded chat over MCP approach
 
 ---
 
@@ -1597,61 +1953,6 @@ These are explicitly **not** part of Phase 3:
 
 ---
 
-## Alternative: MCP Server Approach
-
-An alternative to embedding the AI in the app would be to build a **Model Context Protocol (MCP) server** that exposes the inventory database:
-
-**Benefits:**
-- No need to build chat UI (use Claude Desktop or any MCP client)
-- Separation of concerns (database access vs. UI)
-- Can use any MCP-compatible client
-
-**Implementation:**
-```typescript
-// mcp-server-genshin/index.ts
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import sqlite3 from "sqlite3";
-
-const server = new Server({
-  name: "genshin-inventory",
-  version: "1.0.0"
-});
-
-const db = new sqlite3.Database("C:/Users/.../inventory.db");
-
-server.setRequestHandler("tools/list", async () => ({
-  tools: [
-    {
-      name: "query_inventory",
-      description: "Query Genshin Impact inventory database",
-      inputSchema: {
-        type: "object",
-        properties: {
-          sql: { type: "string" }
-        }
-      }
-    }
-  ]
-}));
-
-server.setRequestHandler("tools/call", async (request) => {
-  if (request.params.name === "query_inventory") {
-    return new Promise((resolve) => {
-      db.all(request.params.arguments.sql, (err, rows) => {
-        resolve({ content: [{ type: "text", text: JSON.stringify(rows) }] });
-      });
-    });
-  }
-});
-
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
-
-Users would configure Claude Desktop to use this MCP server, then chat directly in Claude Desktop.
-
-**Decision:** We'll proceed with embedded AI (Phase 3 as specified) for better integration and user experience, but may add MCP server support as Phase 4+ alternative.
 
 ---
 
