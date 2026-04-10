@@ -88,6 +88,7 @@ public class Character
     // Navigation properties
     public ICollection<CharacterConstellation> Constellations { get; set; }
     public ICollection<CharacterTalent> Talents { get; set; }
+    public ICollection<TravelerElement> TravelerElements { get; set; }  // Only populated for Traveler
 
     // Metadata
     public DateTime AddedDate { get; set; }
@@ -103,10 +104,16 @@ public class TravelerElement
     public int Id { get; set; }
 
     [Required]
+    public int CharacterId { get; set; }  // FK to Character (Traveler)
+
+    [Required]
     public ElementType Element { get; set; }
 
     [Required]
     public string ConstellationOrder { get; set; }  // JSON: ["skill", "burst"]
+
+    // Navigation
+    public Character Character { get; set; }
 }
 
 // Character Constellations
@@ -698,7 +705,11 @@ public async Task MigrateFromJson_ValidJsonFiles_CreatesDatabase()
     // Assert
     using var context = new GenshinDbContext(tempDb);
     var characterCount = await context.Characters.CountAsync();
-    Assert.Equal(112, characterCount);  // Expected from characters.json
+    Assert.True(characterCount > 0, "Should have migrated characters from JSON");
+
+    // Verify specific known characters exist (more robust than hardcoded count)
+    Assert.True(await context.Characters.AnyAsync(c => c.InternalKey == "hutao"));
+    Assert.True(await context.Characters.AnyAsync(c => c.InternalKey == "raidenshogun"));
 }
 ```
 

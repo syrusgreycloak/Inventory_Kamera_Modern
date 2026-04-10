@@ -159,7 +159,7 @@ group Navigation Error (e.g., game window lost)
     User -> UI : Restore game window
     User -> UI : Click "Resume"
     UI -> Scraper : Resume scanning
-    note right: Reset retry counter, continue
+    note right: **Resume Implementation Note:**\nScraper is injected and stateless.\nScanOrchestrator tracks position (item index)\nand restarts from that point, or alternatively\nthe whole scan restarts from beginning.\nDiagram implies seamless resume but actual\nimplementation needs careful state management.
   end
 end
 
