@@ -373,6 +373,12 @@ Users can pull latest community profiles or submit their own via PR.
 - Preset templates (start from 16:9, adjust for ultrawide)
 - Undo/redo for region adjustments
 
+### Phase 2.3 (Conditional Region System)
+- Conditional region shifting rules
+- Detection region configuration
+- Visual rule editor
+- Rule testing and validation
+
 ### Phase 3+ (Future Enhancements)
 - Automatic region detection (computer vision to find UI elements)
 - Profile sharing marketplace (central repository with ratings/reviews)
@@ -380,7 +386,437 @@ Users can pull latest community profiles or submit their own via PR.
 
 ---
 
-## Success Criteria
+## Conditional Region Shifting System
+
+### Problem Statement
+
+Genshin Impact occasionally adds new UI elements that shift the positions of other elements on specific cards. For example:
+
+**Sanctified Artifacts:**
+- Added in version 4.x
+- Display a special "sanctified" indicator on the card
+- This indicator shifts substats and other regions downward
+- Only appears on specific artifact sets
+
+**Current Pain Point:**
+Without conditional rules, supporting these variations requires:
+1. Duplicate region definitions (normal artifacts vs sanctified artifacts)
+2. Manual detection by user (select different profile for sanctified items)
+3. Maintenance nightmare (any region adjustment needs updating in multiple places)
+
+**Desired Solution:**
+Define regions once, with conditional rules that apply coordinate shifts when specific UI elements are detected.
+
+---
+
+### Feature Scope
+
+**In Scope:**
+- Define detection regions (areas to check for UI elements)
+- Specify conditions (element exists, color match, image match)
+- Apply coordinate shifts to dependent regions
+- Visual editor for creating/editing rules
+- Test rules against sample screenshots
+
+**Out of Scope (Phase 3+):**
+- ❌ Machine learning-based detection
+- ❌ Automatic rule generation
+- ❌ Complex Boolean logic (AND/OR combinations)
+
+---
+
+### ScanProfile.json Schema Extension
+
+```json
+{
+  "version": "2.0",
+  "profiles": {
+    "16-9-1920x1080": {
+      "name": "Standard 16:9 (1920x1080)",
+      "aspectRatio": 1.7778,
+      "artifacts": {
+        "card": { "x": 0.7250, "y": 0.1556, "width": 0.2635, "height": 0.7778 },
+        "name": { "x": 0.0911, "y": 0.0614, "width": 0.6719, "height": 0.0965 },
+        "mainStat": { "x": 0.075, "y": 0.185, "width": 0.250, "height": 0.045 },
+        "substats": { "x": 0.075, "y": 0.520, "width": 0.850, "height": 0.180 },
+
+        "detectionRegions": {
+          "sanctifyIndicator": { "x": 0.82, "y": 0.15, "width": 0.12, "height": 0.08 }
+        },
+
+        "conditionalShifts": [
+          {
+            "name": "Sanctified Artifact Adjustment",
+            "description": "Shifts substats/mainstat down when sanctified indicator is present",
+            "detectionRegion": "sanctifyIndicator",
+            "condition": {
+              "type": "colorMatch",
+              "targetColor": "#FFD700",
+              "tolerance": 20,
+              "minMatchPercent": 15
+            },
+            "applyToRegions": ["substats", "mainStat"],
+            "shift": { "x": 0, "y": 0.052 }
+          }
+        ]
+      },
+      "weapons": { /* ... */ }
+    }
+  }
+}
+```
+
+---
+
+### Detection Methods
+
+#### 1. Color Match Detection
+
+Check if a specific color appears in the detection region.
+
+**Use Case:** Sanctified indicator has distinctive gold/yellow color
+
+**Parameters:**
+- `targetColor`: Hex color code (e.g., "#FFD700")
+- `tolerance`: RGB distance tolerance (0-255)
+- `minMatchPercent`: Minimum percentage of pixels that must match (0-100)
+
+**Implementation:**
+```csharp
+public bool DetectColorMatch(Bitmap region, ColorMatchCondition condition)
+{
+    int matchingPixels = 0;
+    int totalPixels = region.Width * region.Height;
+    Color target = ColorTranslator.FromHtml(condition.TargetColor);
+
+    for (int y = 0; y < region.Height; y++)
+    {
+        for (int x = 0; x < region.Width; x++)
+        {
+            Color pixel = region.GetPixel(x, y);
+            int distance = Math.Abs(pixel.R - target.R) +
+                          Math.Abs(pixel.G - target.G) +
+                          Math.Abs(pixel.B - target.B);
+
+            if (distance <= condition.Tolerance)
+            {
+                matchingPixels++;
+            }
+        }
+    }
+
+    double matchPercent = (matchingPixels / (double)totalPixels) * 100;
+    return matchPercent >= condition.MinMatchPercent;
+}
+```
+
+#### 2. Image Template Matching
+
+Check if a reference image appears in the detection region.
+
+**Use Case:** Detect specific icon or text pattern
+
+**Parameters:**
+- `templatePath`: Path to reference image file
+- `minConfidence`: Minimum match confidence (0.0-1.0)
+
+**Implementation:**
+```csharp
+public bool DetectImageMatch(Bitmap region, ImageMatchCondition condition)
+{
+    Bitmap template = LoadTemplate(condition.TemplatePath);
+    var matcher = new ExhaustiveTemplateMatching(condition.MinConfidence);
+    var matches = matcher.ProcessImage(region, template);
+
+    return matches.Length > 0;
+}
+```
+
+#### 3. Brightness/Contrast Detection
+
+Check if region is significantly brighter/darker than expected.
+
+**Use Case:** Detect presence of glowing effects or overlays
+
+**Parameters:**
+- `minBrightness`: Minimum average brightness (0-255)
+- `maxBrightness`: Maximum average brightness (0-255)
+
+---
+
+### Coordinate Shift Application
+
+When a condition is met, apply shifts to dependent regions:
+
+```csharp
+public Rectangle ApplyConditionalShifts(
+    string regionName,
+    Rectangle baseRegion,
+    Bitmap screenshot,
+    ScanProfile profile)
+{
+    Rectangle adjustedRegion = baseRegion;
+
+    foreach (var rule in profile.ConditionalShifts)
+    {
+        // Skip if this rule doesn't apply to current region
+        if (!rule.ApplyToRegions.Contains(regionName))
+            continue;
+
+        // Get detection region
+        var detectionRegionDef = profile.DetectionRegions[rule.DetectionRegion];
+        Rectangle detectionRect = ConvertToPixels(detectionRegionDef, screenshot.Size);
+        Bitmap detectionBitmap = CropBitmap(screenshot, detectionRect);
+
+        // Check condition
+        bool conditionMet = false;
+        switch (rule.Condition.Type)
+        {
+            case "colorMatch":
+                conditionMet = DetectColorMatch(detectionBitmap, rule.Condition);
+                break;
+            case "imageMatch":
+                conditionMet = DetectImageMatch(detectionBitmap, rule.Condition);
+                break;
+            case "brightness":
+                conditionMet = DetectBrightness(detectionBitmap, rule.Condition);
+                break;
+        }
+
+        // Apply shift if condition met
+        if (conditionMet)
+        {
+            int shiftX = (int)(rule.Shift.X * screenshot.Width);
+            int shiftY = (int)(rule.Shift.Y * screenshot.Height);
+
+            adjustedRegion.X += shiftX;
+            adjustedRegion.Y += shiftY;
+
+            Logger.Debug($"Applied conditional shift '{rule.Name}' to region '{regionName}': " +
+                        $"x+={shiftX}, y+={shiftY}");
+        }
+
+        detectionBitmap.Dispose();
+    }
+
+    return adjustedRegion;
+}
+```
+
+---
+
+### Visual Editor UI
+
+#### Rule Management Panel
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ Conditional Region Rules                                       │
+├────────────────────────────────────────────────────────────────┤
+│ ┌──────────────────────────────────────────────────────────┐   │
+│ │ ☑ Sanctified Artifact Adjustment                         │   │
+│ │   Detection: sanctifyIndicator (color match: #FFD700)    │   │
+│ │   Applies to: substats, mainStat                         │   │
+│ │   Shift: x=0, y=+0.052                                   │   │
+│ │   [Edit] [Test] [Delete]                                 │   │
+│ └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ [+ Add New Rule]                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+#### Rule Editor Dialog
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ Edit Conditional Rule                             [─][□][×]   │
+├────────────────────────────────────────────────────────────────┤
+│ Rule Name: [Sanctified Artifact Adjustment            ]        │
+│                                                                 │
+│ Description:                                                    │
+│ ┌────────────────────────────────────────────────────────────┐ │
+│ │Shifts substats/mainstat down when sanctified indicator   │ │
+│ │is present on artifact cards.                              │ │
+│ └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ Detection Region: [sanctifyIndicator ▼]  [Define New...]       │
+│                                                                 │
+│ Condition Type: [Color Match ▼]                                │
+│   Target Color: [#FFD700] [Pick from Screenshot]               │
+│   Tolerance: [──●────────] 20                                  │
+│   Min Match %: [────────●─] 15%                                │
+│                                                                 │
+│ Apply Shift To:                                                 │
+│   ☑ substats                                                    │
+│   ☑ mainStat                                                    │
+│   ☐ level                                                       │
+│   ☐ rarity                                                      │
+│                                                                 │
+│ Shift Amount:                                                   │
+│   X: [0.000  ] (0 pixels at 1920x1080)                         │
+│   Y: [0.052  ] (100 pixels at 1920x1080)                       │
+│                                                                 │
+│ [Test Rule on Current Screenshot]                              │
+│                                                                 │
+│               [Cancel]  [Save Rule]                             │
+└────────────────────────────────────────────────────────────────┘
+```
+
+#### Rule Testing Workflow
+
+1. **Load sample screenshot** (artifact card with sanctified indicator)
+2. **Click "Test Rule"** button
+3. **Visual feedback:**
+   - Detection region highlighted in yellow
+   - Overlay shows "CONDITION MET" or "CONDITION NOT MET"
+   - Affected regions shown in green (original) and orange (shifted)
+   - Side-by-side OCR preview of original vs shifted regions
+
+4. **Adjust parameters** if detection fails:
+   - Increase tolerance if too strict
+   - Adjust minMatchPercent if false positives/negatives
+   - Reposition detection region if wrong area
+
+---
+
+### Integration with Scanner
+
+Modify scraper classes to apply conditional shifts:
+
+```csharp
+// In ArtifactScraper.cs
+
+Bitmap GetSubstatsBitmap(Bitmap card)
+{
+    // Load base region definition from profile
+    var baseRegion = _profile.Artifacts.Substats;
+    Rectangle rect = ConvertToPixels(baseRegion, card.Size);
+
+    // Apply any conditional shifts
+    rect = ApplyConditionalShifts("substats", rect, card, _profile);
+
+    return GenshinProcesor.CopyBitmap(card, rect);
+}
+```
+
+This ensures all conditional rules are evaluated before cropping regions for OCR.
+
+---
+
+### Debugging and Logging
+
+When conditional rules are applied, log detailed information:
+
+```
+[DEBUG] Evaluating conditional rules for region 'substats'
+[DEBUG] Rule 'Sanctified Artifact Adjustment': Testing detection region 'sanctifyIndicator'
+[DEBUG] Color match detection: Found 18.3% gold pixels (threshold: 15%), MATCH
+[DEBUG] Applied shift to 'substats': x+=0, y+=100 pixels
+[DEBUG] Final region: (144, 600, 1632, 230) -> (144, 700, 1632, 230)
+```
+
+Save detection region screenshots to `./logging/conditions/`:
+```
+./logging/conditions/
+├── artifact_42_sanctifyIndicator_MATCH.png
+├── artifact_43_sanctifyIndicator_NO_MATCH.png
+└── ...
+```
+
+---
+
+### Example Use Cases
+
+#### Use Case 1: Sanctified Artifacts
+
+**Problem:** Sanctified artifacts have gold indicator that shifts substats down
+
+**Solution:**
+```json
+{
+  "name": "Sanctified Indicator Shift",
+  "detectionRegion": "sanctifyIndicator",
+  "condition": {
+    "type": "colorMatch",
+    "targetColor": "#FFD700",
+    "tolerance": 20,
+    "minMatchPercent": 15
+  },
+  "applyToRegions": ["substats", "mainStat"],
+  "shift": { "x": 0, "y": 0.052 }
+}
+```
+
+#### Use Case 2: Equipped Weapon Character Portrait
+
+**Problem:** Equipped weapons show character portrait that may overlap refinement
+
+**Solution:**
+```json
+{
+  "name": "Equipped Character Portrait Shift",
+  "detectionRegion": "characterPortrait",
+  "condition": {
+    "type": "brightness",
+    "minBrightness": 80,
+    "maxBrightness": 255
+  },
+  "applyToRegions": ["refinement"],
+  "shift": { "x": 0.08, "y": 0 }
+}
+```
+
+#### Use Case 3: Future UI Changes
+
+**Problem:** Genshin Impact version 7.x adds new indicator
+
+**Solution:**
+User creates custom rule in visual editor:
+1. Load screenshot with new indicator
+2. Define detection region by dragging box
+3. Select detection method (color/image/brightness)
+4. Test on multiple samples
+5. Save and share profile with community
+
+---
+
+### Benefits
+
+**For Users:**
+- ✅ Single profile handles UI variations
+- ✅ No manual switching between profiles
+- ✅ Self-service when game updates UI
+
+**For Maintainers:**
+- ✅ Community can create rules for new UI elements
+- ✅ No code changes needed for UI variations
+- ✅ Easier debugging (visual feedback on detection)
+
+**For Game Updates:**
+- ✅ Adapt to UI changes without waiting for official release
+- ✅ Share rules via community profile repository
+
+---
+
+### Implementation Considerations
+
+**Performance:**
+- Conditional detection adds overhead to each scan
+- Cache detection results within same screenshot
+- Skip disabled rules
+- Optimize color matching with unsafe code/pointers
+
+**Reliability:**
+- Test rules against multiple sample screenshots
+- Provide visual feedback on detection success/failure
+- Log detection regions to `./logging/conditions/` for debugging
+
+**User Experience:**
+- Provide presets for known UI variations (sanctified, etc.)
+- Clear error messages when detection fails
+- Tutorial/documentation on creating rules
+
+---
 
 ### Phase 2 Complete When:
 - [ ] Users can load weapon/artifact card screenshot
@@ -391,6 +827,15 @@ Users can pull latest community profiles or submit their own via PR.
 - [ ] Users can export/import profiles for sharing
 - [ ] Documentation/tutorial on creating custom profiles
 - [ ] At least 3 community-contributed ultrawide profiles
+
+### Phase 2.3 (Conditional Region System) Complete When:
+- [ ] Users can define detection regions in visual editor
+- [ ] Users can create conditional shift rules with color/image/brightness detection
+- [ ] Users can test rules against sample screenshots with visual feedback
+- [ ] Detection regions are logged to ./logging/conditions/ for debugging
+- [ ] Scanner applies conditional shifts before OCR
+- [ ] At least one preset rule for sanctified artifacts included
+- [ ] Documentation on creating and testing conditional rules
 
 ### Non-Goals:
 - ❌ Built-in screenshot capture (user provides screenshots)
