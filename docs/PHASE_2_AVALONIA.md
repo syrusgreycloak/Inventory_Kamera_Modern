@@ -170,7 +170,8 @@ public class ScanViewModel : ViewModelBase
         _scanner = scanner;
         _ui = ui;
 
-        StartScanCommand = new RelayCommand(StartScan, CanStartScan);
+        // Use AsyncRelayCommand for async operations to avoid async void anti-pattern
+        StartScanCommand = new AsyncRelayCommand(StartScanAsync, CanStartScan);
         StopScanCommand = new RelayCommand(StopScan, CanStopScan);
     }
 
@@ -205,13 +206,13 @@ public class ScanViewModel : ViewModelBase
         set => SetProperty(ref _statusMessage, value);
     }
 
-    public ICommand StartScanCommand { get; }
+    public IAsyncRelayCommand StartScanCommand { get; }
     public ICommand StopScanCommand { get; }
 
     private bool CanStartScan() => !IsScanning;
     private bool CanStopScan() => IsScanning;
 
-    private async void StartScan()
+    private async Task StartScanAsync()
     {
         IsScanning = true;
         StatusMessage = "Starting scan...";
@@ -557,6 +558,18 @@ public class MacOSScreenCapture : IScreenCapture
 1. **Delete WinForms project** - No more dual maintenance
 2. **Avalonia only** - Single executable per platform
 3. **Full feature parity** - All WinForms features migrated
+
+**WinForms Project Retirement Timeline:**
+- **Phase 2.0 completion**: WinForms project marked as `[DEPRECATED]` in README
+- **Phase 2.1 completion**: Final WinForms release with deprecation notice
+- **Phase 2.2 completion**: WinForms project removed from repository entirely
+- **Goal**: "Build it right and release it" - Once Avalonia is validated, WinForms is retired completely
+
+After Phase 2.2, the repository will contain only:
+- `InventoryKamera.Core` (shared business logic)
+- `InventoryKamera.Database` (data access layer)
+- `InventoryKamera.Avalonia` (modern UI)
+- `InventoryKamera.Tests` (unit and integration tests)
 
 ---
 
@@ -931,12 +944,12 @@ The Avalonia UI includes an OCR preview panel for debugging scan regions (refere
 // ScanViewModel - OCR preview properties
 public class ScanViewModel : ViewModelBase
 {
-    private Bitmap _currentScreenshot;
+    private Avalonia.Media.Imaging.Bitmap _currentScreenshot;
     private string _currentRegionName;
     private string _ocrResultText;
     private bool _enableOcrPreview;
 
-    public Bitmap CurrentScreenshot
+    public Avalonia.Media.Imaging.Bitmap CurrentScreenshot
     {
         get => _currentScreenshot;
         set => SetProperty(ref _currentScreenshot, value);
@@ -964,17 +977,28 @@ public class ScanViewModel : ViewModelBase
 // AvaloniaUserInterface - Update preview
 public class AvaloniaUserInterface : IUserInterface
 {
-    public void UpdateOcrPreview(Bitmap screenshot, string regionName, string ocrText)
+    public void UpdateOcrPreview(System.Drawing.Bitmap screenshot, string regionName, string ocrText)
     {
         if (!_viewModel.ScanViewModel.EnableOcrPreview)
             return;
 
+        // Convert System.Drawing.Bitmap to Avalonia.Media.Imaging.Bitmap
+        var avaloniaBitmap = ConvertToAvaloniaBitmap(screenshot);
+
         _dispatcher.Post(() =>
         {
-            _viewModel.ScanViewModel.CurrentScreenshot = screenshot;
+            _viewModel.ScanViewModel.CurrentScreenshot = avaloniaBitmap;
             _viewModel.ScanViewModel.CurrentRegionName = regionName;
             _viewModel.ScanViewModel.OcrResultText = ocrText;
         });
+    }
+
+    private Avalonia.Media.Imaging.Bitmap ConvertToAvaloniaBitmap(System.Drawing.Bitmap gdiBitmap)
+    {
+        using var memoryStream = new MemoryStream();
+        gdiBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+        memoryStream.Position = 0;
+        return new Avalonia.Media.Imaging.Bitmap(memoryStream);
     }
 }
 ```
@@ -1029,3 +1053,4 @@ if (!PlatformHelper.IsWindows)
 
 **Last Updated:** 2026-04-10
 **Status:** Draft - Planned for Phase 2 (Post-Phase 1.6)
+**Note:** WinForms project will be retired after Phase 2.2 validation
