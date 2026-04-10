@@ -132,8 +132,34 @@ Externalize all scan region coordinates:
         "sanctifyIndicator": { "x": 0.40, "y": 0.3333, "width": 0.20, "height": 0.0526 },
         "sanctifyShift": 0.0520
       },
-      "weapons": { /* ... */ },
-      "characters": { /* ... */ }
+      "weapons": {
+        "card": { "x": 0.7250, "y": 0.1556, "width": 0.2635, "height": 0.7778 },
+        "name": { "x": 0.0911, "y": 0.0614, "width": 0.6719, "height": 0.0965 },
+        "refinement": { "x": 0.061, "y": 0.421, "width": 0.065, "height": 0.033 }
+      },
+      "characters": { /* ... */ },
+      "navigation": {
+        "weaponTab": {
+          "x": 0.300, "y": 0.049,
+          "width": 0.080, "height": 0.040,
+          "description": "Weapon inventory tab"
+        },
+        "artifactTab": {
+          "x": 0.350, "y": 0.043,
+          "width": 0.080, "height": 0.040,
+          "description": "Artifact inventory tab"
+        },
+        "materialTab": {
+          "x": 0.400, "y": 0.043,
+          "width": 0.080, "height": 0.040,
+          "description": "Material inventory tab"
+        },
+        "sortDropdown": {
+          "x": 0.180, "y": 0.944,
+          "width": 0.100, "height": 0.050,
+          "description": "Sort order dropdown"
+        }
+      }
     },
     "16:10": { /* ... */ },
     "steam-deck": {
@@ -174,6 +200,85 @@ Externalize all scan region coordinates:
 - [ ] Fallback to closest aspect ratio if exact match not found
 - [ ] Validate profile schema on load
 - [ ] Log which profile was selected (help users verify correct profile loaded)
+
+#### 2.3 Navigation Region Logging
+
+**Goal:** Extend navigation to use box regions instead of blind coordinate clicks, with visual feedback.
+
+**Current Problem:**
+Navigation methods use hardcoded point coordinates:
+```csharp
+int buttonX = (int)(385 / 1280.0 * GetWidth());
+int buttonY = (int)(35  / 720.0 * GetHeight());
+SetCursor(buttonX, buttonY);
+Click();
+```
+
+This fails on ultrawide/custom resolutions where menu buttons are in different positions.
+
+**Solution:**
+Define navigation regions as **boxes** (like OCR regions), click the **center** of the box:
+
+```csharp
+public static void SelectWeaponInventory()
+{
+    var region = profile.Navigation.WeaponTab;
+
+    // Calculate center of box
+    int centerX = (int)((region.X + region.Width / 2.0) * GetWidth());
+    int centerY = (int)((region.Y + region.Height / 2.0) * GetHeight());
+
+    // Capture box region before clicking (for visual feedback)
+    if (Properties.Settings.Default.LogScreenshots)
+    {
+        CaptureNavigationRegion(region, "weaponTab");
+    }
+
+    SetCursor(centerX, centerY);
+    Click();
+}
+```
+
+**Visual Feedback:**
+Save navigation box screenshots to `./logging/menus/`:
+```
+./logging/menus/
+├── weaponTab.png           ← User sees: "Did it capture the weapon tab button?"
+├── artifactTab.png         ← Shows what box was around artifact tab
+├── materialTab.png
+├── sortDropdown.png
+└── inventoryButton.png
+```
+
+**User Workflow (Same as OCR regions):**
+1. Enable "Log All Screenshots"
+2. Run scan → Navigation regions saved to `./logging/menus/`
+3. Open PNGs: "Did the box capture the button?"
+4. Edit `ScanProfile.json` navigation box coordinates
+5. Rerun scan → Verify PNGs show correctly positioned boxes
+6. Iterate until clicks hit the right targets
+
+**Benefits:**
+- ✅ **Visual confirmation** - See what was clicked, not blind trust
+- ✅ **Margin for error** - 80px box around 50px button, click center
+- ✅ **Same workflow** - Edit JSON → Check PNGs → Refine (like OCR regions)
+- ✅ **Ultrawide friendly** - Users adjust box position for their layout
+- ✅ **No throwaway code** - This is visual feedback logging, not tooling
+- ✅ **Phase 2 ready** - Visual editor can show/edit these boxes
+
+**Implementation Tasks:**
+- [ ] Update Navigation.cs methods to read from ScanProfile.json
+- [ ] Implement CaptureNavigationRegion() helper
+- [ ] Modify all navigation methods (SelectWeaponInventory, SelectArtifactInventory, etc.)
+- [ ] Add navigation region capture to logging directory structure
+- [ ] Document navigation region coordinate system in comments
+
+**Navigation Regions to Externalize:**
+- Inventory tabs: Weapon, Artifact, Material, Character Development
+- Paimon menu buttons: Inventory, Character, Map, etc.
+- Sort dropdown: Location and click position
+- Confirmation buttons: OK, Cancel, etc.
+- Item grid: Starting position for first item
 
 ---
 

@@ -266,6 +266,8 @@ public async Task<OcrTestResult> TestRegionAsync(RegionDefinition region)
 
 ### Extended Scope
 
+**Note:** Phase 1.5 already externalizes navigation regions as boxes (x, y, width, height) and captures them to `./logging/menus/` for visual feedback. Phase 2 adds a visual editor for these existing regions.
+
 In addition to OCR scan regions, the tool should allow configuring navigation coordinates:
 
 **UI Elements to Configure:**
