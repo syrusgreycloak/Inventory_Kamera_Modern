@@ -146,9 +146,26 @@ Externalize all scan region coordinates:
 ```
 
 **Benefits:**
-- Users can create custom profiles for unsupported resolutions
+- Users can create custom profiles for unsupported resolutions (ultrawide, 4K, etc.)
 - Easier to debug coordinate issues (edit JSON, no recompile)
 - Community can maintain resolution profiles independently
+- Trial-and-error workflow: Edit JSON → Scan → Check screenshots in `./logging/` → Refine
+
+**User Workflow for Custom Resolutions:**
+1. Enable "Log All Screenshots" in UI
+2. Run a scan with default profile (likely misaligned)
+3. Open `./logging/weapons/weapon0/refinement/refinement.png` (or artifact screenshots)
+4. See what's actually being captured
+5. Edit `ScanProfile.json` coordinates in text editor (Notepad++, VS Code, etc.)
+6. Rerun scan and verify screenshots improve
+7. Iterate until regions capture correctly
+
+**Explicitly NOT in Phase 1.5:**
+- ❌ Visual region configuration tools
+- ❌ GUI editor for profiles
+- ❌ CLI utilities for region testing
+
+**Rationale:** Phase 2 will have full visual configuration tool integrated with Avalonia UI. Building intermediate WinForms/CLI tools would be throwaway work. Manual JSON editing is sufficient to unblock users and validate the profile system design.
 
 #### 2.2 ScanProfile Loader
 - [ ] Create `ScanProfileManager` class
@@ -156,6 +173,7 @@ Externalize all scan region coordinates:
 - [ ] Detect game resolution and select appropriate profile
 - [ ] Fallback to closest aspect ratio if exact match not found
 - [ ] Validate profile schema on load
+- [ ] Log which profile was selected (help users verify correct profile loaded)
 
 ---
 
