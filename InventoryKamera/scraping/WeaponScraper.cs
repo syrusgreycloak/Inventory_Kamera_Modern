@@ -237,6 +237,7 @@ namespace InventoryKamera
 			bool locked = false;
 			string equippedCharacter = null;
 			int rarity = 0;
+			bool refinementDefaulted = false;
 
 			if (bm.Count >= 4)
 			{
@@ -277,7 +278,6 @@ namespace InventoryKamera
 				await Task.WhenAll(tasks.ToArray());
 
 				// Default to refinement 1 if OCR failed to prevent losing high-rarity/equipped weapons
-				bool refinementDefaulted = false;
 				if (refinementLevel == -1)
 				{
 					refinementLevel = 1;
