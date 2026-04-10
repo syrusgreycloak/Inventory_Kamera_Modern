@@ -512,77 +512,28 @@ public class DatabaseManager
 }
 ```
 
-## Admin UI for Community Data Entry
+## Admin UI for Community Data Entry - DEFERRED TO PHASE 2
 
-### WinForms Admin Form (Phase 1.6)
+**Decision:** Admin UI is deferred to Phase 2 (Avalonia) to avoid building WinForms CRUD dialogs that will be immediately replaced.
 
-```csharp
-public partial class DataManagementForm : Form
-{
-    private readonly GenshinDbContext _dbContext;
+**Phase 1.6 Scope:**
+- Focus on data layer only (SQLite, EF Core, migrations)
+- No UI for manual data entry
+- Community can still contribute via:
+  - Direct SQL inserts (for technical users)
+  - Pull requests with migration scripts
+  - Wait for Phase 2 Avalonia admin UI
 
-    // TabControl with pages:
-    // - Characters
-    // - Weapons
-    // - Artifacts
-    // - Materials
-
-    // Character tab has:
-    // - DataGridView listing all characters
-    // - Add/Edit/Delete buttons
-    // - Filter by element, weapon type
-    // - Sort by name, rarity, date added
-
-    private async void btnAddCharacter_Click(object sender, EventArgs e)
-    {
-        using var form = new CharacterEditDialog();
-        if (form.ShowDialog() == DialogResult.OK)
-        {
-            var character = new Character
-            {
-                InternalKey = form.InternalKey,
-                GoodName = form.GoodName,
-                Element = form.Element,
-                WeaponType = form.WeaponType,
-                Rarity = form.Rarity,
-                AddedDate = DateTime.UtcNow,
-                DataSource = "manual",
-                GameVersion = form.GameVersion
-            };
-
-            _dbContext.Characters.Add(character);
-            await _dbContext.SaveChangesAsync();
-
-            RefreshCharacterGrid();
-        }
-    }
-}
-
-public partial class CharacterEditDialog : Form
-{
-    // Form fields:
-    // - TextBox: Internal Key (auto-generates from name)
-    // - TextBox: GOOD Name
-    // - ComboBox: Element (enum dropdown)
-    // - ComboBox: Weapon Type (enum dropdown)
-    // - NumericUpDown: Rarity (4-5)
-    // - TextBox: Game Version
-    // - DataGridView: Constellations (add 6 rows)
-
-    // Validation:
-    // - Required fields
-    // - Unique internal key
-    // - Valid enums
-}
-```
-
-### Avalonia Admin UI (Phase 2)
-
-Better UX with Avalonia:
-- MVVM architecture
-- Data binding to ViewModels
-- Better validation
-- Modern UI components
+**Phase 2 Avalonia Admin UI (Deferred):**
+- MVVM architecture with proper data binding
+- Modern validation and error handling
+- Cross-platform from the start
+- Better UX with Avalonia controls
+- Features:
+  - DataGrid for browsing characters/weapons/artifacts
+  - Add/Edit/Delete dialogs with validation
+  - Bulk import from community submissions
+  - Data versioning and audit trail
 
 ## JSON Export for GOOD Format
 
@@ -762,19 +713,13 @@ else
 - Update manual entry workflows
 - Test with real game data
 
-### 1.6.5: Admin UI (WinForms) (2 weeks)
-- DataGridView for CRUD operations
-- Add/Edit/Delete dialogs
-- Validation
-- User testing with community maintainers
-
-### 1.6.6: Integration & Testing (1 week)
+### 1.6.5: Integration & Testing (1 week)
 - Full scanner tests with SQLite backend
 - Performance validation
 - Edge case handling
 - Documentation updates
 
-**Total: ~7 weeks**
+**Total: ~5 weeks** (reduced from 7 weeks by deferring Admin UI to Phase 2)
 
 ## Success Criteria
 
@@ -782,14 +727,14 @@ Phase 1.6 complete when:
 
 - ✅ Scanner reads character/weapon/artifact/material data from SQLite
 - ✅ DatabaseManager updates pull from dvaJi and upsert to DB
-- ✅ Admin UI allows adding new characters/weapons without editing JSON
 - ✅ Migration tool successfully imports all existing JSON data
 - ✅ Performance is equal or better than JSON parsing
 - ✅ Rollback to JSON repository works via config flag
-- ✅ Community maintainers can use Admin UI without coding
 - ✅ All unit tests pass
 - ✅ All integration tests pass
 - ✅ GOOD export still works correctly
+- ✅ Database schema supports all current GOOD format fields
+- ✅ Phase 2 can build on this foundation without schema changes
 
 ## Future Enhancements (Post-1.6)
 
