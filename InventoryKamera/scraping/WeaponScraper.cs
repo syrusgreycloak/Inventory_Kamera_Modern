@@ -221,10 +221,10 @@ namespace InventoryKamera
         {
             return GenshinProcesor.CopyBitmap(card,
                 new Rectangle(
-                    x: (int)(card.Width * (Navigation.IsNormal ? 0.058 : 0.057)),
-                    y: (int)(card.Height * (Navigation.IsNormal ? 0.417 : 0.364)),
-                    width: (int)(card.Width * (Navigation.IsNormal ? 0.074 : 0.075)),
-                    height: (int)(card.Height * (Navigation.IsNormal ? 0.038 : 0.034))));
+                    x: (int)(card.Width * (Navigation.IsNormal ? 0.061 : 0.060)),
+                    y: (int)(card.Height * (Navigation.IsNormal ? 0.421 : 0.368)),
+                    width: (int)(card.Width * (Navigation.IsNormal ? 0.065 : 0.066)),
+                    height: (int)(card.Height * (Navigation.IsNormal ? 0.033 : 0.030))));
         }
 
         public async Task<Weapon> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
@@ -339,24 +339,36 @@ namespace InventoryKamera
 
 		public int ScanRefinement(Bitmap image)
 		{
-			for (double factor = 1; factor <= 2; factor += 0.1)
+			// Removed scaling loop - process image once at original size
+			// Scaling was distorting digit "2" specifically, causing 100% OCR failure on R2 weapons
+			Bitmap n = GenshinProcesor.ConvertToGrayscale(image);
+			GenshinProcesor.SetInvert(ref n);
+
+			string text = GenshinProcesor.AnalyzeText(n).Trim();
+			n.Dispose();
+
+			// Debug logging to see raw OCR output
+			Logger.Debug("Refinement OCR raw output: '{0}'", text);
+
+			text = Regex.Replace(text, @"[^\d]", string.Empty);
+			Logger.Debug("Refinement OCR after regex: '{0}'", text);
+
+			// Handle multi-digit reads - Tesseract often reads R2 as "12" and R3 as "13"
+			// Extract the last digit when we get invalid multi-digit results
+			if (text.Length > 1 && int.TryParse(text, out int multiDigit) && multiDigit > 5)
 			{
-				using (Bitmap up = GenshinProcesor.ScaleImage(image, factor))
-				{
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(up);
-					GenshinProcesor.SetInvert(ref n);
-
-					string text = GenshinProcesor.AnalyzeText(n).Trim();
-					n.Dispose();
-					text = Regex.Replace(text, @"[^\d]", string.Empty);
-
-					// Parse Int
-					if (int.TryParse(text, out int refinementLevel) && 1 <= refinementLevel && refinementLevel <= 5)
-					{
-						return refinementLevel;
-					}
-				}
+				text = text.Substring(text.Length - 1);
+				Logger.Debug("Refinement OCR extracted last digit: '{0}'", text);
 			}
+
+			// Parse Int
+			if (int.TryParse(text, out int refinementLevel) && 1 <= refinementLevel && refinementLevel <= 5)
+			{
+				Logger.Debug("Refinement OCR parsed successfully: {0}", refinementLevel);
+				return refinementLevel;
+			}
+
+			Logger.Debug("Refinement OCR failed to parse valid level (1-5)");
 			return -1;
 		}
 

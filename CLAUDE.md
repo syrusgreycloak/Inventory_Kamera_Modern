@@ -9,16 +9,21 @@ Inventory Kamera is a Windows Forms (.NET Framework 4.7.2) desktop application t
 ## Build Commands
 
 ### Building the Project
+
+**IMPORTANT:** This project requires Rider's MSBuild (version 18.4.0+) to compile correctly. The codebase uses C# 7.3 features (string interpolation with `$"..."`) that the standard .NET Framework 4.0 MSBuild does not support. Rider's MSBuild includes the Roslyn compiler which handles these features.
+
 ```bash
-# Build in Debug configuration
-msbuild InventoryKamera.sln /p:Configuration=Debug
+# Build in Debug configuration (use dash switches to avoid Git bash path translation)
+"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Debug -nologo -v:minimal
 
 # Build in Release configuration
-msbuild InventoryKamera.sln /p:Configuration=Release
+"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Release -nologo -v:minimal
 
 # Build for specific platform (x64, x86, or AnyCPU)
-msbuild InventoryKamera.sln /p:Configuration=Release /p:Platform=x64
+"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Release -p:Platform=x64 -nologo -v:minimal
 ```
+
+**Note:** The build will show `error MSB3202` about missing `InventoryKameraWPF.csproj` but this is expected - the main `InventoryKamera.exe` compiles successfully.
 
 ### Running the Application
 ```bash
