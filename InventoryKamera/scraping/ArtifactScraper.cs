@@ -593,8 +593,11 @@ namespace InventoryKamera
                     g.DrawImage(grayscale, (padded.Width - grayscale.Width) / 2, (padded.Height - grayscale.Height) / 2);
 
                     var scannedText = GenshinProcesor.AnalyzeText(grayscale, Tesseract.PageSegMode.Auto).ToLower().Replace("\n", " ");
+					Logger.Debug("Raw OCR text for artifact set name: '{0}'", scannedText);
                     string text = Regex.Replace(scannedText, @"[\W]", string.Empty);
+					Logger.Debug("Cleaned text for artifact set lookup: '{0}'", text);
                     text = GenshinProcesor.FindClosestArtifactSetFromArtifactName(text);
+					Logger.Debug("Artifact set match result: '{0}'", text ?? "(null)");
 
 					grayscale.Dispose();
 

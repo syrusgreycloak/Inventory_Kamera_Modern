@@ -305,11 +305,25 @@ namespace InventoryKamera
 
             foreach (var artifactSet in Artifacts)
             {
-                string currentSet = artifactSet.Value["GOOD"].ToString();
+                // Defensive null checks - skip malformed artifact set data
+			if (artifactSet.Value["GOOD"] == null || artifactSet.Value["artifacts"] == null)
+			{
+				Logger.Debug("Skipping artifact set '{0}' - missing GOOD or artifacts field", artifactSet.Key);
+				continue;
+			}
+
+            string currentSet = artifactSet.Value["GOOD"].ToString();
 
                 foreach (var slot in artifactSet.Value["artifacts"].Values())
                 {
-                    string artifactName = slot["normalizedName"].ToString();
+                    // Check if slot has normalizedName before accessing
+				if (slot["normalizedName"] == null)
+				{
+					Logger.Debug("Skipping artifact piece in set '{0}' - missing normalizedName field", currentSet);
+					continue;
+				}
+
+                string artifactName = slot["normalizedName"].ToString();
                     if (artifactName == name) return currentSet;
 
 					double artifactSimilarity = StringSimilarity(name, artifactName);
@@ -321,6 +335,12 @@ namespace InventoryKamera
 					}
 				}
 			}
+
+            
+            if (closestMatch == null)
+            {
+                Logger.Debug("No artifact set match found for input: '{0}' (after {1} sets checked)", name, Artifacts.Count);
+            }
 
             return closestMatch;
 		}
@@ -951,6 +971,24 @@ namespace InventoryKamera
                     return null;
                 }
             }
+        }
+
+        internal static string GetElementForCharacter(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "";
+            }
+
+            var elements = GetCharactersElements(name);
+            if (elements != null && elements.Count > 0)
+            {
+                // For Traveler, elements list will have multiple values
+                // Caller should handle Traveler specially to get active element
+                return elements[0];
+            }
+
+            return "";
         }
     }
 }
