@@ -300,5 +300,29 @@ namespace InventoryKamera.Properties {
                 this["Slot1Key"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Manequin1")]
+        public string Manequin1Name {
+            get {
+                return ((string)(this["Manequin1Name"]));
+            }
+            set {
+                this["Manequin1Name"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Manequin2")]
+        public string Manequin2Name {
+            get {
+                return ((string)(this["Manequin2Name"]));
+            }
+            set {
+                this["Manequin2Name"] = value;
+            }
+        }
     }
 }
