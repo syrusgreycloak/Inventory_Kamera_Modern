@@ -448,7 +448,7 @@ namespace InventoryKamera
 
                                 var constellationOrder = new JArray();
 
-                                // The skill/burst name is always mentioned in the constellation's description so we'll check for it
+                                // The skill/burst/auto name is always mentioned in the constellation's description so we'll check for it
                                 const3Description = talents.Where(entry => entry["icon"].ToString().Contains(name)).ElementAt(2)["descTextMapHash"].ToString();
                                 if (!Mappings.ContainsKey(const3Description))
                                 {
@@ -457,7 +457,14 @@ namespace InventoryKamera
                                 }
                                 const3Description = Mappings[const3Description].ToString();
 
-                                if (const3Description.Contains(skill))
+                                // Check for Normal Attack/Charged Attack constellations (C3 boosts auto talent)
+                                if (const3Description.Contains("Normal Attack") || const3Description.Contains("Charged Attack"))
+                                {
+                                    // C3 = auto, C5 = burst (normal attack carries)
+                                    constellationOrder.Add("auto");
+                                    constellationOrder.Add("burst");
+                                }
+                                else if (const3Description.Contains(skill))
                                 {
                                     constellationOrder.Add("skill");
                                     constellationOrder.Add("burst");
