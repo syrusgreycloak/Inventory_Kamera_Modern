@@ -873,33 +873,57 @@ public ReshapeRecommendation AnalyzeReshape(Artifact artifact, string targetChar
 ```
 
 #### 3.3: AI-Powered Artifact Recommendations
-**Uses scan history + character roster + game knowledge**
+**Uses scan history + character roster + stat_priorities.json**
+
+The AI can read build information from `stat_priorities.json` to provide context-aware recommendations:
+
+```csharp
+// AI has access to build descriptions and priorities
+var buildInfo = StatPriorityManager.GetBuildDescription("zhongli", "shieldbot");
+// Returns: "Maximum shield strength for team protection, ignore damage stats entirely"
+
+var priorities = StatPriorityManager.GetStatPriorities("zhongli", "shieldbot");
+// Returns: hp_: 10, hp: 7, enerRech_: 7, critRate_: 0...
+```
+
+**Example AI Response:**
 
 ```
-"You have 3 level 20 Crit Rate circlets. For your Arlecchino:
+"You have Zhongli equipped with artifacts optimized for burst DPS (CRIT Rate/DMG focus),
+but I see you're running him in a team with Hu Tao and Yelan.
 
- 1. Gladiator's Finale (Current)
-    Score: 87/100
-    ⭐ CRIT Rate 31.1%
-    • CRIT DMG 12.4% (low, consider reshaping)
-    • ATK% 5.8%
+Based on your team composition and the 'shieldbot' build definition in stat_priorities.json
+('Maximum shield strength for team protection, ignore damage stats entirely'), I recommend:
 
- 2. Golden Troupe (In Inventory)
-    Score: 94/100 ⚡ RECOMMENDED
-    ⭐ CRIT Rate 31.1%
-    • CRIT DMG 21.0% (excellent!)
-    • ATK% 11.7%
-    • Elixir Crafted ✨
+1. Switch Zhongli's build preset from 'burstdps' to 'shieldbot'
+2. This changes priority from CRIT stats (value: 10) to HP% (value: 10)
 
- 3. Noblesse Oblige (In Inventory)
-    Score: 72/100
-    ⭐ CRIT Rate 31.1%
-    • CRIT DMG 7.0%
-    • DEF% 11.7% (wasted stat)
+Your best HP% artifacts for shieldbot Zhongli:
+ • Tenacity Sands - HP% main, HP substat ③, ER% ②  (Score: 95/100)
+ • Tenacity Goblet - HP% main, HP substat ②, ER% ③  (Score: 92/100)
+ • Tenacity Circlet - HP% main, HP substat ①, DEF% ④ (Score: 78/100)
 
-Recommendation: Switch to Golden Troupe circlet for +7.8% team DPS.
-If you reshape Gladiator's, 67% chance it becomes better than Golden Troupe."
+Switching to shieldbot build will increase shield strength by ~40% but reduce burst
+damage by 60%. For your team (Hu Tao carry), the shield value is more important than
+Zhongli's personal damage output.
+
+Would you like me to:
+1. Show all HP% artifacts for Zhongli
+2. Calculate optimal 4pc Tenacity set
+3. Evaluate reshape candidates for HP% circlet improvements"
 ```
+
+**AI Context from stat_priorities.json:**
+- Build name: "Shield Support" vs "Burst DPS Hybrid"
+- Role: "Shield Support" vs "Sub DPS"
+- Description: AI understands WHY stats are prioritized
+- Priorities: AI can score artifacts per build
+
+This enables the AI to:
+- Recommend build switches based on team composition
+- Explain trade-offs ("40% more shield, 60% less damage")
+- Suggest specific artifacts from inventory
+- Generate reshape priority queues per build
 
 ### Phase 3.4: Astral Mark System (TBD)
 - Research game mechanics
