@@ -1,0 +1,289 @@
+{
+  "format": "StatPriorities",
+  "version": "6.4.0",
+  "lastUpdated": "2026-04-11",
+  "description": "Character stat priority rankings for artifact optimization and reshape recommendations. Scale: 10=Critical, 7=High Value, 4=Moderate, 2=Low Value, 0=Dead Stat",
+  "characters": {
+    "arlecchino": {
+      "builds": {
+        "default": {
+          "name": "Main DPS",
+          "description": "Standard vaporize/melt carry build focusing on crit damage and ATK",
+          "role": "Main DPS",
+          "priorities": {
+            "critRate_": 10,
+            "critDMG_": 10,
+            "atk_": 7,
+            "enerRech_": 4,
+            "eleMas": 2,
+            "hp_": 0,
+            "def_": 0,
+            "hp": 0,
+            "def": 0,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "zhongli": {
+      "builds": {
+        "shieldbot": {
+          "name": "Shield Support",
+          "description": "Maximum shield strength for team protection, ignore damage stats entirely",
+          "role": "Shield Support",
+          "priorities": {
+            "hp_": 10,
+            "hp": 7,
+            "enerRech_": 7,
+            "def_": 2,
+            "critRate_": 0,
+            "critDMG_": 0,
+            "atk_": 0,
+            "atk": 0,
+            "def": 0,
+            "eleMas": 4
+          }
+        },
+        "burstdps": {
+          "name": "Burst DPS Hybrid",
+          "description": "Balance between meteor damage and shield strength, requires high ER for burst uptime",
+          "role": "Sub DPS",
+          "priorities": {
+            "critRate_": 10,
+            "critDMG_": 10,
+            "atk_": 7,
+            "hp_": 4,
+            "enerRech_": 7,
+            "def_": 0,
+            "hp": 2,
+            "def": 0,
+            "atk": 2,
+            "eleMas": 2
+          }
+        }
+      }
+    },
+    "raiden": {
+      "builds": {
+        "hypercarry": {
+          "name": "Hypercarry DPS",
+          "description": "Maximum personal damage with Bennett/Sara buffs, focus on crit and ATK",
+          "role": "Main DPS",
+          "priorities": {
+            "critRate_": 10,
+            "critDMG_": 10,
+            "atk_": 7,
+            "enerRech_": 7,
+            "eleMas": 2,
+            "hp_": 0,
+            "def_": 0,
+            "hp": 0,
+            "def": 0,
+            "atk": 2
+          }
+        },
+        "national": {
+          "name": "National Support",
+          "description": "Team energy battery and sub-DPS, prioritize ER for team rotation",
+          "role": "Sub DPS / Battery",
+          "priorities": {
+            "enerRech_": 10,
+            "critRate_": 7,
+            "critDMG_": 7,
+            "atk_": 7,
+            "eleMas": 2,
+            "hp_": 0,
+            "def_": 0,
+            "hp": 0,
+            "def": 0,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "kazuha": {
+      "builds": {
+        "default": {
+          "name": "EM Support",
+          "description": "Elemental Mastery stacking for maximum team damage buff via swirl",
+          "role": "Support / Buffer",
+          "priorities": {
+            "eleMas": 10,
+            "enerRech_": 7,
+            "atk_": 0,
+            "critRate_": 0,
+            "critDMG_": 0,
+            "hp_": 2,
+            "def_": 2,
+            "hp": 2,
+            "def": 2,
+            "atk": 0
+          }
+        }
+      }
+    },
+    "bennett": {
+      "builds": {
+        "default": {
+          "name": "ATK Buffer / Healer",
+          "description": "High base ATK weapon + ER for burst uptime, HP for healing",
+          "role": "Support / Healer",
+          "priorities": {
+            "enerRech_": 10,
+            "hp_": 7,
+            "hp": 7,
+            "critRate_": 0,
+            "critDMG_": 0,
+            "atk_": 0,
+            "def_": 2,
+            "def": 2,
+            "atk": 0,
+            "eleMas": 2
+          }
+        }
+      }
+    },
+    "fischl": {
+      "builds": {
+        "default": {
+          "name": "Off-Field DPS",
+          "description": "Oz turret damage, standard crit-focused build",
+          "role": "Sub DPS",
+          "priorities": {
+            "critRate_": 10,
+            "critDMG_": 10,
+            "atk_": 7,
+            "enerRech_": 4,
+            "eleMas": 4,
+            "hp_": 0,
+            "def_": 0,
+            "hp": 0,
+            "def": 0,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "kokomi": {
+      "builds": {
+        "default": {
+          "name": "Healer / Hydro Applicator",
+          "description": "Cannot crit, focus on HP for healing and damage scaling",
+          "role": "Healer / Support",
+          "priorities": {
+            "hp_": 10,
+            "hp": 7,
+            "enerRech_": 7,
+            "eleMas": 4,
+            "atk_": 2,
+            "atk": 2,
+            "def_": 2,
+            "def": 2,
+            "critRate_": 0,
+            "critDMG_": 0
+          }
+        }
+      }
+    },
+    "nahida": {
+      "builds": {
+        "default": {
+          "name": "Dendro Support / DPS",
+          "description": "EM scaling for reactions and skill damage, some crit for burst",
+          "role": "Support / Sub DPS",
+          "priorities": {
+            "eleMas": 10,
+            "critRate_": 7,
+            "critDMG_": 7,
+            "atk_": 4,
+            "enerRech_": 4,
+            "hp_": 2,
+            "def_": 2,
+            "hp": 2,
+            "def": 2,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "neuvillette": {
+      "builds": {
+        "default": {
+          "name": "Charged Attack DPS",
+          "description": "HP scaling with crit, unique damage formula prioritizes HP% and crit stats",
+          "role": "Main DPS",
+          "priorities": {
+            "critRate_": 10,
+            "critDMG_": 10,
+            "hp_": 10,
+            "atk_": 2,
+            "enerRech_": 4,
+            "eleMas": 2,
+            "hp": 7,
+            "def_": 0,
+            "def": 0,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "xiangling": {
+      "builds": {
+        "default": {
+          "name": "Pyronado Sub-DPS",
+          "description": "Off-field pyro application, requires high ER for burst uptime",
+          "role": "Sub DPS",
+          "priorities": {
+            "enerRech_": 10,
+            "critRate_": 7,
+            "critDMG_": 7,
+            "atk_": 7,
+            "eleMas": 4,
+            "hp_": 0,
+            "def_": 0,
+            "hp": 0,
+            "def": 0,
+            "atk": 2
+          }
+        }
+      }
+    },
+    "traveler": {
+      "builds": {
+        "default": {
+          "name": "Flexible Support",
+          "description": "Generic balanced stats, adjust based on active element",
+          "role": "Support",
+          "priorities": {
+            "enerRech_": 7,
+            "critRate_": 4,
+            "critDMG_": 4,
+            "atk_": 4,
+            "eleMas": 4,
+            "hp_": 4,
+            "def_": 4,
+            "hp": 2,
+            "def": 2,
+            "atk": 2
+          }
+        }
+      }
+    }
+  },
+  "defaultPriorities": {
+    "name": "Generic DPS",
+    "description": "Fallback priorities when character data unavailable",
+    "priorities": {
+      "critRate_": 10,
+      "critDMG_": 10,
+      "atk_": 7,
+      "enerRech_": 4,
+      "eleMas": 2,
+      "hp_": 2,
+      "def_": 2,
+      "hp": 1,
+      "def": 1,
+      "atk": 2
+    }
+  }
+}
