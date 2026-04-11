@@ -24,6 +24,16 @@ namespace InventoryKamera
 			while (true)
 			{
 				var character = ScanCharacter(first);
+
+				// Skip mannequins - Genshin Optimizer doesn't support them and they cause crashes
+				if (character.NameGOOD.ToLower() == "manequin1" || character.NameGOOD.ToLower() == "manequin2")
+				{
+					Logger.Info("Skipping mannequin: {0}", character.NameGOOD);
+					Navigation.SelectNextCharacter();
+					UserInterface.ResetCharacterDisplay();
+					continue;
+				}
+
 				if (Characters.Count > 0 && character.NameGOOD == Characters.ElementAt(0).NameGOOD) break;
 				if (character.IsValid())
 				{
@@ -91,6 +101,13 @@ namespace InventoryKamera
 
 			// Scan the Name and element of Character. Attempt 75 times max.
 			ScanNameAndElement(ref name, ref element);
+
+			// Early return for mannequins - just set the name and skip all other scanning
+			if (name == "Manequin1" || name == "Manequin2")
+			{
+				character.NameGOOD = name;
+				return character;
+			}
 
 			if (string.IsNullOrWhiteSpace(name))
 			{
