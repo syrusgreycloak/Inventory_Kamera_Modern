@@ -120,7 +120,8 @@ Total number of substat upgrade rolls (0-9) an artifact has received.
 **Background:**
 - Artifacts start with 3-4 substats at level 0
 - Every 4 levels (0→4→8→12→16→20), one substat gets upgraded
-- 5 total upgrade opportunities = max 9 total rolls (4 initial + 5 upgrades)
+- 5 total upgrade opportunities for level 20 artifacts
+- **IMPORTANT:** `totalRolls` counts upgrade rolls only, NOT initial substats
 
 **DISCOVERY: Reshape Screen Shows Individual Roll Counts!**
 
@@ -143,16 +144,34 @@ DEF      5.1%     (no badge shown)
 **Understanding totalRolls for Level 20 Artifacts:**
 
 Level 20 artifacts have had 5 upgrade opportunities (at levels 4, 8, 12, 16, 20):
-- **Started with 3 substats:** First upgrade reveals 4th substat, then 4 upgrades roll substats → **totalRolls = 4**
+- **Started with 3 substats:** First upgrade **activates** 4th substat (not a roll), then 4 upgrades roll substats → **totalRolls = 4**
 - **Started with 4 substats:** All 5 upgrades roll substats → **totalRolls = 5**
 
-**Therefore: totalRolls for level 20 is ALWAYS 4 or 5** (sum of individual roll badges)
+**Therefore: totalRolls for level 20 is ALWAYS 4 or 5** (sum of badge numbers only)
+
+**Reshape Screen Display:**
+- Substats with upgrade rolls show numbered badges: ①②③④⑤
+- Substats with no upgrade rolls show bullet points: •
+- **Badge numbers = upgrade rolls, bullet points = 0 rolls**
+
+**Example from screenshot:**
+```
+ATK      5.8%     • (0 upgrade rolls)
+CRIT Rate 12.4%   ③ (3 upgrade rolls)
+CRIT DMG  12.4%   ① (1 upgrade roll)
+DEF      5.1%     • (0 upgrade rolls)
+
+Badge sum = 3 + 1 = 4 → totalRolls = 4
+(This artifact started with 3 substats, 4th activated at level 4)
+```
 
 ```csharp
 // For 5★ level 20 artifacts scanned via Reshape screen:
-int totalRolls = individualRollCounts.Sum();
+// Sum ONLY the badge numbers (bullets contribute 0)
+int totalRolls = rollCounts.Values.Sum();
 // Example: 3 + 1 + 0 + 0 = 4 (started with 3 substats)
 // Example: 2 + 1 + 1 + 1 = 5 (started with 4 substats)
+// Example: 1 + 1 + 1 + 2 = 5 (started with 4 substats)
 
 // Bonus: We can determine initial substat count!
 int initialSubstatCount = (totalRolls == 4) ? 3 : 4;
