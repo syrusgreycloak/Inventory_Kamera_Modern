@@ -37,10 +37,24 @@ def convert_dvaJi_to_IK(artifact_data: dict) -> dict:
     # Extract max rarity
     max_rarity = artifact_data.get("max_rarity", 5)
 
+    # Build artifacts object with individual pieces
+    artifacts = {}
+    for slot in ["flower", "plume", "sands", "goblet", "circlet"]:
+        if slot in artifact_data and artifact_data[slot]:
+            piece_name = artifact_data[slot].get("name", "")
+            if piece_name:
+                artifacts[slot] = {
+                    "artifactName": piece_name,
+                    "GOOD": to_good_name(piece_name),
+                    "normalizedName": normalize_key(piece_name)
+                }
+
     # Create InventoryKamera format
     ik_artifact = {
+        "setName": name,
         "GOOD": to_good_name(name),
-        "Rarity": max_rarity
+        "normalizedName": normalize_key(name),
+        "artifacts": artifacts
     }
 
     return ik_artifact

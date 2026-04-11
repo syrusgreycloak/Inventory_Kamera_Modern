@@ -145,22 +145,22 @@ namespace InventoryKamera
                             ? (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][0]
                             : (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][0];
 
-                        // Scale down talents
+                        // Scale down talents (constellations give +3 bonus in-game)
+						// Ensure talents don't go below 1 for low-level characters
                         if (character.Constellation >= 5)
 						{
-							Logger.Info("{0} constellation 5+, adjusting scanned skill and burst levels", character.NameGOOD);
-							character.Talents["skill"] -= 3;
-							character.Talents["burst"] -= 3;
-						}
-						else if (talentLeveledAtConst3 == "skill")
-						{
-							Logger.Info("{0} constellation 3+, adjusting scanned skill level", character.NameGOOD);
-							character.Talents["skill"] -= 3;
+							string talentLeveledAtConst5 = character.NameGOOD.Contains("Traveler")
+                                ? (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][1]
+                                : (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][1];
+
+							Logger.Info("{0} constellation 5+, adjusting scanned {1} and {2} levels", character.NameGOOD, talentLeveledAtConst3, talentLeveledAtConst5);
+							character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
+							character.Talents[talentLeveledAtConst5] = Math.Max(1, character.Talents[talentLeveledAtConst5] - 3);
 						}
 						else
 						{
-							Logger.Info("{0} constellation 3+, adjusting scanned burst level", character.NameGOOD);
-							character.Talents["burst"] -= 3;
+							Logger.Info("{0} constellation 3+, adjusting scanned {1} level", character.NameGOOD, talentLeveledAtConst3);
+							character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
 						}
 					}
 					else
@@ -221,64 +221,179 @@ namespace InventoryKamera
 		{
 			int attempts = 0;
 			int maxAttempts = 75;
-			Rectangle region = new RECT(
+
+			var xRef = 1280.0;
+			var yRef = 720.0;
+			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			{
+				yRef = 800.0;
+			}
+
+			// Capture character name from right stats panel (above "Level" text)
+			// Uses same left coordinate as Level region, positioned higher and ~66% wider
+			// Name sits just above the star row, which is ~20-30px above Level (Top: 135)
+			// Tightened to 85-120 to capture descenders without hitting star tops
+			Rectangle nameRegion = new RECT(
+				Left:   (int)( 960  / xRef * Navigation.GetWidth() ),
+				Top:    (int)( 85   / yRef * Navigation.GetHeight() ),
+				Right:  (int)( 1234 / xRef * Navigation.GetWidth() ),
+				Bottom: (int)( 120  / yRef * Navigation.GetHeight() ));
+
+			do
+			{
+				Navigation.SystemWait(Navigation.Speed.Fast);
+				using (Bitmap bm = Navigation.CaptureRegion(nameRegion))
+				{
+					Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+					// Increase contrast to make white text stand out from lighter backgrounds (fog effects)
+					GenshinProcesor.SetContrast(60, ref n);
+					// High threshold to capture only pure white text, filtering out light backgrounds
+					GenshinProcesor.SetThreshold(200, ref n);
+					GenshinProcesor.SetInvert(ref n);
+
+					n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
+					string text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+
+					Logger.Debug("Name OCR from right panel: '{0}'", text);
+
+					// Clean up the text - remove non-alphanumeric except spaces
+					text = Regex.Replace(text, @"[^a-z0-9\s]", string.Empty).Trim();
+
+					// Remove extra whitespace
+					text = Regex.Replace(text, @"\s+", string.Empty);
+
+					Logger.Debug("Cleaned name text: '{0}'", text);
+
+					// Try to match character name
+					if (!string.IsNullOrWhiteSpace(text))
+					{
+						// Check for custom character names first
+						string travelerName = Properties.Settings.Default.TravelerName?.ToLower()?.Trim();
+						string wandererName = Properties.Settings.Default.WandererName?.ToLower()?.Trim();
+
+						Logger.Debug("Checking custom names - Traveler: '{0}', Wanderer: '{1}'",
+							travelerName ?? "(not set)", wandererName ?? "(not set)");
+
+						if (!string.IsNullOrWhiteSpace(travelerName) && text.Equals(travelerName, StringComparison.OrdinalIgnoreCase))
+						{
+							Logger.Debug("Matched custom Traveler name: '{0}'", travelerName);
+							name = "Traveler";
+						}
+						else if (!string.IsNullOrWhiteSpace(wandererName) && text.Equals(wandererName, StringComparison.OrdinalIgnoreCase))
+						{
+							Logger.Debug("Matched custom Wanderer name: '{0}'", wandererName);
+							name = "Wanderer";
+						}
+						else
+						{
+							// Use fuzzy matching for regular characters
+							name = GenshinProcesor.FindClosestCharacterName(text);
+						}
+
+						if (!string.IsNullOrWhiteSpace(name))
+						{
+							Logger.Debug("Matched character name: '{0}'", name);
+
+							// Look up element from characters.json
+							element = GenshinProcesor.GetElementForCharacter(name);
+
+							// Special case: Traveler can be any element, need to check left panel for active element
+							if (name.Contains("Traveler"))
+							{
+								Logger.Debug("Traveler detected, scanning left panel for active element");
+								element = ScanTravelerElement();
+							}
+
+							if (!string.IsNullOrWhiteSpace(element))
+							{
+								Logger.Debug("Scanned character name as {0} with element {1}", name, element);
+								UserInterface.SetCharacter_NameAndElement(bm, name, element);
+
+								// Save screenshot if LogScreenshots is enabled
+								if (Properties.Settings.Default.LogScreenshots)
+								{
+									Directory.CreateDirectory($"./logging/characters/temp");
+									bm.Save($"./logging/characters/temp/name_{name}_{DateTime.Now:yyyyMMddHHmmss}.png");
+								}
+
+								n.Dispose();
+								return;
+							}
+							else
+							{
+								Logger.Debug("Could not determine element for character '{0}'", name);
+								name = "";
+							}
+						}
+						else
+						{
+							Logger.Debug("Could not match OCR text '{0}' to any character", text);
+						}
+					}
+
+					n.Dispose();
+
+					Logger.Debug("Could not parse character name (Attempt {0}/{1}). Retrying...", attempts+1, maxAttempts);
+
+					// Always save screenshot on failure for debugging
+					Directory.CreateDirectory($"./logging/characters/failures");
+					bm.Save($"./logging/characters/failures/name_fail_{DateTime.Now:yyyyMMddHHmmss}.png");
+				}
+				attempts++;
+				Navigation.SystemWait(Navigation.Speed.Fast);
+			} while ( attempts < maxAttempts );
+
+			Logger.Error("Failed to scan character name after {0} attempts", maxAttempts);
+			name = null;
+			element = null;
+		}
+
+		private static string ScanTravelerElement()
+		{
+			// Use original left panel region that captures "element / name" format
+			// This region was working reliably for element detection
+			Rectangle elementRegion = new RECT(
 				Left:   (int)( 85  / 1280.0 * Navigation.GetWidth() ),
 				Top:    (int)( 10  / 720.0 * Navigation.GetHeight() ),
 				Right:  (int)( 305 / 1280.0 * Navigation.GetWidth() ),
 				Bottom: (int)( 55  / 720.0 * Navigation.GetHeight() ));
 
-			do
+			using (Bitmap bm = Navigation.CaptureRegion(elementRegion))
 			{
-				Navigation.SystemWait(Navigation.Speed.Fast);
-				using (Bitmap bm = Navigation.CaptureRegion(region))
+				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+				GenshinProcesor.SetThreshold(110, ref n);
+				GenshinProcesor.SetInvert(ref n);
+
+				n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
+				string block = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower().Trim();
+				string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+
+				// Use line if it has a slash, otherwise use block
+				string nameAndElement = line.Contains("/") ? line : block;
+
+				Logger.Debug("Traveler element+name OCR: '{0}'", nameAndElement);
+
+				// Extract element from "element / name" format
+				if (nameAndElement.Contains("/"))
 				{
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-					GenshinProcesor.SetThreshold(110, ref n);
-					GenshinProcesor.SetInvert(ref n);
+					var split = nameAndElement.Split('/');
+					string elementText = split[0].Trim();
+					string element = GenshinProcesor.FindElementByName(elementText);
 
-					n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
-					string block = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower().Trim();
-					string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
-
-					// Characters with wrapped names will not have a slash
-					string nameAndElement = line.Contains("/") ? line : block;
-
-					if (nameAndElement.Contains("/"))
-					{
-						var split = nameAndElement.Split('/');
-
-						// Search for element and character name in block
-
-						// Long name characters might look like
-						// <Element>   <First Name>
-						// /           <Last Name>
-						element = !split[0].Contains(" ") ? GenshinProcesor.FindElementByName(split[0].Trim()) : GenshinProcesor.FindElementByName(split[0].Split(' ')[0].Trim());
-
-						// Find character based on string after /
-						// Long name characters might search by their last name only but it'll still work.
-						name = GenshinProcesor.FindClosestCharacterName(Regex.Replace(split[1], @"[\W]", string.Empty));
-
-						if (!GenshinProcesor.CharacterMatchesElement(name, element)) { name = ""; element = ""; }
-                    }
 					n.Dispose();
 
-					if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(element))
+					if (!string.IsNullOrWhiteSpace(element))
 					{
-						Logger.Debug("Scanned character name as {0} with element {1}", name, element);
-                        UserInterface.SetCharacter_NameAndElement(bm, name, element);
-						return;
+						Logger.Debug("Traveler element identified as: '{0}'", element);
+						return element;
 					}
-					else
-                    {
-                        Logger.Debug("Could not parse character name/element (Atempt {0}/{1}). Retrying...", attempts+1, maxAttempts);
-                        bm.Save($"./logging/characters/{bm.GetHashCode()}.png");
-                    }
 				}
-				attempts++;
-				Navigation.SystemWait(Navigation.Speed.Fast);
-			} while ( attempts < maxAttempts );
-			name = null;
-			element = null;
+
+				n.Dispose();
+			}
+
+			Logger.Debug("Could not determine Traveler element from left panel");
+			return "";
 		}
 
 		private static int ScanLevel(ref bool ascended)
@@ -376,6 +491,7 @@ namespace InventoryKamera
 
 		private static int ScanConstellations(Character character)
 		{
+			Logger.Debug("Starting constellation scan for character: {0}", character.NameGOOD);
 			double yReference = 720.0;
 			int constellation;
 
@@ -419,12 +535,20 @@ namespace InventoryKamera
 					// Check a small region next to the text "Activate"
 					// for a mostly white backround
 					ImageStatistics statistics = new ImageStatistics(region);
-					if (statistics.Red.Mean >= 190 && statistics.Green.Mean >= 190 && statistics.Blue.Mean >= 190) 
+					Logger.Debug("Constellation {0} color check - R: {1:F1}, G: {2:F1}, B: {3:F1}",
+						constellation + 1, statistics.Red.Mean, statistics.Green.Mean, statistics.Blue.Mean);
+
+					if (statistics.Red.Mean >= 190 && statistics.Green.Mean >= 190 && statistics.Blue.Mean >= 190)
+					{
+						Logger.Debug("Constellation {0} is not activated (found 'Activate' button). Total constellations: {1}",
+							constellation + 1, constellation);
 						break;
-					
+					}
+
 				}
 			}
 
+			Logger.Debug("Completed constellation scan for {0}: {1} constellations activated", character.NameGOOD, constellation);
 			Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
 			UserInterface.SetCharacter_Constellation(constellation);
 			return constellation;
@@ -432,6 +556,7 @@ namespace InventoryKamera
 
 		private static Dictionary<string, int> ScanTalents(Character character)
 		{
+			Logger.Debug("Starting talent scan for character: {0}", character.NameGOOD);
 			var talents = new Dictionary<string, int>
 			{
 				{ "auto" , -1 },
@@ -490,14 +615,34 @@ namespace InventoryKamera
 					GenshinProcesor.SetInvert(ref n);
 
 					var text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleBlock).Trim().Split('\n').ToList();
+					Logger.Debug("Talent '{0}' OCR raw text: '{1}'", talent, string.Join(" | ", text));
 
 					if (int.TryParse(Regex.Replace(text.Last(), @"\D", string.Empty), out int level))
 					{
+						Logger.Debug("Parsed talent '{0}' level: {1}", talent, level);
+
 						if (level >= 1 && level <= 15)
 						{
 							talents[talent] = level;
 							UserInterface.SetCharacter_Talent(talentLevel, level.ToString(), i);
+
+							// Save screenshot if LogScreenshots is enabled
+							if (Properties.Settings.Default.LogScreenshots)
+							{
+								Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
+								talentLevel.Save($"./logging/characters/{character.NameGOOD}/talent_{talent}.png");
+							}
+
+							Logger.Debug("Successfully scanned talent '{0}' with level {1} for character {2}", talent, level, character.NameGOOD);
 						}
+						else
+						{
+							Logger.Debug("Talent '{0}' level {1} out of valid range (1-15), retrying", talent, level);
+						}
+					}
+					else
+					{
+						Logger.Debug("Failed to parse talent '{0}' level from text, retrying", talent);
 					}
 
 					n.Dispose();
