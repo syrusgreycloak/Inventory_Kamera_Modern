@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace InventoryKamera
 {
@@ -19,6 +20,19 @@ namespace InventoryKamera
         /// This class is a temporary bridge that will be removed when validation logic is refactored
         /// to not depend on game data lookups (future milestone).
         /// </summary>
+        public static bool IsWiredUp { get; private set; }
+
+        public static void MarkWiredUp()
+        {
+            IsWiredUp = true;
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertWired()
+        {
+            Debug.Assert(IsWiredUp, "ModelValidator has not been wired up — IsValid() calls on models return vacuous true. Call GenshinProcesor initialization before using model validation.");
+        }
+
         public static Func<string, bool> IsValidWeapon { get; set; } = _ => true;
         public static Func<string, bool> IsValidCharacter { get; set; } = _ => true;
         public static Func<string, bool> IsValidElement { get; set; } = _ => true;

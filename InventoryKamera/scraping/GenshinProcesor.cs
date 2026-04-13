@@ -103,6 +103,7 @@ namespace InventoryKamera
 			ModelValidator.IsValidSlot = IsValidSlot;
 			ModelValidator.IsValidSetName = IsValidSetName;
 			ModelValidator.IsValidStat = IsValidStat;
+			ModelValidator.MarkWiredUp();
 
 			Logger.Info("Scraper initialized");
         }
