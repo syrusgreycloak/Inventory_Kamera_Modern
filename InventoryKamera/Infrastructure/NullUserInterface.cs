@@ -28,6 +28,7 @@ namespace InventoryKamera.Infrastructure
 
         public void SetProgramStatus(string status, bool ok = true) { }
         public void AddError(string error) { }
+        public void SetMainCharacterName(string name) { }
 
         public void SetNavigation_Image(Bitmap bm) { }
 

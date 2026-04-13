@@ -29,6 +29,7 @@ namespace InventoryKamera
         // Status and errors
         void SetProgramStatus(string status, bool ok = true);
         void AddError(string error);
+        void SetMainCharacterName(string name);
 
         // Navigation image
         void SetNavigation_Image(Bitmap bm);
