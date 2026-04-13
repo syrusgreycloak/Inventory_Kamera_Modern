@@ -18,7 +18,7 @@ namespace InventoryKamera
     public class DatabaseManager
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-        private string _listdir = @".\inventorylists\";
+        private string _listdir = Path.Combine(AppContext.BaseDirectory, "inventorylists") + Path.DirectorySeparatorChar;
 
         public string ListsDir
         {
