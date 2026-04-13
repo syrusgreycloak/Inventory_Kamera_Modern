@@ -366,3 +366,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /InventoryKameraWPF/
+
+# Git worktrees
+.worktrees/
