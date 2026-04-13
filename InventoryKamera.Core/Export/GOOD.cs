@@ -45,7 +45,7 @@ namespace InventoryKamera
             // Get rid of VS warning since we are converting this class to JSON
             Format = "GOOD";
             Version = 2;
-            AppVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+            AppVersion = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version?.ToString(3) ?? "unknown";
             Source = "Inventory_Kamera";
 
             // Assign Characters

@@ -9,6 +9,16 @@ namespace InventoryKamera
     /// </summary>
     public static class ModelValidator
     {
+        /// <summary>
+        /// Static validation delegates for model classes. These must be initialized by the WinForms
+        /// application startup code (specifically, GenshinProcesor's static constructor) before any
+        /// model IsValid() calls are made. The defaults return true so Core compiles without WinForms,
+        /// but validation is silently disabled until wired up.
+        ///
+        /// Boot-order dependency: GenshinProcesor static constructor must execute before validation.
+        /// This class is a temporary bridge that will be removed when validation logic is refactored
+        /// to not depend on game data lookups (future milestone).
+        /// </summary>
         public static Func<string, bool> IsValidWeapon { get; set; } = _ => true;
         public static Func<string, bool> IsValidCharacter { get; set; } = _ => true;
         public static Func<string, bool> IsValidElement { get; set; } = _ => true;
