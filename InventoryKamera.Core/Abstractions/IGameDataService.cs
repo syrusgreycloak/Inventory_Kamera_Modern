@@ -12,6 +12,7 @@ namespace InventoryKamera
         Dictionary<string, JObject> Characters { get; }
         Dictionary<string, JObject> Artifacts { get; }
         Dictionary<string, string> Stats { get; }
+        Dictionary<string, string> Elements { get; }
         List<string> GearSlots { get; }
         HashSet<string> EnhancementMaterials { get; }
 

@@ -22,6 +22,7 @@ namespace InventoryKamera.Infrastructure
         public Dictionary<string, JObject> Characters => _core.Characters;
         public Dictionary<string, JObject> Artifacts => _core.Artifacts;
         public Dictionary<string, string> Stats => _core.Stats;
+        public Dictionary<string, string> Elements => _core.Elements;
         public List<string> GearSlots => _core.GearSlots;
         public HashSet<string> EnhancementMaterials => _core.EnhancementMaterials;
 

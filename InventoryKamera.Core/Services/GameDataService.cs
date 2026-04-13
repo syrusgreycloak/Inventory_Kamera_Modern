@@ -98,7 +98,7 @@ namespace InventoryKamera
             if (Artifacts.TryGetValue(setName, out _) || Artifacts.TryGetValue(setName.ToLower(), out _)) return true;
             foreach (var set in Artifacts.Values)
                 foreach (var field in set)
-                    if (field.ToString() == setName) return true;
+                    if (field.Value?.ToString() == setName) return true;
             return false;
         }
 
@@ -214,7 +214,7 @@ namespace InventoryKamera
             if (string.IsNullOrWhiteSpace(name)) return new List<string>();
             if (Characters.TryGetValue(name.ToLower(), out var data))
                 return data["Element"].ToObject<List<string>>();
-            return null;
+            return new List<string>();
         }
 
         // --- String matching internals ---
