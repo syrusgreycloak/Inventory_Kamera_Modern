@@ -1,0 +1,168 @@
+@startuml Deployment Diagram - Cross-Platform Support
+
+title Milestone 1 & Milestone 2 - Cross-Platform Deployment Architecture
+
+!define WINDOWS_COLOR #E3F2FD
+!define MACOS_COLOR #F3E5F5
+!define LINUX_COLOR #FFF9C4
+!define SHARED_COLOR #E8F5E9
+
+node "Windows PC" <<Windows>> WINDOWS_COLOR {
+  node "Windows 10/11 x64" as Win10 {
+    component "Genshin Impact\n(GenshinImpact.exe)" as GenshinWin
+    note bottom: Official client\nWindowed or Fullscreen\n16:9 or 16:10
+
+    artifact "Inventory Kamera\n(WinForms - Milestone 1)\n(net8.0-windows)" as AppWinForms
+    note bottom: Migrated to .NET 8 in Milestone 1\nWindows-only scanning\nDeprecated in Milestone 2
+
+    artifact "Inventory Kamera 2.0\n(Avalonia - Milestone 2)\n(.NET 8)" as AppWinAvalonia #LightGray
+    note bottom: Future cross-platform UI\nWindows/Linux/macOS
+
+    component "Core Library\n(.NET 8)" as CoreWin SHARED_COLOR
+    component "WindowsScreenCapture\n(Graphics.CopyFromScreen)" as WinCapture
+    component "WindowsInputSimulator\n(WindowsInput library)" as WinInput
+    component "ImageSharp\n(Cross-platform)" as ImageSharpWin SHARED_COLOR
+    component "Tesseract 5.x\n(tesseract.dll)" as TesseractWin SHARED_COLOR
+
+    database "ScanProfile.json\ndatasources.json\ninventorylists/*.json" as ConfigWin
+
+    AppWinForms --> CoreWin
+    AppWinAvalonia ..> CoreWin : (Milestone 2)
+    CoreWin --> WinCapture
+    CoreWin --> WinInput
+    CoreWin --> ImageSharpWin
+    CoreWin --> TesseractWin
+    CoreWin --> ConfigWin : reads
+
+    WinCapture --> GenshinWin : captures
+    WinInput --> GenshinWin : controls
+  }
+}
+
+node "macOS Machine" <<macOS>> MACOS_COLOR {
+  node "macOS Sonoma (M3 Max)" as MacOS #LightGray {
+    component "Genshin Impact\n(via Wine/Crossover)" as GenshinMac #LightGray
+    note bottom: Unofficial (Wine)\nOr native if/when available
+
+    artifact "Inventory Kamera 2.0\n(Avalonia)\n(.NET 8)" as AppMac #LightGray
+    note bottom: Milestone 2 only\nNative macOS app
+
+    component "Core Library\n(.NET 8)" as CoreMac SHARED_COLOR
+    component "macOSScreenCapture\n(CGWindowListCreateImage)" as MacCapture #LightGray
+    component "macOSInputSimulator\n(Core Graphics)" as MacInput #LightGray
+    component "ImageSharp\n(Cross-platform)" as ImageSharpMac SHARED_COLOR
+    component "Tesseract 5.x\n(libtesseract.dylib)" as TesseractMac SHARED_COLOR
+
+    database "ScanProfile.json\ndatasources.json\ninventorylists/*.json" as ConfigMac
+
+    AppMac --> CoreMac
+    CoreMac --> MacCapture
+    CoreMac --> MacInput
+    CoreMac --> ImageSharpMac
+    CoreMac --> TesseractMac
+    CoreMac --> ConfigMac : reads
+
+    MacCapture --> GenshinMac : captures
+    MacInput --> GenshinMac : controls
+  }
+}
+
+node "Linux PC / Steam Deck" <<Linux>> LINUX_COLOR {
+  node "SteamOS 3.0 / Ubuntu 22.04" as Linux #LightGray {
+    component "Genshin Impact\n(via Proton)" as GenshinLinux #LightGray
+    note bottom: Official via Steam\nProton compatibility layer
+
+    artifact "Inventory Kamera 2.0\n(Avalonia)\n(.NET 8)" as AppLinux #LightGray
+    note bottom: Milestone 2 only\nFirst native Linux scanner!
+
+    component "Core Library\n(.NET 8)" as CoreLinux SHARED_COLOR
+    component "LinuxScreenCapture\n(X11/Wayland)" as LinuxCapture #LightGray
+    component "LinuxInputSimulator\n(xdotool/ydotool)" as LinuxInput #LightGray
+    component "ImageSharp\n(Cross-platform)" as ImageSharpLinux SHARED_COLOR
+    component "Tesseract 5.x\n(libtesseract.so)" as TesseractLinux SHARED_COLOR
+
+    database "ScanProfile.json\ndatasources.json\ninventorylists/*.json" as ConfigLinux
+
+    AppLinux --> CoreLinux
+    CoreLinux --> LinuxCapture
+    CoreLinux --> LinuxInput
+    CoreLinux --> ImageSharpLinux
+    CoreLinux --> TesseractLinux
+    CoreLinux --> ConfigLinux : reads
+
+    LinuxCapture --> GenshinLinux : captures
+    LinuxInput --> GenshinLinux : controls
+
+    note bottom of Linux
+      **Steam Deck Notes:**
+      - 1280x800 resolution (16:10)
+      - Gaming Mode: Needs desktop mode or overlay
+      - Performance: OCR may be slower on Deck
+      - ScanProfile: "steam-deck" preset
+    end note
+  }
+}
+
+cloud "GitHub" {
+  database "DimbreathBot/AnimeGameData\n(Game data repository)" as GitHub
+  note bottom: Fallback repositories:\n- Sycamore0/GenshinData\n- User-configured alternatives
+}
+
+CoreWin ..> GitHub : HTTP GET
+CoreMac ..> GitHub : HTTP GET
+CoreLinux ..> GitHub : HTTP GET
+
+note as SharedNote
+  **Shared Components:**
+  - Core Library: 100% identical across platforms
+  - ImageSharp: Cross-platform image processing
+  - Tesseract: Native library per platform
+  - Configuration: Same JSON files everywhere
+
+  **Platform-Specific:**
+  - Screen capture API
+  - Input simulation API
+  - Native library names (.dll/.dylib/.so)
+end note
+
+CoreWin .. SharedNote
+CoreMac .. SharedNote
+CoreLinux .. SharedNote
+
+note as DependencyInjection
+  **Dependency Injection:**
+  Platform detection at runtime:
+
+  if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      services.AddSingleton<IScreenCapture, WindowsScreenCapture>();
+  else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+      services.AddSingleton<IScreenCapture, macOSScreenCapture>();
+  else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      services.AddSingleton<IScreenCapture, LinuxScreenCapture>();
+
+  Core library never knows which implementation is used!
+end note
+
+AppWinAvalonia .. DependencyInjection
+AppMac .. DependencyInjection
+AppLinux .. DependencyInjection
+
+note as Phase1vs2
+  **Milestone 1 (Current):**
+  ✅ Core library extracted
+  ✅ Windows implementation only
+  ✅ WinForms UI (existing)
+  ✅ ScanProfile.json support
+  ❌ macOS/Linux not implemented yet
+
+  **Milestone 2 (Future):**
+  ✅ Avalonia UI (replaces WinForms)
+  ✅ macOS implementation
+  ✅ Linux implementation
+  ✅ Cross-platform deployment
+  ✅ Modern, resizable UI
+end note
+
+Win10 .. Phase1vs2
+
+@enduml

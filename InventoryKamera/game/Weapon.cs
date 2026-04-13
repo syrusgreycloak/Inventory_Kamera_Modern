@@ -20,7 +20,7 @@ namespace InventoryKamera
 
 		[JsonProperty("location")]
 		[DefaultValue("")]
-		public string EquippedCharacter { get; private set; }
+		public string EquippedCharacter { get; internal set; }
 
 		[JsonProperty("lock")]
 		public bool Lock { get; private set; }
@@ -36,6 +36,9 @@ namespace InventoryKamera
 
 		[JsonIgnore]
 		public WeaponType WeaponType { get; private set; }
+
+		[JsonIgnore]
+		public bool RefinementDefaulted { get; set; } = false;
 
 		public Weapon()
 		{
@@ -108,12 +111,12 @@ namespace InventoryKamera
 
 		public bool HasValidWeaponName()
 		{
-			return Scraper.IsValidWeapon(Name);
+			return GenshinProcesor.IsValidWeapon(Name);
 		}
 
 		public bool HasValidEquippedCharacter()
 		{
-			return string.IsNullOrWhiteSpace(EquippedCharacter) || Scraper.IsValidCharacter(EquippedCharacter) ;
+			return string.IsNullOrWhiteSpace(EquippedCharacter) || GenshinProcesor.IsValidCharacter(EquippedCharacter) ;
 		}
 
 		public int AscensionCount()

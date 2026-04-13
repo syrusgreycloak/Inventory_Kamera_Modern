@@ -1,0 +1,226 @@
+@startuml State Diagram - Scanning Process
+
+title Inventory Kamera - Scanning Process State Machine
+
+[*] --> Idle : Application Start
+
+state Idle {
+  state "Ready to Scan" as Ready
+  state "Loading Configuration" as LoadingConfig
+
+  [*] --> LoadingConfig
+  LoadingConfig --> Ready : Config loaded
+  note on link: Load ScanProfile.json\nLoad datasources.json
+}
+
+Idle --> CheckingGame : User clicks "Scan"
+
+state "Checking Game" as CheckingGame {
+  state "Finding Process" as FindProcess
+  state "Validating Window" as ValidateWindow
+  state "Detecting Resolution" as DetectRes
+
+  [*] --> FindProcess
+  FindProcess --> ValidateWindow : Process found
+  FindProcess --> [*] : Process not found
+  ValidateWindow --> DetectRes : Paimon menu open
+  ValidateWindow --> [*] : Invalid state
+  DetectRes --> [*] : Resolution detected
+}
+
+CheckingGame --> Error : Game not found\nor wrong state
+CheckingGame --> Initializing : Game ready
+
+state Initializing {
+  state "Loading Database" as LoadDB
+  state "Initializing OCR Engines" as InitOCR
+  state "Creating Workers" as CreateWorkers
+
+  [*] --> LoadDB
+  LoadDB --> InitOCR : Database loaded
+  InitOCR --> CreateWorkers : 8 engines ready
+  CreateWorkers --> [*] : 2-3 workers started
+}
+
+Initializing --> Scanning : Ready to scan
+
+state Scanning {
+  state "Navigating" as Nav {
+    state "To Weapons" as NavWeapons
+    state "To Artifacts" as NavArtifacts
+    state "To Characters" as NavChars
+    state "To Materials" as NavMaterials
+
+    [*] --> NavWeapons : Scan weapons enabled
+    NavWeapons --> NavArtifacts : Weapons complete
+    [*] --> NavArtifacts : Scan artifacts enabled
+    NavArtifacts --> NavChars : Artifacts complete
+    [*] --> NavChars : Scan characters enabled
+    NavChars --> NavMaterials : Characters complete
+    [*] --> NavMaterials : Scan materials enabled
+    NavMaterials --> [*] : All complete
+  }
+
+  state "Capturing" as Capture {
+    state "Screenshot" as Screenshot
+    state "Crop Regions" as Crop
+    state "Detect Sanctified" as DetectSanctify
+
+    [*] --> Screenshot
+    Screenshot --> DetectSanctify : Card captured
+    DetectSanctify --> Crop : Check purple bar
+    Crop --> [*] : Regions ready
+  }
+
+  state "OCR Processing" as OCRProc {
+    state "Queued" as Queued
+    state "Borrowing Engine" as BorrowEngine
+    state "Recognizing Text" as Recognize
+    state "Parsing Results" as Parse
+
+    [*] --> Queued
+    Queued --> BorrowEngine : Worker available
+    BorrowEngine --> Recognize : Engine acquired
+    Recognize --> Parse : Text extracted
+    Recognize --> Timeout : 30 seconds elapsed
+    Parse --> [*] : Object created
+  }
+
+  state "Validation" as Validate {
+    state "Valid Item" as Valid
+    state "Invalid Item" as Invalid
+
+    [*] --> Valid : Validation passed
+    [*] --> Invalid : Validation failed
+    Valid --> [*] : Added to inventory
+    Invalid --> [*] : Logged error
+  }
+
+  Nav --> Capture : Position found
+  Capture --> OCRProc : Regions captured
+  OCRProc --> Validate : OCR complete
+  Validate --> Nav : Continue scanning
+
+  note right of OCRProc
+    **Parallel Processing:**
+    Main thread: Nav + Capture
+    Worker threads: OCRProc + Validate
+
+    Benefits:
+    - No blocking
+    - Concurrent OCR
+    - Progress updates
+  end note
+}
+
+Scanning --> Finalizing : All categories scanned
+Scanning --> Paused : User pauses
+Scanning --> Error : Critical error
+
+state Paused {
+  [*] --> [*]
+}
+
+Paused --> Scanning : User resumes
+Paused --> Cancelled : User cancels
+
+state Finalizing {
+  state "Waiting Workers" as WaitWorkers
+  state "Assigning Equipment" as AssignEquip
+  state "Building Inventory" as BuildInv
+
+  [*] --> WaitWorkers
+  WaitWorkers --> AssignEquip : All workers done
+  AssignEquip --> BuildInv : Equipment matched
+  BuildInv --> [*] : Inventory complete
+}
+
+Finalizing --> Exporting : Ready to export
+
+state Exporting {
+  state "Generating GOOD JSON" as GenGOOD
+  state "Saving File" as SaveFile
+
+  [*] --> GenGOOD
+  GenGOOD --> SaveFile : JSON generated
+  SaveFile --> [*] : File saved
+}
+
+Exporting --> Complete : Export successful
+Exporting --> Error : Export failed
+
+state Complete {
+  state "Displaying Results" as ShowResults
+  state "Cleanup" as Cleanup
+
+  [*] --> ShowResults
+  ShowResults --> Cleanup : User acknowledges
+  Cleanup --> [*] : Resources released
+}
+
+Complete --> Idle : Return to idle
+
+state Error {
+  state "Game Lost" as GameLost
+  state "OCR Failure" as OcrFail
+  state "Navigation Failure" as NavFail
+  state "Export Failure" as ExportFail
+
+  [*] --> GameLost : Game window lost
+  [*] --> OcrFail : OCR timeout or crash
+  [*] --> NavFail : Navigation error
+  [*] --> ExportFail : File save error
+}
+
+Error --> Idle : User acknowledges
+Error --> Scanning : Retry (if recoverable)
+
+state Cancelled {
+  [*] --> [*]
+}
+
+Cancelled --> Idle : Cancel acknowledged
+
+note bottom of Idle
+  **Initial State:**
+  - Configuration loaded
+  - Database up to date
+  - UI responsive
+  - Waiting for user input
+end note
+
+note bottom of Error
+  **Error Recovery:**
+  - Recoverable: Retry navigation, skip item
+  - Non-recoverable: Save partial results, exit
+  - Always log errors to ./logging/
+  - Display user-friendly error messages
+end note
+
+note bottom of Complete
+  **Output:**
+  - GOOD JSON file saved
+  - Summary displayed (counts, errors)
+  - Debug logs available
+  - Ready for next scan
+end note
+
+note right of Scanning
+  **Timeout Handling:**
+
+  OCR Timeout (30s):
+  - Skip item
+  - Log error
+  - Continue scan
+
+  Navigation Timeout (5s):
+  - Retry 3 times
+  - If fails, pause scan
+
+  Game Window Lost:
+  - Pause scan
+  - Prompt user to restore game
+  - Resume when ready
+end note
+
+@enduml

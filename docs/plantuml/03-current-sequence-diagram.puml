@@ -1,0 +1,171 @@
+@startuml Current Artifact Scanning Sequence
+
+title Current Architecture - Artifact Scanning Workflow (v1.3.17)
+
+actor User
+participant MainForm
+participant InventoryKamera
+participant ArtifactScraper
+participant Navigation <<static>>
+participant "Worker Thread" as Worker
+queue workerQueue
+participant Scraper <<static>>
+participant TesseractEngine
+participant UserInterface <<static>>
+participant GenshinProcesor <<static>>
+
+User -> MainForm : Click "Scan"
+activate MainForm
+
+MainForm -> InventoryKamera : GatherData()
+activate InventoryKamera
+
+' Initialization
+InventoryKamera -> InventoryKamera : ResetLogging()
+InventoryKamera -> GenshinProcesor : ReloadData()
+InventoryKamera -> Scraper : RestartEngines()
+note right: Initializes pool of 8 TesseractEngines
+
+loop 2-3 times (NumWorkers)
+  InventoryKamera -> Worker : Start Thread
+  activate Worker
+  Worker -> Worker : ImageProcessorWorker()
+end
+
+' Navigation to artifact screen
+InventoryKamera -> Navigation : InventoryScreen()
+InventoryKamera -> Navigation : SelectArtifactInventory()
+
+' Start artifact scanning
+InventoryKamera -> ArtifactScraper : ScanArtifacts()
+activate ArtifactScraper
+
+ArtifactScraper -> Navigation : GetArtifactCount()
+Navigation --> ArtifactScraper : count (e.g., 895)
+
+loop For each artifact (895 times)
+  ArtifactScraper -> ArtifactScraper : QueueScan(id)
+
+  ' Capture screenshots
+  ArtifactScraper -> Navigation : GetItemCard()
+  activate Navigation
+  Navigation -> Navigation : Graphics.CopyFromScreen()
+  note right: Windows-specific, blocks thread
+  Navigation --> ArtifactScraper : Bitmap card
+  deactivate Navigation
+
+  ' Capture individual regions (hard-coded coordinates)
+  ArtifactScraper -> GenshinProcesor : CopyBitmap(card, nameRegion)
+  note right: nameRegion = {x:0.0911, y:0.0614, ...}
+  GenshinProcesor --> ArtifactScraper : Bitmap name
+
+  ArtifactScraper -> GenshinProcesor : CopyBitmap(card, substatsRegion)
+  note right: May apply sanctifyShift if detected
+  GenshinProcesor --> ArtifactScraper : Bitmap substats
+
+  ' More regions...
+  ArtifactScraper -> GenshinProcesor : CopyBitmap(card, levelRegion)
+  ArtifactScraper -> GenshinProcesor : CopyBitmap(card, equippedRegion)
+
+  ' Queue for OCR processing
+  ArtifactScraper -> workerQueue : Enqueue(OCRImageCollection)
+  note right: Contains: [Bitmaps, Type="artifact", Id]
+
+  ' Navigation continues while worker processes
+  ArtifactScraper -> Navigation : ScrollDown()
+  ArtifactScraper -> Navigation : Wait(delay)
+end
+
+' Signal workers to finish
+ArtifactScraper -> workerQueue : Enqueue("END")
+deactivate ArtifactScraper
+
+' Worker thread processing (runs in parallel)
+Worker -> workerQueue : TryDequeue()
+workerQueue --> Worker : OCRImageCollection
+note right: Dequeues items as they become available
+
+alt Item Type == "artifact"
+  Worker -> Worker : Check IsEnhancementMaterial()
+
+  alt Is regular artifact
+    Worker -> UserInterface : SetGearPictureBox(card)
+    note right: Thread-safe UI update via BeginInvoke
+
+    ' OCR Processing
+    Worker -> ArtifactScraper : CatalogueFromBitmapsAsync(bitmaps, id)
+    activate ArtifactScraper
+
+    ' Borrow engine from pool
+    ArtifactScraper -> Scraper : GetEngine()
+    Scraper --> ArtifactScraper : TesseractEngine
+
+    ' OCR each region
+    loop For each bitmap region
+      ArtifactScraper -> TesseractEngine : Process(bitmap)
+      activate TesseractEngine
+      note right: Potential deadlock here (Tesseract 5.2.0)
+      TesseractEngine --> ArtifactScraper : Page
+      deactivate TesseractEngine
+
+      ArtifactScraper -> TesseractEngine : GetText()
+      TesseractEngine --> ArtifactScraper : string text
+    end
+
+    ' Return engine to pool
+    ArtifactScraper -> Scraper : ReturnEngine(engine)
+
+    ' Build artifact object
+    ArtifactScraper -> ArtifactScraper : ParseSubstats(text)
+    ArtifactScraper -> ArtifactScraper : ParseLevel(text)
+    ArtifactScraper --> Worker : Artifact
+    deactivate ArtifactScraper
+
+    ' Validation
+    Worker -> Worker : artifact.IsValid()
+
+    alt Valid artifact
+      Worker -> UserInterface : IncrementArtifactCount()
+      Worker -> InventoryKamera : Inventory.Add(artifact)
+    else Invalid artifact
+      Worker -> UserInterface : AddError("Unable to validate artifact")
+      Worker -> Worker : SaveDebugImages()
+      note right: Saves to ./logging/artifacts/artifact{id}/
+    end
+
+  else Is enhancement material
+    Worker -> ArtifactScraper : StopScanning = true
+  end
+
+else Item Type == "END"
+  Worker -> Worker : b_threadCancel = true
+  Worker -> Worker : Break loop, exit thread
+  deactivate Worker
+end
+
+' Await all workers to finish
+InventoryKamera -> InventoryKamera : AwaitProcessors()
+note right: Waits for all worker threads to exit
+
+' Complete
+InventoryKamera --> MainForm : Scan complete
+deactivate InventoryKamera
+
+MainForm -> GOOD : Export(inventoryKamera)
+GOOD --> MainForm : JSON string
+
+MainForm -> MainForm : Save to file
+MainForm --> User : Show "Scan Complete"
+deactivate MainForm
+
+note over Worker, TesseractEngine
+  **Problems with Current Approach:**
+  1. Graphics.CopyFromScreen() blocks main thread
+  2. Tesseract.Process() can deadlock (30s timeout workaround)
+  3. Hard-coded coordinates (0.4216, 0.3682, etc.)
+  4. System.Drawing.Bitmap (Windows-only)
+  5. No progress reporting during OCR
+  6. Difficult to unit test (no abstractions)
+end note
+
+@enduml

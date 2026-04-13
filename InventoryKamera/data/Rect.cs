@@ -3,6 +3,11 @@ using System.Runtime.InteropServices;
 
 namespace InventoryKamera
 {
+	internal static class RectangleExtensions
+	{
+		internal static Point Center(this Rectangle r) => new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
+	}
+
 	[StructLayout(LayoutKind.Sequential)]
 	public struct RECT
 	{
