@@ -132,7 +132,6 @@ namespace InventoryKamera
                     weaponScraper.ScanWeapons();
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -153,7 +152,6 @@ namespace InventoryKamera
 					artifactScraper.ScanArtifacts();
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -173,7 +171,6 @@ namespace InventoryKamera
 				{
 					CharacterScraper.ScanCharacters(ref Characters);
 				}
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -208,7 +205,6 @@ namespace InventoryKamera
 					materialScraper.Scan_Materials(ref Inventory);
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -231,7 +227,6 @@ namespace InventoryKamera
 					materialScraper.Scan_Materials(ref Inventory);
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
