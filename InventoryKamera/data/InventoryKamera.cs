@@ -110,8 +110,8 @@ namespace InventoryKamera
 			GenshinProcesor.RestartEngines();
 
 
-			// Assign Traveler's custom name
-			GenshinProcesor.AssignTravelerName(Properties.Settings.Default.TravelerName);
+			// TODO Task 9: replace with characterScraper.ScanMainCharacterName() — AssignTravelerName removed (CharacterScraper is now an instance class)
+			// GenshinProcesor.AssignTravelerName(Properties.Settings.Default.TravelerName);
 
 			// Assign Wanderer's custom name
 			GenshinProcesor.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
@@ -169,7 +169,8 @@ namespace InventoryKamera
 				Navigation.CharacterScreen();
 				try
 				{
-					CharacterScraper.ScanCharacters(ref Characters);
+					// TODO Task 9: replace with characterScraper.ScanCharacters(ref Characters)
+					// CharacterScraper.ScanCharacters(ref Characters);
 				}
 				catch (Exception ex)
 				{

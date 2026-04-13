@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -8,17 +8,22 @@ using System.Text.RegularExpressions;
 
 namespace InventoryKamera
 {
-    public static class CharacterScraper
+    internal class CharacterScraper : InventoryScraper
 	{
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		public static void ScanCharacters(ref List<Character> Characters)
+		public CharacterScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
+			: base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+		{
+		}
+
+		public void ScanCharacters(ref List<Character> Characters)
 		{
 			int viewed = 0;
 			string first = null;
 			HashSet<string> scanned = new HashSet<string>();
 
-			UserInterface.ResetCharacterDisplay();
+			_userInterface.ResetCharacterDisplay();
 
 			while (true)
 			{
@@ -28,8 +33,8 @@ namespace InventoryKamera
 				if (character.NameGOOD.ToLower() == "manequin1" || character.NameGOOD.ToLower() == "manequin2")
 				{
 					Logger.Info("Skipping mannequin: {0}", character.NameGOOD);
-					Navigation.SelectNextCharacter();
-					UserInterface.ResetCharacterDisplay();
+					_inputSimulator.SelectNextCharacter();
+					_userInterface.ResetCharacterDisplay();
 					continue;
 				}
 
@@ -39,7 +44,7 @@ namespace InventoryKamera
                     if (!scanned.Contains(character.NameGOOD))
 					{
 						Characters.Add(character);
-						UserInterface.IncrementCharacterCount();
+						_userInterface.IncrementCharacterCount();
 						Logger.Info("Scanned {0} successfully", character.NameGOOD);
 						if (Characters.Count == 1) first = character.NameGOOD;
 					}
@@ -59,8 +64,8 @@ namespace InventoryKamera
 					Logger.Error("Failed to scan character\n" + error + character);
 				}
 
-				Navigation.SelectNextCharacter();
-				UserInterface.ResetCharacterDisplay();
+				_inputSimulator.SelectNextCharacter();
+				_userInterface.ResetCharacterDisplay();
 
 				if (++viewed > 3 && Characters.Count < 1) break;
 			}
@@ -91,10 +96,10 @@ namespace InventoryKamera
             }
 		}
 
-		private static Character ScanCharacter(string firstCharacter)
+		private Character ScanCharacter(string firstCharacter)
 		{
 			var character = new Character();
-			Navigation.SelectCharacterAttributes();
+			_inputSimulator.SelectCharacterAttributes();
 			string name = null;
 			string element = null;
 
@@ -110,8 +115,8 @@ namespace InventoryKamera
 
 			if (string.IsNullOrWhiteSpace(name))
 			{
-				if (string.IsNullOrWhiteSpace(name)) UserInterface.AddError("Could not determine character's name");
-				if (string.IsNullOrWhiteSpace(element)) UserInterface.AddError("Could not determine character's element");
+				if (string.IsNullOrWhiteSpace(name)) _userInterface.AddError("Could not determine character's name");
+				if (string.IsNullOrWhiteSpace(element)) _userInterface.AddError("Could not determine character's element");
 				return character;
 			}
 
@@ -126,7 +131,7 @@ namespace InventoryKamera
 				int level = ScanLevel(ref ascended);
 				if (level == -1)
 				{
-					UserInterface.AddError($"Could not determine {character.NameGOOD}'s level. Setting to 1.");
+					_userInterface.AddError($"Could not determine {character.NameGOOD}'s level. Setting to 1.");
 					level = 1;
 					ascended = false;
 				}
@@ -141,33 +146,33 @@ namespace InventoryKamera
 				//Navigation.SystemRandomWait(Navigation.Speed.Normal);
 
 				// Scan Constellation
-				Navigation.SelectCharacterConstellation();
+				_inputSimulator.SelectCharacterConstellation();
 				character.Constellation = ScanConstellations(character);
 				Logger.Info("{0} Constellation: {1}", character.NameGOOD, character.Constellation);
-				Navigation.SystemWait(Navigation.Speed.Normal);
+				_inputSimulator.SystemWait(ScanDelay.Normal);
 
 				// Scan Talents
-				Navigation.SelectCharacterTalents();
+				_inputSimulator.SelectCharacterTalents();
 				character.Talents = ScanTalents(character);
 				Logger.Info("{0} Talents: {1}", character.NameGOOD, "{" + string.Join(", ", character.Talents.Select(kv => kv.Key + "=" + kv.Value).ToArray()) + "}");
-				Navigation.SystemWait(Navigation.Speed.Normal);
+				_inputSimulator.SystemWait(ScanDelay.Normal);
 
 				// Scale down talents due to constellations
 				if (character.Constellation >= 3)
 				{
-					if (GenshinProcesor.Characters.ContainsKey(name.ToLower()))
+					if (_gameDataService.Characters.ContainsKey(name.ToLower()))
 					{
 						string talentLeveledAtConst3 = character.NameGOOD.Contains("Traveler")
-                            ? (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][0]
-                            : (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][0];
+                            ? (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][0]
+                            : (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][0];
 
                         // Scale down talents (constellations give +3 bonus in-game)
 						// Ensure talents don't go below 1 for low-level characters
                         if (character.Constellation >= 5)
 						{
 							string talentLeveledAtConst5 = character.NameGOOD.Contains("Traveler")
-                                ? (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][1]
-                                : (string)GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][1];
+                                ? (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][1]
+                                : (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][1];
 
 							Logger.Info("{0} constellation 5+, adjusting scanned {1} and {2} levels", character.NameGOOD, talentLeveledAtConst3, talentLeveledAtConst5);
 							character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
@@ -190,31 +195,31 @@ namespace InventoryKamera
 			return character;
 		}
 
-		public static string ScanMainCharacterName()
+		public string ScanMainCharacterName()
 		{
 			var xReference = 1280.0;
 			var yReference = 720.0;
-			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 			{
 				yReference = 800.0;
 			}
 
 			RECT region = new RECT(
-				Left:   (int)(185 / xReference * Navigation.GetWidth()),
-				Top:    (int)(26  / yReference * Navigation.GetHeight()),
-				Right:  (int)(460 / xReference * Navigation.GetWidth()),
-				Bottom: (int)(60  / yReference * Navigation.GetHeight()));
+				Left:   (int)(185 / xReference * _screenCapture.GetWidth()),
+				Top:    (int)(26  / yReference * _screenCapture.GetHeight()),
+				Right:  (int)(460 / xReference * _screenCapture.GetWidth()),
+				Bottom: (int)(60  / yReference * _screenCapture.GetHeight()));
 
-			Bitmap nameBitmap = Navigation.CaptureRegion(region);
+			Bitmap nameBitmap = _screenCapture.CaptureRegion(region);
 
 			//Image Operations
-			GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref nameBitmap);
-			GenshinProcesor.SetInvert(ref nameBitmap);
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(nameBitmap);
+			nameBitmap = _imageProcessor.SetGamma(nameBitmap, 0.2, 0.2, 0.2);
+			nameBitmap = _imageProcessor.SetInvert(nameBitmap);
+			Bitmap n = _imageProcessor.SetGrayscale(nameBitmap);
 
-			UserInterface.SetNavigation_Image(nameBitmap);
+			_userInterface.SetNavigation_Image(nameBitmap);
 
-			string text = GenshinProcesor.AnalyzeText(n).Trim();
+			string text = _ocrEngine.AnalyzeText(n).Trim();
 			if (text != "")
 			{
 				// Only keep a-Z and 0-9
@@ -226,21 +231,21 @@ namespace InventoryKamera
 			}
 			else
 			{
-				UserInterface.AddError(text);
+				_userInterface.AddError(text);
 			}
 			n.Dispose();
 			nameBitmap.Dispose();
 			return text;
 		}
 
-		private static void ScanNameAndElement(ref string name, ref string element)
+		private void ScanNameAndElement(ref string name, ref string element)
 		{
 			int attempts = 0;
 			int maxAttempts = 75;
 
 			var xRef = 1280.0;
 			var yRef = 720.0;
-			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 			{
 				yRef = 800.0;
 			}
@@ -250,25 +255,25 @@ namespace InventoryKamera
 			// Name sits just above the star row, which is ~20-30px above Level (Top: 135)
 			// Tightened to 85-120 to capture descenders without hitting star tops
 			Rectangle nameRegion = new RECT(
-				Left:   (int)( 960  / xRef * Navigation.GetWidth() ),
-				Top:    (int)( 85   / yRef * Navigation.GetHeight() ),
-				Right:  (int)( 1234 / xRef * Navigation.GetWidth() ),
-				Bottom: (int)( 120  / yRef * Navigation.GetHeight() ));
+				Left:   (int)( 960  / xRef * _screenCapture.GetWidth() ),
+				Top:    (int)( 85   / yRef * _screenCapture.GetHeight() ),
+				Right:  (int)( 1234 / xRef * _screenCapture.GetWidth() ),
+				Bottom: (int)( 120  / yRef * _screenCapture.GetHeight() ));
 
 			do
 			{
-				Navigation.SystemWait(Navigation.Speed.Fast);
-				using (Bitmap bm = Navigation.CaptureRegion(nameRegion))
+				_inputSimulator.SystemWait(ScanDelay.Fast);
+				using (Bitmap bm = _screenCapture.CaptureRegion(nameRegion))
 				{
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+					Bitmap n = _imageProcessor.SetGrayscale(bm);
 					// Increase contrast to make white text stand out from lighter backgrounds (fog effects)
-					GenshinProcesor.SetContrast(60, ref n);
+					n = _imageProcessor.SetContrast(n, 60);
 					// High threshold to capture only pure white text, filtering out light backgrounds
-					GenshinProcesor.SetThreshold(200, ref n);
-					GenshinProcesor.SetInvert(ref n);
+					n = _imageProcessor.SetThreshold(n, 200);
+					n = _imageProcessor.SetInvert(n);
 
-					n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
-					string text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+					n = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+					string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
 
 					Logger.Debug("Name OCR from right panel: '{0}'", text);
 
@@ -303,7 +308,7 @@ namespace InventoryKamera
 						else
 						{
 							// Use fuzzy matching for regular characters
-							name = GenshinProcesor.FindClosestCharacterName(text);
+							name = _gameDataService.FindClosestCharacterName(text);
 						}
 
 						if (!string.IsNullOrWhiteSpace(name))
@@ -311,7 +316,7 @@ namespace InventoryKamera
 							Logger.Debug("Matched character name: '{0}'", name);
 
 							// Look up element from characters.json
-							element = GenshinProcesor.GetElementForCharacter(name);
+							element = _gameDataService.GetElementForCharacter(name);
 
 							// Special case: Traveler can be any element, need to check left panel for active element
 							if (name.Contains("Traveler"))
@@ -323,7 +328,7 @@ namespace InventoryKamera
 							if (!string.IsNullOrWhiteSpace(element))
 							{
 								Logger.Debug("Scanned character name as {0} with element {1}", name, element);
-								UserInterface.SetCharacter_NameAndElement(bm, name, element);
+								_userInterface.SetCharacter_NameAndElement(bm, name, element);
 
 								// Save screenshot if LogScreenshots is enabled
 								if (Properties.Settings.Default.LogScreenshots)
@@ -356,7 +361,7 @@ namespace InventoryKamera
 					bm.Save($"./logging/characters/failures/name_fail_{DateTime.Now:yyyyMMddHHmmss}.png");
 				}
 				attempts++;
-				Navigation.SystemWait(Navigation.Speed.Fast);
+				_inputSimulator.SystemWait(ScanDelay.Fast);
 			} while ( attempts < maxAttempts );
 
 			Logger.Error("Failed to scan character name after {0} attempts", maxAttempts);
@@ -364,25 +369,25 @@ namespace InventoryKamera
 			element = null;
 		}
 
-		private static string ScanTravelerElement()
+		private string ScanTravelerElement()
 		{
 			// Use original left panel region that captures "element / name" format
 			// This region was working reliably for element detection
 			Rectangle elementRegion = new RECT(
-				Left:   (int)( 85  / 1280.0 * Navigation.GetWidth() ),
-				Top:    (int)( 10  / 720.0 * Navigation.GetHeight() ),
-				Right:  (int)( 305 / 1280.0 * Navigation.GetWidth() ),
-				Bottom: (int)( 55  / 720.0 * Navigation.GetHeight() ));
+				Left:   (int)( 85  / 1280.0 * _screenCapture.GetWidth() ),
+				Top:    (int)( 10  / 720.0 * _screenCapture.GetHeight() ),
+				Right:  (int)( 305 / 1280.0 * _screenCapture.GetWidth() ),
+				Bottom: (int)( 55  / 720.0 * _screenCapture.GetHeight() ));
 
-			using (Bitmap bm = Navigation.CaptureRegion(elementRegion))
+			using (Bitmap bm = _screenCapture.CaptureRegion(elementRegion))
 			{
-				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-				GenshinProcesor.SetThreshold(110, ref n);
-				GenshinProcesor.SetInvert(ref n);
+				Bitmap n = _imageProcessor.SetGrayscale(bm);
+				n = _imageProcessor.SetThreshold(n, 110);
+				n = _imageProcessor.SetInvert(n);
 
-				n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
-				string block = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower().Trim();
-				string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+				n = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+				string block = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.Auto).ToLower().Trim();
+				string line = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
 
 				// Use line if it has a slash, otherwise use block
 				string nameAndElement = line.Contains("/") ? line : block;
@@ -394,7 +399,7 @@ namespace InventoryKamera
 				{
 					var split = nameAndElement.Split('/');
 					string elementText = split[0].Trim();
-					string element = GenshinProcesor.FindElementByName(elementText);
+					string element = _gameDataService.FindElementByName(elementText);
 
 					n.Dispose();
 
@@ -412,33 +417,33 @@ namespace InventoryKamera
 			return "";
 		}
 
-		private static int ScanLevel(ref bool ascended)
+		private int ScanLevel(ref bool ascended)
 		{
             int attempt = 0;
 
             var xRef = 1280.0;
 			var yRef = 720.0;
-			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 			{
 				yRef = 800.0;
 			}
 
 			Rectangle region =  new RECT(
-				Left:   (int)( 960  / xRef * Navigation.GetWidth() ),
-				Top:    (int)( 135  / yRef * Navigation.GetHeight() ),
-				Right:  (int)( 1125 / xRef * Navigation.GetWidth() ),
-				Bottom: (int)( 163  / yRef * Navigation.GetHeight() ));
+				Left:   (int)( 960  / xRef * _screenCapture.GetWidth() ),
+				Top:    (int)( 135  / yRef * _screenCapture.GetHeight() ),
+				Right:  (int)( 1125 / xRef * _screenCapture.GetWidth() ),
+				Bottom: (int)( 163  / yRef * _screenCapture.GetHeight() ));
 
 			do
 			{
-				Bitmap bm = Navigation.CaptureRegion(region);
+				Bitmap bm = _screenCapture.CaptureRegion(region);
 
-				bm = GenshinProcesor.ResizeImage(bm, bm.Width * 2, bm.Height * 2);
-				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-				GenshinProcesor.SetInvert(ref n);
-				GenshinProcesor.SetContrast(30.0, ref bm);
+				bm = _imageProcessor.ResizeImage(bm, bm.Width * 2, bm.Height * 2);
+				Bitmap n = _imageProcessor.SetGrayscale(bm);
+				n = _imageProcessor.SetInvert(n);
+				bm = _imageProcessor.SetContrast(bm, 30.0);
 
-				string text = GenshinProcesor.AnalyzeText(n).Trim();
+				string text = _ocrEngine.AnalyzeText(n).Trim();
 				Logger.Debug("Scanned character level as {0}", text);
 
 				text = Regex.Replace(text, @"(?![0-9/]).", string.Empty);
@@ -450,7 +455,7 @@ namespace InventoryKamera
                     {
                         maxLevel = (int)Math.Round(maxLevel / 10.0, MidpointRounding.AwayFromZero) * 10;
                         ascended = 20 <= level && level < maxLevel;
-                        UserInterface.SetCharacter_Level(bm, level, maxLevel);
+                        _userInterface.SetCharacter_Level(bm, level, maxLevel);
                         n.Dispose();
                         bm.Dispose();
                         Logger.Debug("Parsed character level as {0}", level);
@@ -463,13 +468,13 @@ namespace InventoryKamera
 
                 n.Dispose();
                 bm.Dispose();
-                Navigation.SystemWait(Navigation.Speed.Fast);
+                _inputSimulator.SystemWait(ScanDelay.Fast);
 			} while (attempt < 50);
 
 			return -1;
 		}
 
-		private static int ScanExperience()
+		private int ScanExperience()
 		{
 			int experience = 0;
 
@@ -482,12 +487,12 @@ namespace InventoryKamera
 			g.CopyFromScreen(screenLocation_X, screenLocation_Y, 0, 0, bm.Size);
 
 			//Image Operations
-			bm = GenshinProcesor.ResizeImage(bm, bm.Width * 6, bm.Height * 6);
+			bm = _imageProcessor.ResizeImage(bm, bm.Width * 6, bm.Height * 6);
 			//Scraper.ConvertToGrayscale(ref bm);
 			//Scraper.SetInvert(ref bm);
-			GenshinProcesor.SetContrast(30.0, ref bm);
+			bm = _imageProcessor.SetContrast(bm, 30.0);
 
-			string text = GenshinProcesor.AnalyzeText(bm);
+			string text = _ocrEngine.AnalyzeText(bm);
 			text = text.Trim();
 			text = Regex.Replace(text, @"(?![0-9\s/]).", string.Empty);
 
@@ -499,58 +504,58 @@ namespace InventoryKamera
 			else
 			{
 				Debug.Print("Error: Found " + experience + " instead of experience");
-				UserInterface.AddError("Found " + experience + " instead of experience");
+				_userInterface.AddError("Found " + experience + " instead of experience");
 			}
 
 			return experience;
 		}
 
-		private static int ScanConstellations(Character character)
+		private int ScanConstellations(Character character)
 		{
 			Logger.Debug("Starting constellation scan for character: {0}", character.NameGOOD);
 			double yReference = 720.0;
 			int constellation;
 
-			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 			{
 				yReference = 800.0;
 			}
 
 			Rectangle constActivate =  new RECT(
-				Left:   (int)( 70 / 1280.0 * Navigation.GetWidth() ),
-				Top:    (int)( 665 / 720.0 * Navigation.GetHeight() ),
-				Right:  (int)( 100 / 1280.0 * Navigation.GetWidth() ),
-				Bottom: (int)( 695 / 720.0 * Navigation.GetHeight() ));
+				Left:   (int)( 70 / 1280.0 * _screenCapture.GetWidth() ),
+				Top:    (int)( 665 / 720.0 * _screenCapture.GetHeight() ),
+				Right:  (int)( 100 / 1280.0 * _screenCapture.GetWidth() ),
+				Bottom: (int)( 695 / 720.0 * _screenCapture.GetHeight() ));
 
 			for (constellation = 0; constellation < 6; constellation++)
 			{
 				// Select Constellation
-				int yOffset = (int)( ( 180 + ( constellation * 75 ) ) / yReference * Navigation.GetHeight() );
+				int yOffset = (int)( ( 180 + ( constellation * 75 ) ) / yReference * _screenCapture.GetHeight() );
 
-				if (Navigation.GetAspectRatio() == new Size(8, 5))
+				if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 				{
-					yOffset = (int)( ( 225 + ( constellation * 75 ) ) / yReference * Navigation.GetHeight() );
+					yOffset = (int)( ( 225 + ( constellation * 75 ) ) / yReference * _screenCapture.GetHeight() );
 				}
 
-				Navigation.SetCursor((int)( 1130 / 1280.0 * Navigation.GetWidth() ), yOffset);
-				Navigation.Click();
+				_inputSimulator.SetCursor((int)( 1130 / 1280.0 * _screenCapture.GetWidth() ), yOffset);
+				_inputSimulator.Click();
 
 				var pause = constellation == 0 ? 700 : 550;
-				Navigation.SystemWait(pause);
+				_inputSimulator.Wait(pause);
 
 				if (Properties.Settings.Default.LogScreenshots)
 				{
-					var screenshot = Navigation.CaptureWindow();
+					var screenshot = _screenCapture.CaptureWindow();
 					Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
 					screenshot.Save($"./logging/characters/{character.NameGOOD}/constellation_{constellation + 1}.png");
 				}
 
 				// Grab Color
-				using (Bitmap region = Navigation.CaptureRegion(constActivate))
+				using (Bitmap region = _screenCapture.CaptureRegion(constActivate))
 				{
 					// Check a small region next to the text "Activate"
 					// for a mostly white backround
-					Color statistics = GenshinProcesor.GetAverageColor(region);
+					Color statistics = _imageProcessor.GetAverageColor(region);
 					Logger.Debug("Constellation {0} color check - R: {1:F1}, G: {2:F1}, B: {3:F1}",
 						constellation + 1, statistics.R, statistics.G, statistics.B);
 
@@ -566,11 +571,11 @@ namespace InventoryKamera
 
 			Logger.Debug("Completed constellation scan for {0}: {1} constellations activated", character.NameGOOD, constellation);
 			Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
-			UserInterface.SetCharacter_Constellation(constellation);
+			_userInterface.SetCharacter_Constellation(constellation);
 			return constellation;
 		}
 
-		private static Dictionary<string, int> ScanTalents(Character character)
+		private Dictionary<string, int> ScanTalents(Character character)
 		{
 			Logger.Debug("Starting talent scan for character: {0}", character.NameGOOD);
 			var talents = new Dictionary<string, int>
@@ -589,24 +594,24 @@ namespace InventoryKamera
 			var xRef = 1280.0;
 			var yRef = 720.0;
 
-			if (Navigation.GetAspectRatio() == new Size(8, 5)) yRef = 800.0;
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5)) yRef = 800.0;
 
 			Rectangle region =  new Rectangle(
-				x:		(int)((Navigation.IsNormal ? 0.0003 : 0) * Navigation.GetWidth() ),
-				y:		(int)((Navigation.IsNormal ? 0.1278 : 0) * Navigation.GetHeight() ),
-				width:	(int)((Navigation.IsNormal ? 0.2913 : 0) * Navigation.GetWidth() ),
-				height:	(int)((Navigation.IsNormal ? 0.0711 : 0) * Navigation.GetHeight() ));
+				x:		(int)((_screenCapture.IsNormal ? 0.0003 : 0) * _screenCapture.GetWidth() ),
+				y:		(int)((_screenCapture.IsNormal ? 0.1278 : 0) * _screenCapture.GetHeight() ),
+				width:	(int)((_screenCapture.IsNormal ? 0.2913 : 0) * _screenCapture.GetWidth() ),
+				height:	(int)((_screenCapture.IsNormal ? 0.0711 : 0) * _screenCapture.GetHeight() ));
 
 			for (int i = 0; i < 3; i++)
 			{
 				string talent;
 				// Change y-offset for talent clicking
-				int yOffset = (int)( 110 / yRef * Navigation.GetHeight() ) + ( i + ( ( i == 2 ) ? specialOffset : 0 ) ) * (int)(60 / yRef * Navigation.GetHeight() );
+				int yOffset = (int)( 110 / yRef * _screenCapture.GetHeight() ) + ( i + ( ( i == 2 ) ? specialOffset : 0 ) ) * (int)(60 / yRef * _screenCapture.GetHeight() );
 
-				Navigation.SetCursor((int)(1130 / xRef * Navigation.GetWidth()), yOffset);
-				Navigation.Click();
+				_inputSimulator.SetCursor((int)(1130 / xRef * _screenCapture.GetWidth()), yOffset);
+				_inputSimulator.Click();
 				int pause = i == 0 ? 700 : 550;
-				Navigation.SystemWait(pause);
+				_inputSimulator.Wait(pause);
                 switch (i)
                 {
 					default:
@@ -622,15 +627,15 @@ namespace InventoryKamera
 
                 while (talents[talent] < 1 || talents[talent] > 15)
 				{
-					Bitmap talentLevel = Navigation.CaptureRegion(region);
+					Bitmap talentLevel = _screenCapture.CaptureRegion(region);
 
-					talentLevel = GenshinProcesor.ResizeImage(talentLevel, talentLevel.Width * 2, talentLevel.Height * 2);
+					talentLevel = _imageProcessor.ResizeImage(talentLevel, talentLevel.Width * 2, talentLevel.Height * 2);
 
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(talentLevel);
-					GenshinProcesor.SetContrast(60, ref n);
-					GenshinProcesor.SetInvert(ref n);
+					Bitmap n = _imageProcessor.SetGrayscale(talentLevel);
+					n = _imageProcessor.SetContrast(n, 60);
+					n = _imageProcessor.SetInvert(n);
 
-					var text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleBlock).Trim().Split('\n').ToList();
+					var text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleBlock).Trim().Split('\n').ToList();
 					Logger.Debug("Talent '{0}' OCR raw text: '{1}'", talent, string.Join(" | ", text));
 
 					if (int.TryParse(Regex.Replace(text.Last(), @"\D", string.Empty), out int level))
@@ -640,7 +645,7 @@ namespace InventoryKamera
 						if (level >= 1 && level <= 15)
 						{
 							talents[talent] = level;
-							UserInterface.SetCharacter_Talent(talentLevel, level.ToString(), i);
+							_userInterface.SetCharacter_Talent(talentLevel, level.ToString(), i);
 
 							// Save screenshot if LogScreenshots is enabled
 							if (Properties.Settings.Default.LogScreenshots)

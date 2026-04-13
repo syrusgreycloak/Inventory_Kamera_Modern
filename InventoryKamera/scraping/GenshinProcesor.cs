@@ -110,19 +110,20 @@ namespace InventoryKamera
 		internal static void UpdateCharacterName(string target, string name) =>
             _gameData.UpdateCharacterName(target, name);
 
-		internal static void AssignTravelerName(string name)
-		{
-			name = string.IsNullOrWhiteSpace(name) ? CharacterScraper.ScanMainCharacterName() : name.ToLower();
-			if (!string.IsNullOrWhiteSpace(name))
-			{
-				UpdateCharacterName("traveler", name);
-				UserInterface.SetMainCharacterName(name);
-			}
-			else
-			{
-				UserInterface.AddError("Could not parse Traveler's username");
-			}
-		}
+		// TODO Task 9: replace with characterScraper.ScanMainCharacterName() — CharacterScraper is now an instance class
+		// internal static void AssignTravelerName(string name)
+		// {
+		// 	name = string.IsNullOrWhiteSpace(name) ? CharacterScraper.ScanMainCharacterName() : name.ToLower();
+		// 	if (!string.IsNullOrWhiteSpace(name))
+		// 	{
+		// 		UpdateCharacterName("traveler", name);
+		// 		UserInterface.SetMainCharacterName(name);
+		// 	}
+		// 	else
+		// 	{
+		// 		UserInterface.AddError("Could not parse Traveler's username");
+		// 	}
+		// }
 
 		#region OCR
 
