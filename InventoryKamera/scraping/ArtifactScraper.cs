@@ -13,7 +13,10 @@ namespace InventoryKamera
 	{
 		private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		public ArtifactScraper() 
+		public ArtifactScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+
+        public ArtifactScraper()
 		{
 			inventoryPage = InventoryPage.Artifacts;
             SortByLevel = Properties.Settings.Default.MinimumArtifactLevel > 0;

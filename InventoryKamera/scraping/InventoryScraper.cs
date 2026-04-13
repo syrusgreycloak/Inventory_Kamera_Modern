@@ -61,7 +61,20 @@ namespace InventoryKamera
         private int prevColumn = 0;
         private int prevRow = 0;
 
-        public InventoryScraper() 
+        protected IScreenCapture _screenCapture;
+        protected IOcrEngine _ocrEngine;
+        protected IImageProcessor _imageProcessor;
+        protected IUserInterface _userInterface;
+
+        protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+        {
+            _screenCapture = screenCapture;
+            _ocrEngine = ocrEngine;
+            _imageProcessor = imageProcessor;
+            _userInterface = userInterface;
+        }
+
+        public InventoryScraper()
         {
             materialPages = new List<InventoryPage>();
 
