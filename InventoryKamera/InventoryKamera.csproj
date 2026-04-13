@@ -44,8 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Accord.Imaging" Version="3.8.0" />
-    <PackageReference Include="InputSimulator" Version="1.0.4" />
+<PackageReference Include="InputSimulator" Version="1.0.4" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NHotkey.WindowsForms" Version="3.0.0" />
