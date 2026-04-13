@@ -1214,10 +1214,4 @@ namespace InventoryKamera
         }
     }
 
-	internal struct IntRange
-	{
-		internal int Min { get; }
-		internal int Max { get; }
-		internal IntRange(int min, int max) { Min = min; Max = max; }
-	}
 }
