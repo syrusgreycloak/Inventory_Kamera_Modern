@@ -25,7 +25,7 @@ namespace InventoryKamera
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
         private static Thread scannerThread;
-        private static InventoryKamera data = new InventoryKamera();
+        private static InventoryKamera data = new InventoryKamera(null);
         private static DatabaseManager databaseManager = new DatabaseManager();
 
         private int Delay;
@@ -259,7 +259,7 @@ namespace InventoryKamera
 
                         if (Navigation.GetSize() != Navigation.CaptureWindow().Size) throw new FormatException("Window size and screenshot size mismatch. Please make sure the game is not in a fullscreen mode.");
 
-                        data = new InventoryKamera();
+                        data = new InventoryKamera(this);
 
                         Logger.Info("Resolution: {0}x{1}", Navigation.GetSize().Width, Navigation.GetSize().Height);
 
