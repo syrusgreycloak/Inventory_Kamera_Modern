@@ -13,8 +13,11 @@ namespace InventoryKamera
     {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-		public WeaponScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+		public WeaponScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+        {
+            inventoryPage = InventoryPage.Weapons;
+        }
 
         public WeaponScraper()
         {
@@ -33,7 +36,7 @@ namespace InventoryKamera
             int cardsQueued = 0;
             int rowsQueued = 0;
             int offset = 0;
-            UserInterface.SetWeapon_Max(weaponCount);
+            _userInterface.SetWeapon_Max(weaponCount);
 
             // Determine Delay if delay has not been found before
             // Scraper.FindDelay(rectangles);
@@ -56,9 +59,9 @@ namespace InventoryKamera
                 for (int i = cardsRemaining < fullPage ? (rows - (totalRows - rowsQueued)) * cols : 0; i < rectangles.Count; i++)
                 {
                     Rectangle item = rectangles[i];
-                    Navigation.SetCursor(item.Center().X, item.Center().Y + offset);
-                    Navigation.Click();
-                    Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+                    _inputSimulator.SetCursor(item.Center().X, item.Center().Y + offset);
+                    _inputSimulator.Click();
+                    _inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
 
                     // Queue card for scanning
                     QueueScan(cardsQueued);
@@ -79,30 +82,30 @@ namespace InventoryKamera
                 // only scroll a few rows
                 if (totalRows - rowsQueued <= rows)
                 {
-                    if (Navigation.GetAspectRatio() == new Size(8, 5))
+                    if (_screenCapture.GetAspectRatio() == new Size(8, 5))
                     {
                         offset = 35; // Lazy fix
                     }
                     for (int i = 0; i < 10 * (totalRows - rowsQueued) - 1; i++)
                     {
-                        Navigation.sim.Mouse.VerticalScroll(-1);
-                        Navigation.Wait(1);
+                        _inputSimulator.MouseVerticalScroll(-1);
+                        _inputSimulator.Wait(1);
                     }
-                    Navigation.SystemWait(Navigation.Speed.Fast);
+                    _inputSimulator.SystemWait(ScanDelay.Fast);
                 }
                 else
                 {
                     // Scroll back one to keep it from getting too crazy
                     if (rowsQueued % 15 == 0)
                     {
-                        Navigation.sim.Mouse.VerticalScroll(1);
+                        _inputSimulator.MouseVerticalScroll(1);
                     }
                     for (int i = 0; i < 10 * rows - 1; i++)
                     {
-                        Navigation.sim.Mouse.VerticalScroll(-1);
-                        Navigation.Wait(1);
+                        _inputSimulator.MouseVerticalScroll(-1);
+                        _inputSimulator.Wait(1);
                     }
-                    Navigation.SystemWait(Navigation.Speed.Fast);
+                    _inputSimulator.SystemWait(ScanDelay.Fast);
                 }
                 ++page;
                 (rectangles, cols, rows) = GetPageOfItems(page, acceptLess: totalRows - rowsQueued <= fullPage);
@@ -110,30 +113,30 @@ namespace InventoryKamera
 
             void SelectLevelSorting()
             {
-                Navigation.SetCursor(
-                    X: (int)(230 / 1280.0 * Navigation.GetWidth()),
-                    Y: (int)(680 / 720.0 * Navigation.GetHeight()));
-                Navigation.Click();
-                Navigation.Wait();
-                Navigation.SetCursor(
-                    X: (int)(250 / 1280.0 * Navigation.GetWidth()),
-                    Y: (int)(575 / 720.0 * Navigation.GetHeight()));
-                Navigation.Click();
-                Navigation.Wait();
+                _inputSimulator.SetCursor(
+                    (int)(230 / 1280.0 * _screenCapture.GetWidth()),
+                    (int)(680 / 720.0 * _screenCapture.GetHeight()));
+                _inputSimulator.Click();
+                _inputSimulator.Wait(1000);
+                _inputSimulator.SetCursor(
+                    (int)(250 / 1280.0 * _screenCapture.GetWidth()),
+                    (int)(575 / 720.0 * _screenCapture.GetHeight()));
+                _inputSimulator.Click();
+                _inputSimulator.Wait(1000);
             }
 
             void SelectQualitySorting()
             {
-                Navigation.SetCursor(
-                                        X: (int)(230 / 1280.0 * Navigation.GetWidth()),
-                                        Y: (int)(680 / 720.0 * Navigation.GetHeight()));
-                Navigation.Click();
-                Navigation.Wait();
-                Navigation.SetCursor(
-                    X: (int)(250 / 1280.0 * Navigation.GetWidth()),
-                    Y: (int)(615 / 720.0 * Navigation.GetHeight()));
-                Navigation.Click();
-                Navigation.Wait();
+                _inputSimulator.SetCursor(
+                    (int)(230 / 1280.0 * _screenCapture.GetWidth()),
+                    (int)(680 / 720.0 * _screenCapture.GetHeight()));
+                _inputSimulator.Click();
+                _inputSimulator.Wait(1000);
+                _inputSimulator.SetCursor(
+                    (int)(250 / 1280.0 * _screenCapture.GetWidth()),
+                    (int)(615 / 720.0 * _screenCapture.GetHeight()));
+                _inputSimulator.Click();
+                _inputSimulator.Wait(1000);
             }
 
             void SelectSortingMethod()
@@ -211,22 +214,22 @@ namespace InventoryKamera
 
         Bitmap GetLevelBitmap(Bitmap card)
         {
-            return GenshinProcesor.CopyBitmap(card,
+            return _imageProcessor.Crop(card,
                 new Rectangle(
                     x: (int)(card.Width * 0.060),
-                    y: (int)(card.Height * (Navigation.IsNormal ? 0.367 : 0.320)),
+                    y: (int)(card.Height * (_screenCapture.IsNormal ? 0.367 : 0.320)),
                     width: (int)(card.Width * 0.262),
-                    height: (int)(card.Height * (Navigation.IsNormal ? 0.035 : 0.033))));
+                    height: (int)(card.Height * (_screenCapture.IsNormal ? 0.035 : 0.033))));
         }
 
         Bitmap GetRefinementBitmap(Bitmap card)
         {
-            return GenshinProcesor.CopyBitmap(card,
+            return _imageProcessor.Crop(card,
                 new Rectangle(
-                    x: (int)(card.Width * (Navigation.IsNormal ? 0.061 : 0.060)),
-                    y: (int)(card.Height * (Navigation.IsNormal ? 0.421 : 0.368)),
-                    width: (int)(card.Width * (Navigation.IsNormal ? 0.065 : 0.066)),
-                    height: (int)(card.Height * (Navigation.IsNormal ? 0.033 : 0.030))));
+                    x: (int)(card.Width * (_screenCapture.IsNormal ? 0.061 : 0.060)),
+                    y: (int)(card.Height * (_screenCapture.IsNormal ? 0.421 : 0.368)),
+                    width: (int)(card.Width * (_screenCapture.IsNormal ? 0.065 : 0.066)),
+                    height: (int)(card.Height * (_screenCapture.IsNormal ? 0.033 : 0.030))));
         }
 
         public async Task<Weapon> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
@@ -251,12 +254,12 @@ namespace InventoryKamera
 				// Check for equipped color
 				Color equippedColor = Color.FromArgb(255, 255, 231, 187);
 				Color equippedStatus = bm[w_equippedCharacter].GetPixel(5, 5);
-				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
+				bool b_equipped = _imageProcessor.CompareColors(equippedColor, equippedStatus);
 
 				// Check for lock color
 				Color lockedColor = Color.FromArgb(255, 70, 80, 100); // Dark area around red lock
 				Color lockStatus = bm[w_lock].GetPixel(5, 5);
-				locked = GenshinProcesor.CompareColors(lockedColor, lockStatus);
+				locked = _imageProcessor.CompareColors(lockedColor, lockStatus);
 
 				List<Task> tasks = new List<Task>();
 
@@ -284,7 +287,7 @@ namespace InventoryKamera
 				{
 					refinementLevel = 1;
 					refinementDefaulted = true;
-					UserInterface.AddError($"Warning: Could not read refinement level for weapon ID#{id}, defaulting to R1");
+					_userInterface.AddError($"Warning: Could not read refinement level for weapon ID#{id}, defaulting to R1");
 				}
 			}
 			var weapon = new Weapon(name, level, ascended, refinementLevel, locked, equippedCharacter, id, rarity);
@@ -295,13 +298,13 @@ namespace InventoryKamera
         public bool IsEnhancementMaterial(Bitmap nameBitmap)
 		{
 			string material = ScanEnchancementOreName(nameBitmap);
-			return !string.IsNullOrWhiteSpace(material) && GenshinProcesor.enhancementMaterials.Contains(material.ToLower());
+			return !string.IsNullOrWhiteSpace(material) && _gameDataService.EnhancementMaterials.Contains(material.ToLower());
 		}
 
 		public string ScanEnchancementOreName(Bitmap bm)
 		{
 			// Analyze
-			string name = GenshinProcesor.FindClosestMaterialName(ScanItemName(bm), minConfidence: 95);
+			string name = _gameDataService.FindClosestMaterialName(ScanItemName(bm), minConfidence: 95);
 
 			return name;
 		}
@@ -310,15 +313,15 @@ namespace InventoryKamera
 
 		private string ScanWeaponName(string name)
         {
-            return GenshinProcesor.FindClosestWeapon(name);
+            return _gameDataService.FindClosestWeapon(name);
         }
 
         public int ScanLevel(Bitmap bm, ref bool ascended)
 		{
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetInvert(ref n);
+			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			n = _imageProcessor.SetInvert(n);
 
-			string text = GenshinProcesor.AnalyzeText(n).Trim();
+			string text = _ocrEngine.AnalyzeText(n).Trim();
 			n.Dispose();
 			text = Regex.Replace(text, @"(?![\d/]).", string.Empty);
 
@@ -343,10 +346,10 @@ namespace InventoryKamera
 		{
 			// Removed scaling loop - process image once at original size
 			// Scaling was distorting digit "2" specifically, causing 100% OCR failure on R2 weapons
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(image);
-			GenshinProcesor.SetInvert(ref n);
+			Bitmap n = _imageProcessor.SetGrayscale(image);
+			n = _imageProcessor.SetInvert(n);
 
-			string text = GenshinProcesor.AnalyzeText(n).Trim();
+			string text = _ocrEngine.AnalyzeText(n).Trim();
 			n.Dispose();
 
 			// Debug logging to see raw OCR output
@@ -376,10 +379,10 @@ namespace InventoryKamera
 
 		public string ScanEquippedCharacter(Bitmap bm)
 		{
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetContrast(60.0, ref n);
+			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			n = _imageProcessor.SetContrast(n, 60.0);
 
-			string extractedString = GenshinProcesor.AnalyzeText(n);
+			string extractedString = _ocrEngine.AnalyzeText(n);
 			n.Dispose();
 
 			if (extractedString != "")
@@ -390,7 +393,7 @@ namespace InventoryKamera
 					var name = extractedString.Split(':')[1];
 
 					name = Regex.Replace(name, @"[\W]", string.Empty).ToLower();
-					name = GenshinProcesor.FindClosestCharacterName(name);
+					name = _gameDataService.FindClosestCharacterName(name);
 
 					return name;
 				}
