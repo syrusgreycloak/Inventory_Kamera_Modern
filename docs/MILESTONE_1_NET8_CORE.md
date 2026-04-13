@@ -2,7 +2,7 @@
 
 **Goal:** .NET 8 solution with a clean platform-agnostic Core library. WinForms still works as the UI throughout.
 
-**Status:** Not started.
+**Status:** In progress — Step 1.1 complete (2026-04-12).
 
 ---
 
@@ -46,7 +46,7 @@ This avoids a big-bang rewrite — every intermediate state compiles and runs.
 
 ---
 
-## Step 1.1: .NET 8 Migration
+## Step 1.1: .NET 8 Migration ✓ COMPLETE
 
 **Files to modify:**
 - `InventoryKamera/InventoryKamera.csproj` — convert to SDK-style, `net8.0-windows`
