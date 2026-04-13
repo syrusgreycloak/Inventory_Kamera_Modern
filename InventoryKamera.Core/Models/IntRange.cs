@@ -4,6 +4,6 @@ namespace InventoryKamera
     {
         public int Min;
         public int Max;
-        internal IntRange(int min, int max) { Min = min; Max = max; }
+        public IntRange(int min, int max) { Min = min; Max = max; }
     }
 }
