@@ -13,7 +13,10 @@ namespace InventoryKamera
     {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-		public WeaponScraper()
+		public WeaponScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+
+        public WeaponScraper()
         {
             inventoryPage = InventoryPage.Weapons;
             SortByLevel = Properties.Settings.Default.MinimumWeaponLevel > 1;

@@ -11,7 +11,10 @@ namespace InventoryKamera
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
 
-		public MaterialScraper()
+		public MaterialScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+
+        public MaterialScraper()
 		{
 			inventoryPage = InventoryPage.CharacterDevelopmentItems;
 		}
