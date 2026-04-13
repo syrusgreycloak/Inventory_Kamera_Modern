@@ -490,14 +490,6 @@ namespace InventoryKamera
 
 			return -1;
 		}
-			else
-			{
-				Debug.Print("Error: Found " + experience + " instead of experience");
-				_userInterface.AddError("Found " + experience + " instead of experience");
-			}
-
-			return experience;
-		}
 
 		private int ScanConstellations(Character character)
 		{
