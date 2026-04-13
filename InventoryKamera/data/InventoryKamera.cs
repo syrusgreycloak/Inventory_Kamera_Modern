@@ -30,6 +30,7 @@ namespace InventoryKamera
 		private MaterialScraper materialScraper;
 
 		private volatile bool b_threadCancel;
+		public bool WasCancelled => b_threadCancel;
 		private readonly int NumWorkers;
 
 		public bool HasData

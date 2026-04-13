@@ -89,7 +89,7 @@ namespace InventoryKamera
             if (scannerThread.IsAlive)
             {
                 // Stop navigating weapons/artifacts
-                scannerThread.Abort();
+                data?.StopImageProcessorWorkers();
 
                 UserInterface.SetProgramStatus("Scan Stopped");
 
@@ -278,14 +278,15 @@ namespace InventoryKamera
                         good.WriteToJSON(OutputPath_TextBox.Text);
                         Logger.Info("Exported data");
 
-                        UserInterface.SetProgramStatus("Finished");
-                        OpenOptimizerDialog(good);
-                    }
-                    catch (ThreadAbortException)
-                    {
-                        // Workers can get stuck if the thread is aborted or an exception is raised
-                        data?.StopImageProcessorWorkers();
-                        UserInterface.SetProgramStatus("Scan stopped");
+                        if (data.WasCancelled)
+                        {
+                            UserInterface.SetProgramStatus("Scan stopped");
+                        }
+                        else
+                        {
+                            UserInterface.SetProgramStatus("Finished");
+                            OpenOptimizerDialog(good);
+                        }
                     }
                     catch (NotImplementedException ex)
                     {
