@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using InventoryKamera.Infrastructure;
+using InventoryKamera.UI;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,6 +30,14 @@ namespace InventoryKamera
 		private WeaponScraper weaponScraper;
 		private ArtifactScraper artifactScraper;
 		private MaterialScraper materialScraper;
+		private CharacterScraper _characterScraper;
+
+		private readonly IScreenCapture _screenCapture;
+		private readonly IOcrEngine _ocrEngine;
+		private readonly IImageProcessor _imageProcessor;
+		private readonly IUserInterface _userInterface;
+		private readonly IGameDataService _gameDataService;
+		private readonly IInputSimulator _inputSimulator;
 
 		private volatile bool b_threadCancel;
 		public bool WasCancelled => b_threadCancel;
@@ -38,7 +48,7 @@ namespace InventoryKamera
 			get { return Characters.Count > 0 || Inventory.Size > 0; }
         }
 
-		public InventoryKamera()
+		public InventoryKamera(MainForm mainForm = null)
 		{
 			Characters = new List<Character>();
 			Inventory = new Inventory();
@@ -47,9 +57,25 @@ namespace InventoryKamera
 			ImageProcessors = new List<Thread>();
 			workerQueue = new Queue<OCRImageCollection>();
 
-			weaponScraper = new WeaponScraper();
-			artifactScraper = new ArtifactScraper();
-			materialScraper = new MaterialScraper();
+			// Construct infrastructure services
+			_screenCapture = new WindowsScreenCapture();
+			_ocrEngine = new OcrEnginePool();
+			_imageProcessor = new WinFormsImageProcessor();
+			_inputSimulator = new WindowsInputSimulator();
+			_userInterface = mainForm != null
+				? (IUserInterface)new WinFormsUserInterface(mainForm)
+				: new NullUserInterface();
+
+			// Construct game data service
+			var db = new DatabaseManager();
+			var coreGameData = new GameDataService(db);
+			_gameDataService = new InfraGameDataService(coreGameData);
+
+			// Construct scrapers with injected services
+			weaponScraper = new WeaponScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
+			artifactScraper = new ArtifactScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
+			materialScraper = new MaterialScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
+			_characterScraper = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
 
 			b_threadCancel = false;
 
@@ -110,8 +136,19 @@ namespace InventoryKamera
 			GenshinProcesor.RestartEngines();
 
 
-			// TODO Task 9: replace with characterScraper.ScanMainCharacterName() — AssignTravelerName removed (CharacterScraper is now an instance class)
-			// GenshinProcesor.AssignTravelerName(Properties.Settings.Default.TravelerName);
+			// Assign Traveler's name via instance CharacterScraper
+			string travelerName = string.IsNullOrWhiteSpace(Properties.Settings.Default.TravelerName)
+				? _characterScraper.ScanMainCharacterName()
+				: Properties.Settings.Default.TravelerName.ToLower();
+			if (!string.IsNullOrWhiteSpace(travelerName))
+			{
+				_gameDataService.UpdateCharacterName("traveler", travelerName);
+				UserInterface.SetMainCharacterName(travelerName);
+			}
+			else
+			{
+				UserInterface.AddError("Could not parse Traveler's username");
+			}
 
 			// Assign Wanderer's custom name
 			GenshinProcesor.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
@@ -169,8 +206,7 @@ namespace InventoryKamera
 				Navigation.CharacterScreen();
 				try
 				{
-					// TODO Task 9: replace with characterScraper.ScanCharacters(ref Characters)
-					// CharacterScraper.ScanCharacters(ref Characters);
+					_characterScraper.ScanCharacters(ref Characters);
 				}
 				catch (Exception ex)
 				{
