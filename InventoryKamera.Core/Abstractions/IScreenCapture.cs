@@ -6,7 +6,10 @@ namespace InventoryKamera
     {
         Bitmap CaptureWindow();
         Bitmap CaptureRegion(int x, int y, int width, int height);
+        Bitmap CaptureRegion(RECT region);
         int GetWidth();
         int GetHeight();
+        Size GetAspectRatio();
+        bool IsNormal { get; }
     }
 }
