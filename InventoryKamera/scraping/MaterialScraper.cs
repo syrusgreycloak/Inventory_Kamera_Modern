@@ -332,7 +332,7 @@ namespace InventoryKamera
 					using (Bitmap rescaled = GenshinProcesor.ResizeImage(bm, (int)(bm.Width * scale), (int)(bm.Height * scale)))
                     {
                         Bitmap copy = (Bitmap)rescaled.Clone();
-                        GenshinProcesor.FilterColors(ref copy, rRange, bRange, gRange);
+                        GenshinProcesor.FilterColors(ref copy, rRange, gRange, bRange);
 
                         for (int i = 0; i < copy.Width; i++)
                             for (int j = 0; j < copy.Height * 0.25; j++)
