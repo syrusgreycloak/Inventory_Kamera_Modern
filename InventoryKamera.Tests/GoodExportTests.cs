@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -87,23 +88,28 @@ namespace InventoryKamera.Tests
         [Fact]
         public void GOOD_Constructor_EquipWeaponsFalse_ClearsWeaponLocation()
         {
+            var weaponWithLocation = new Weapon("AquilaFavonia", 20, false, 1, false, "Albedo", 1, 5);
+            Assert.Equal("Albedo", weaponWithLocation.EquippedCharacter); // sanity: starts with location
+
             var inventory = BuildMinimalInventory();
-            // Add a weapon with a character equipped
-            inventory.Add(new Weapon("AquilaFavonia", 20, false, 1, false, "Albedo", 1, 5));
+            inventory.Add(weaponWithLocation);
             var characters = new List<Character>();
 
             var good = new GOOD(characters, inventory, equipWeapons: false, equipArtifacts: false);
-            string json = good.ToString();
 
+            // GOOD with equipWeapons=false mutates the weapon objects directly (shallow copy),
+            // so we can assert on the object itself.
+            Assert.Equal("", weaponWithLocation.EquippedCharacter);
+
+            // Also verify through JSON output that the specific weapon has empty location.
+            string json = good.ToString();
             var obj = JObject.Parse(json);
             var weapons = obj["weapons"] as JArray;
 
             Assert.NotNull(weapons);
-            // All weapons should have empty location when equipWeapons = false
-            foreach (var w in weapons)
-            {
-                Assert.Equal("", (string)w["location"]);
-            }
+            var aquila = weapons.FirstOrDefault(w => (string)w["key"] == "AquilaFavonia");
+            Assert.NotNull(aquila); // weapon must be present in output
+            Assert.Equal("", (string)aquila["location"]); // its location must be cleared
         }
 
         [Fact]
