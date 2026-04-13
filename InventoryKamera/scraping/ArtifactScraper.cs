@@ -1,5 +1,4 @@
-﻿using Accord.Imaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -374,7 +373,7 @@ namespace InventoryKamera
 
 		private static int GetRarity(Bitmap bm)
 		{
-			var averageColor = new ImageStatistics(bm);
+			var averageColor = GenshinProcesor.GetAverageColor(bm);
 
 			Color fiveStar = Color.FromArgb(255, 188, 105, 50);
 			Color fourStar = Color.FromArgb(255, 161, 86, 224);

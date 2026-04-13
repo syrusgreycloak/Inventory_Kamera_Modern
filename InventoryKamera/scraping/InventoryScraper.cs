@@ -1,10 +1,10 @@
-﻿using Accord.Imaging;
-using Accord.Imaging.Filters;
-using NLog;
+﻿using NLog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace InventoryKamera
@@ -242,27 +242,26 @@ namespace InventoryKamera
             int iconMaxHeight = icon.Height + ((int)(icon.Height * 0.15));
             int iconMinWidth = icon.Width - ((int)(icon.Width * 0.15));
             int iconMaxWidth = icon.Width + ((int)(icon.Width * 0.15));
-            using (BlobCounter blobCounter = new BlobCounter
-            {
-                FilterBlobs = true,
-                MinHeight = (int)(iconMinHeight * (1 - weight)),
-                MaxHeight = (int)(iconMaxHeight * (1 + weight)),
-                MinWidth = (int)(iconMinWidth * (1 - weight)),
-                MaxWidth = (int)(iconMaxWidth * (1 + weight)),
-            })
             {
                 // Image pre-processing
-                screenshot = new KirschEdgeDetector().Apply(screenshot); // Algorithm to find edges. Really good but can take ~1s
-                screenshot = new Grayscale(0.2125, 0.7154, 0.0721).Apply(screenshot);
-                screenshot = new Threshold(75).Apply(screenshot); // Convert to black and white only based on pixel intensity			
-
-                blobCounter.ProcessImage(screenshot);
+                using (var kirschEdges = GenshinProcesor.KirschEdgeDetect(screenshot))
+                using (var grayscale = GenshinProcesor.ConvertToGrayscale(kirschEdges))
+                {
+                    Bitmap thresholded = (Bitmap)grayscale.Clone();
+                    GenshinProcesor.SetThreshold(75, ref thresholded);
+                    screenshot.Dispose();
+                    screenshot = thresholded;
+                }
                 // Note: Processing won't always detect all item rectangles on screen. Since the
                 // background isn't a solid color it's a bit trickier to filter out.
 
                 // Don't save overlapping blobs
                 List<Rectangle> rectangles = new List<Rectangle>();
-                List<Rectangle> blobRects = blobCounter.GetObjectsRectangles().ToList();
+                List<Rectangle> blobRects = FindBlobs(screenshot,
+                    (int)(iconMinWidth * (1 - weight)),
+                    (int)(iconMaxWidth * (1 + weight)),
+                    (int)(iconMinHeight * (1 - weight)),
+                    (int)(iconMaxHeight * (1 + weight)));
 
                 int minWidth = blobRects[0].Width;
                 int minHeight = blobRects[0].Height;
@@ -376,6 +375,67 @@ namespace InventoryKamera
             }
         }
 
+        private static List<Rectangle> FindBlobs(Bitmap binaryBitmap, int minWidth, int maxWidth, int minHeight, int maxHeight)
+        {
+            int width = binaryBitmap.Width;
+            int height = binaryBitmap.Height;
+            bool[,] visited = new bool[width, height];
+            var results = new List<Rectangle>();
+
+            BitmapData bmpData = binaryBitmap.LockBits(
+                new Rectangle(0, 0, width, height),
+                ImageLockMode.ReadOnly, binaryBitmap.PixelFormat);
+            int bytesPerPixel = Image.GetPixelFormatSize(binaryBitmap.PixelFormat) / 8;
+            int stride = bmpData.Stride;
+            byte[] pixels = new byte[stride * height];
+            Marshal.Copy(bmpData.Scan0, pixels, 0, pixels.Length);
+            binaryBitmap.UnlockBits(bmpData);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (visited[x, y]) continue;
+                    int pos = y * stride + x * bytesPerPixel;
+                    bool isWhite = pixels[pos] > 128;
+                    if (!isWhite) continue;
+
+                    var queue = new Queue<(int px, int py)>();
+                    queue.Enqueue((x, y));
+                    visited[x, y] = true;
+                    int minX = x, maxX = x, minY = y, maxY = y;
+
+                    while (queue.Count > 0)
+                    {
+                        var (cx, cy) = queue.Dequeue();
+                        if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+
+                        int[] dxs = { -1, 1, 0, 0 };
+                        int[] dys = { 0, 0, -1, 1 };
+                        for (int d = 0; d < 4; d++)
+                        {
+                            int nx = cx + dxs[d], ny = cy + dys[d];
+                            if (nx < 0 || nx >= width || ny < 0 || ny >= height || visited[nx, ny]) continue;
+                            int npos = ny * stride + nx * bytesPerPixel;
+                            if (pixels[npos] > 128)
+                            {
+                                visited[nx, ny] = true;
+                                queue.Enqueue((nx, ny));
+                            }
+                        }
+                    }
+
+                    int blobW = maxX - minX + 1;
+                    int blobH = maxY - minY + 1;
+                    if (blobW >= minWidth && blobW <= maxWidth && blobH >= minHeight && blobH <= maxHeight)
+                        results.Add(new Rectangle(minX, minY, blobW, blobH));
+                }
+            }
+
+            return results;
+        }
+
         internal (List<Rectangle> rectangles, int cols, int rows) GetPageOfItems(int pageNum, bool acceptLess = false)
         {
             // Screenshot of inventory
@@ -486,7 +546,7 @@ namespace InventoryKamera
         /// <returns>An integer representing quality from 0 - 5 (invalid - 5 star)</returns>
         internal static int GetQuality(Bitmap nameplate)
         {
-            var averageColor = new ImageStatistics(nameplate);
+            var averageColor = GenshinProcesor.GetAverageColor(nameplate);
 
             Color fiveStar = Color.FromArgb(255, 188, 105, 50);
             Color fourStar = Color.FromArgb(255, 161, 86, 224);

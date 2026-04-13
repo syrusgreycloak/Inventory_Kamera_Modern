@@ -1,5 +1,4 @@
-﻿using Accord.Imaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -551,11 +550,11 @@ namespace InventoryKamera
 				{
 					// Check a small region next to the text "Activate"
 					// for a mostly white backround
-					ImageStatistics statistics = new ImageStatistics(region);
+					Color statistics = GenshinProcesor.GetAverageColor(region);
 					Logger.Debug("Constellation {0} color check - R: {1:F1}, G: {2:F1}, B: {3:F1}",
-						constellation + 1, statistics.Red.Mean, statistics.Green.Mean, statistics.Blue.Mean);
+						constellation + 1, statistics.R, statistics.G, statistics.B);
 
-					if (statistics.Red.Mean >= 190 && statistics.Green.Mean >= 190 && statistics.Blue.Mean >= 190)
+					if (statistics.R >= 190 && statistics.G >= 190 && statistics.B >= 190)
 					{
 						Logger.Debug("Constellation {0} is not activated (found 'Activate' button). Total constellations: {1}",
 							constellation + 1, constellation);

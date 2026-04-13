@@ -1,7 +1,4 @@
-﻿using Accord;
-using Accord.Imaging;
-using Accord.Imaging.Filters;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -196,7 +193,14 @@ namespace InventoryKamera
 			while (!engines.TryTake(out e)) { Thread.Sleep(10); }
 
 			if (numbersOnly) e.SetVariable("tessedit_char_whitelist", "0123456789");
-			using (var page = e.Process(bitmap, pageMode))
+			byte[] pngBytes;
+			using (var ms = new System.IO.MemoryStream())
+			{
+				bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+				pngBytes = ms.ToArray();
+			}
+			using (var pix = Pix.LoadFromMemory(pngBytes))
+			using (var page = e.Process(pix, pageMode))
 			{
 				using (var iter = page.GetIterator())
 				{
@@ -724,17 +728,43 @@ namespace InventoryKamera
 			return diff[0] < 10 && diff[1] < 10 && diff[2] < 10;
 		}
 
-		internal static Color ClosestColor(List<Color> colors, ImageStatistics color)
+		internal static Color ClosestColor(List<Color> colors, Color color)
 		{
-			var c2 = Color.FromArgb((int)color.Red.Mean, (int)color.Green.Mean, (int)color.Blue.Mean);
-			var diff = colors.Select(x => new { Value = x, Diff = GetColorDifference(x, c2) }).ToList();
+			var diff = colors.Select(x => new { Value = x, Diff = GetColorDifference(x, color) }).ToList();
 
 			foreach (var c in colors)
             {
-                if (CompareColors(c, c2)) return c;
+                if (CompareColors(c, color)) return c;
             }
 
             return diff.Find(x=> x.Diff == diff.Min(y=>y.Diff)).Value;
+		}
+
+		internal static Color GetAverageColor(Bitmap bitmap)
+		{
+			long r = 0, g = 0, b = 0;
+			int count = 0;
+			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadOnly, bitmap.PixelFormat);
+			int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+			int stride = data.Stride;
+			byte[] pixels = new byte[stride * bitmap.Height];
+			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+			bitmap.UnlockBits(data);
+			for (int y = 0; y < bitmap.Height; y++)
+				for (int x = 0; x < bitmap.Width; x++)
+				{
+					int pos = y * stride + x * bytesPerPixel;
+					if (bytesPerPixel >= 3)
+					{
+						b += pixels[pos];
+						g += pixels[pos + 1];
+						r += pixels[pos + 2];
+						count++;
+					}
+				}
+			if (count == 0) return Color.Black;
+			return Color.FromArgb((int)(r / count), (int)(g / count), (int)(b / count));
 		}
 
         private static int GetColorDifference(Color c, Color c2)
@@ -745,12 +775,51 @@ namespace InventoryKamera
 
         internal static Bitmap ConvertToGrayscale(Bitmap bitmap)
 		{
-			return new Grayscale(0.2125, 0.7154, 0.0721).Apply(bitmap);
+			Bitmap grayscale = new Bitmap(bitmap.Width, bitmap.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			using (Graphics g = Graphics.FromImage(grayscale))
+			{
+				ColorMatrix cm = new ColorMatrix(new float[][]
+				{
+					new float[] { 0.2125f, 0.2125f, 0.2125f, 0, 0 },
+					new float[] { 0.7154f, 0.7154f, 0.7154f, 0, 0 },
+					new float[] { 0.0721f, 0.0721f, 0.0721f, 0, 0 },
+					new float[] { 0,       0,       0,       1, 0 },
+					new float[] { 0,       0,       0,       0, 1 }
+				});
+				using (ImageAttributes ia = new ImageAttributes())
+				{
+					ia.SetColorMatrix(cm);
+					g.DrawImage(bitmap, new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+						0, 0, bitmap.Width, bitmap.Height, GraphicsUnit.Pixel, ia);
+				}
+			}
+			return grayscale;
 		}
 
 		internal static void SetContrast(double contrast, ref Bitmap bitmap)
 		{
-			new ContrastCorrection((int)contrast).ApplyInPlace(bitmap);
+			int c = (int)contrast;
+			double factor = (259.0 * (c + 255)) / (255.0 * (259 - c));
+			byte[] lut = new byte[256];
+			for (int i = 0; i < 256; i++)
+				lut[i] = (byte)Math.Max(0, Math.Min(255, (int)(factor * (i - 128) + 128)));
+
+			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadWrite, bitmap.PixelFormat);
+			int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+			int stride = data.Stride;
+			byte[] pixels = new byte[stride * bitmap.Height];
+			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+			for (int y = 0; y < bitmap.Height; y++)
+				for (int x = 0; x < bitmap.Width; x++)
+				{
+					int pos = y * stride + x * bytesPerPixel;
+					int channels = Math.Min(bytesPerPixel, 3);
+					for (int ch = 0; ch < channels; ch++)
+						pixels[pos + ch] = lut[pixels[pos + ch]];
+				}
+			Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+			bitmap.UnlockBits(data);
 		}
 
 		internal static void SetGamma(double red, double green, double blue, ref Bitmap bitmap)
@@ -786,7 +855,22 @@ namespace InventoryKamera
 
 		internal static void SetInvert(ref Bitmap bitmap)
 		{
-			new Invert().ApplyInPlace(bitmap);
+			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadWrite, bitmap.PixelFormat);
+			int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+			int stride = data.Stride;
+			byte[] pixels = new byte[stride * bitmap.Height];
+			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+			for (int y = 0; y < bitmap.Height; y++)
+				for (int x = 0; x < bitmap.Width; x++)
+				{
+					int pos = y * stride + x * bytesPerPixel;
+					int channels = Math.Min(bytesPerPixel, 3);
+					for (int ch = 0; ch < channels; ch++)
+						pixels[pos + ch] = (byte)(255 - pixels[pos + ch]);
+				}
+			Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+			bitmap.UnlockBits(data);
 		}
 
 		internal static void SetColor(string colorFilterType, ref Bitmap bitmap)
@@ -870,19 +954,54 @@ namespace InventoryKamera
 
 		internal static void SetThreshold(int threshold, ref Bitmap bitmap)
 		{
-			new Threshold(threshold).ApplyInPlace(bitmap);
+			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+				ImageLockMode.ReadWrite, bitmap.PixelFormat);
+			int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+			int stride = data.Stride;
+			byte[] pixels = new byte[stride * bitmap.Height];
+			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+			for (int y = 0; y < bitmap.Height; y++)
+				for (int x = 0; x < bitmap.Width; x++)
+				{
+					int pos = y * stride + x * bytesPerPixel;
+					byte gray = pixels[pos]; // B channel (grayscale B=G=R)
+					byte val = gray < threshold ? (byte)0 : (byte)255;
+					int channels = Math.Min(bytesPerPixel, 3);
+					for (int ch = 0; ch < channels; ch++)
+						pixels[pos + ch] = val;
+				}
+			Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+			bitmap.UnlockBits(data);
 		}
 
 		internal static void FilterColors(ref Bitmap bm, IntRange red, IntRange green, IntRange blue)
 		{
-			ColorFiltering colorFilter = new ColorFiltering
-			{
-				Red = red,
-				Green = green,
-				Blue = blue,
-				FillColor = new RGB(255,255,255)
-			};
-			colorFilter.ApplyInPlace(bm);
+			BitmapData data = bm.LockBits(new Rectangle(0, 0, bm.Width, bm.Height),
+				ImageLockMode.ReadWrite, bm.PixelFormat);
+			int bytesPerPixel = Image.GetPixelFormatSize(bm.PixelFormat) / 8;
+			int stride = data.Stride;
+			byte[] pixels = new byte[stride * bm.Height];
+			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+			for (int y = 0; y < bm.Height; y++)
+				for (int x = 0; x < bm.Width; x++)
+				{
+					int pos = y * stride + x * bytesPerPixel;
+					if (bytesPerPixel >= 3)
+					{
+						byte b = pixels[pos];
+						byte g = pixels[pos + 1];
+						byte r = pixels[pos + 2];
+						if (r < red.Min || r > red.Max || g < green.Min || g > green.Max || b < blue.Min || b > blue.Max)
+						{
+							pixels[pos] = 255;
+							pixels[pos + 1] = 255;
+							pixels[pos + 2] = 255;
+							if (bytesPerPixel == 4) pixels[pos + 3] = 255;
+						}
+					}
+				}
+			Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+			bm.UnlockBits(data);
 		}
 
 		internal static bool CompareBitmapsFast(Bitmap bmp1, Bitmap bmp2)
@@ -923,11 +1042,74 @@ namespace InventoryKamera
 
 		internal static Bitmap PreProcessImage(Bitmap image)
 		{
-			using (var edges = new KirschEdgeDetector().Apply(image)) // Algorithm to find edges. Really good but can take ~1s
+			using (var edges = KirschEdgeDetect(image))
 			using (var grayscale = ConvertToGrayscale(edges))
 			{
-				return new Threshold(70).Apply(grayscale);
+				Bitmap result = (Bitmap)grayscale.Clone();
+				SetThreshold(70, ref result);
+				return result;
 			}
+		}
+
+		internal static Bitmap KirschEdgeDetect(Bitmap source)
+		{
+			int[][][] kernels = new int[][][]
+			{
+				new int[][] { new int[] {  5,  5,  5 }, new int[] { -3,  0, -3 }, new int[] { -3, -3, -3 } },
+				new int[][] { new int[] {  5,  5, -3 }, new int[] {  5,  0, -3 }, new int[] { -3, -3, -3 } },
+				new int[][] { new int[] {  5, -3, -3 }, new int[] {  5,  0, -3 }, new int[] {  5, -3, -3 } },
+				new int[][] { new int[] { -3, -3, -3 }, new int[] {  5,  0, -3 }, new int[] {  5,  5, -3 } },
+				new int[][] { new int[] { -3, -3, -3 }, new int[] { -3,  0, -3 }, new int[] {  5,  5,  5 } },
+				new int[][] { new int[] { -3, -3, -3 }, new int[] { -3,  0,  5 }, new int[] { -3,  5,  5 } },
+				new int[][] { new int[] { -3, -3,  5 }, new int[] { -3,  0,  5 }, new int[] { -3, -3,  5 } },
+				new int[][] { new int[] { -3,  5,  5 }, new int[] { -3,  0,  5 }, new int[] { -3, -3, -3 } }
+			};
+
+			Bitmap src = new Bitmap(source.Width, source.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			using (Graphics g = Graphics.FromImage(src)) g.DrawImage(source, 0, 0);
+			Bitmap result = new Bitmap(source.Width, source.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+			BitmapData srcData = src.LockBits(new Rectangle(0, 0, src.Width, src.Height),
+				ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			BitmapData dstData = result.LockBits(new Rectangle(0, 0, result.Width, result.Height),
+				ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+			int stride = srcData.Stride;
+			byte[] srcPixels = new byte[stride * src.Height];
+			byte[] dstPixels = new byte[stride * result.Height];
+			Marshal.Copy(srcData.Scan0, srcPixels, 0, srcPixels.Length);
+
+			for (int y = 1; y < src.Height - 1; y++)
+			{
+				for (int x = 1; x < src.Width - 1; x++)
+				{
+					int maxResponse = 0;
+					foreach (var kernel in kernels)
+					{
+						int response = 0;
+						for (int ky = 0; ky < 3; ky++)
+							for (int kx = 0; kx < 3; kx++)
+							{
+								int pixPos = (y + ky - 1) * stride + (x + kx - 1) * 4;
+								int gray = (srcPixels[pixPos + 2] + srcPixels[pixPos + 1] + srcPixels[pixPos]) / 3;
+								response += kernel[ky][kx] * gray;
+							}
+						if (response > maxResponse) maxResponse = response;
+					}
+					byte edge = (byte)Math.Min(255, Math.Max(0, maxResponse));
+					int pos = y * stride + x * 4;
+					dstPixels[pos] = edge;
+					dstPixels[pos + 1] = edge;
+					dstPixels[pos + 2] = edge;
+					dstPixels[pos + 3] = 255;
+				}
+			}
+
+			Marshal.Copy(dstPixels, 0, dstData.Scan0, dstPixels.Length);
+			src.UnlockBits(srcData);
+			result.UnlockBits(dstData);
+			src.Dispose();
+			return result;
 		}
 
 		internal static Bitmap CopyBitmap(Bitmap source, Rectangle region)
@@ -993,4 +1175,11 @@ namespace InventoryKamera
             return "";
         }
     }
+
+	internal struct IntRange
+	{
+		internal int Min { get; }
+		internal int Max { get; }
+		internal IntRange(int min, int max) { Min = min; Max = max; }
+	}
 }
