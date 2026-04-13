@@ -263,6 +263,9 @@ namespace InventoryKamera
                     (int)(iconMinHeight * (1 - weight)),
                     (int)(iconMaxHeight * (1 + weight)));
 
+                if (blobRects.Count == 0)
+                    return (new List<Rectangle>(), 0, 0);
+
                 int minWidth = blobRects[0].Width;
                 int minHeight = blobRects[0].Height;
                 foreach (var rect in blobRects)
