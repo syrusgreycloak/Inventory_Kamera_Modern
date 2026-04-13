@@ -25,7 +25,7 @@ namespace InventoryKamera
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
         private static Thread scannerThread;
-        private static InventoryKamera data = new InventoryKamera(null);
+        private static InventoryKamera data = null;
         private static DatabaseManager databaseManager = new DatabaseManager();
 
         private int Delay;
@@ -306,7 +306,7 @@ namespace InventoryKamera
                         running = false;
                         ManualExportButton.Invoke((System.Windows.Forms.MethodInvoker)delegate
                         {
-                            ManualExportButton.Enabled = data.HasData;
+                            ManualExportButton.Enabled = data != null && data.HasData;
                         });
                         MainForm_Activate();
                     }
@@ -616,7 +616,8 @@ namespace InventoryKamera
 
         private void Export_Button_Click(object sender, EventArgs e)
         {
-            OpenOptimizerDialog(new GOOD(data.Characters, data.Inventory, Properties.Settings.Default.EquipWeapons, Properties.Settings.Default.EquipArtifacts), true);
+            if (data != null)
+                OpenOptimizerDialog(new GOOD(data.Characters, data.Inventory, Properties.Settings.Default.EquipWeapons, Properties.Settings.Default.EquipArtifacts), true);
         }
 
         private void MainForm_Activate()

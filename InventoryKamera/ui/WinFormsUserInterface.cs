@@ -103,6 +103,11 @@ namespace InventoryKamera.UI
             _form.BeginInvoke((MethodInvoker)(() => UserInterface.AddError(error)));
         }
 
+        public void SetMainCharacterName(string name)
+        {
+            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetMainCharacterName(name)));
+        }
+
         // Navigation image
 
         public void SetNavigation_Image(Bitmap bm)

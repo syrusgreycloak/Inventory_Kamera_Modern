@@ -122,7 +122,7 @@ namespace InventoryKamera
 
 			ResetLogging();
 
-			GenshinProcesor.ReloadData();
+			_gameDataService.ReloadData();
 
 			// Initize Image Processors
 			for (int i = 0; i < NumWorkers; i++)
@@ -133,7 +133,7 @@ namespace InventoryKamera
 			}
 			Logger.Debug("Added {ImageProcessors.Count} workers", ImageProcessors.Count);
 
-			GenshinProcesor.RestartEngines();
+			_ocrEngine.RestartEngines();
 
 
 			// Assign Traveler's name via instance CharacterScraper
@@ -143,19 +143,19 @@ namespace InventoryKamera
 			if (!string.IsNullOrWhiteSpace(travelerName))
 			{
 				_gameDataService.UpdateCharacterName("traveler", travelerName);
-				UserInterface.SetMainCharacterName(travelerName);
+				_userInterface.SetMainCharacterName(travelerName);
 			}
 			else
 			{
-				UserInterface.AddError("Could not parse Traveler's username");
+				_userInterface.AddError("Could not parse Traveler's username");
 			}
 
 			// Assign Wanderer's custom name
-			GenshinProcesor.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
+			_gameDataService.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
 
 			// Assign Mannequin names
-			GenshinProcesor.UpdateCharacterName("manequin1", Properties.Settings.Default.Manequin1Name);
-			GenshinProcesor.UpdateCharacterName("manequin2", Properties.Settings.Default.Manequin2Name);
+			_gameDataService.UpdateCharacterName("manequin1", Properties.Settings.Default.Manequin1Name);
+			_gameDataService.UpdateCharacterName("manequin2", Properties.Settings.Default.Manequin2Name);
 
 
 			if (Properties.Settings.Default.ScanWeapons)
@@ -168,10 +168,10 @@ namespace InventoryKamera
 				{
                     weaponScraper.ScanWeapons();
 				}
-				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
 				catch (Exception ex)
 				{
-					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning weapons");
@@ -188,10 +188,10 @@ namespace InventoryKamera
 				{
 					artifactScraper.ScanArtifacts();
 				}
-				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
 				catch (Exception ex)
 				{
-					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning artifacts");
@@ -210,7 +210,7 @@ namespace InventoryKamera
 				}
 				catch (Exception ex)
 				{
-					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning characters");
@@ -241,10 +241,10 @@ namespace InventoryKamera
 					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
 					materialScraper.Scan_Materials(ref Inventory);
 				}
-				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
 				catch (Exception ex)
 				{
-					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning character development materials");
@@ -263,10 +263,10 @@ namespace InventoryKamera
 					materialScraper.SetInventoryPage(InventoryPage.Materials);
 					materialScraper.Scan_Materials(ref Inventory);
 				}
-				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
 				catch (Exception ex)
 				{
-					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning materials");
@@ -305,19 +305,19 @@ namespace InventoryKamera
 								break;
 							}
 
-							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
+							_userInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
 
 							// Scan as weapon with 30 second timeout
 							var weaponTask = weaponScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
 							if (!weaponTask.Wait(TimeSpan.FromSeconds(30)))
 							{
 								Logger.Error("Weapon #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
-								UserInterface.AddError($"Weapon #{imageCollection.Id} scan timed out - possibly problematic weapon data");
+								_userInterface.AddError($"Weapon #{imageCollection.Id} scan timed out - possibly problematic weapon data");
 								imageCollection.Bitmaps.ForEach(b => b.Dispose());
 								break;
 							}
 							Weapon weapon = weaponTask.Result;
-							UserInterface.SetGear(imageCollection.Bitmaps.Last(), weapon);
+							_userInterface.SetGear(imageCollection.Bitmaps.Last(), weapon);
 
 							string weaponPath = $"./logging/weapons/weapon{weapon.Id}/";
 
@@ -325,21 +325,21 @@ namespace InventoryKamera
 
 							if (weapon.IsValid())
 							{
-								UserInterface.IncrementWeaponCount();
+								_userInterface.IncrementWeaponCount();
 								Inventory.Add(weapon);
 								if (!string.IsNullOrWhiteSpace(weapon.EquippedCharacter))
 									equippedWeapons.Add(weapon);
 							}
 							else
 							{
-								UserInterface.AddError($"Unable to validate information for weapon ID#{weapon.Id}");
+								_userInterface.AddError($"Unable to validate information for weapon ID#{weapon.Id}");
 								string error = "";
-								if (!weapon.HasValidWeaponName()) error += "Invalid weapon name\n"; 
+								if (!weapon.HasValidWeaponName()) error += "Invalid weapon name\n";
 								if (!weapon.HasValidRarity()) error += "Invalid weapon rarity\n";
 								if (!weapon.HasValidLevel()) error += "Invalid weapon level\n";
 								if (!weapon.HasValidRefinementLevel()) error += "Invalid refinement level\n";
 								if (!weapon.HasValidEquippedCharacter()) error += "Inavlid equipped character\n";
-								UserInterface.AddError(error + weapon.ToString());
+								_userInterface.AddError(error + weapon.ToString());
 								Directory.CreateDirectory(weaponPath);
 								using (var writer = File.CreateText(weaponPath + "log.txt"))
 								{
@@ -371,28 +371,28 @@ namespace InventoryKamera
 							break;
 
 						case "artifact":
-							if (ArtifactScraper.IsEnhancementMaterial(imageCollection.Bitmaps.Last()))
+							if (artifactScraper.IsEnhancementMaterial(imageCollection.Bitmaps.Last()))
 							{
 								Logger.Debug("Enhancement Material found for artifact #{artifactID}", imageCollection.Id);
 								artifactScraper.StopScanning = true;
 								break;
 							}
 
-							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
+							_userInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
 
 							// Scan as artifact with 30 second timeout
 							Logger.Debug("Starting OCR for artifact #{0}", imageCollection.Id);
-							var artifactTask = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
+							var artifactTask = artifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
 							if (!artifactTask.Wait(TimeSpan.FromSeconds(30)))
 							{
 								Logger.Error("Artifact #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
-								UserInterface.AddError($"Artifact #{imageCollection.Id} scan timed out - possibly problematic artifact data");
+								_userInterface.AddError($"Artifact #{imageCollection.Id} scan timed out - possibly problematic artifact data");
 								imageCollection.Bitmaps.ForEach(b => b.Dispose());
 								break;
 							}
 							Logger.Debug("OCR completed for artifact #{0}", imageCollection.Id);
 							Artifact artifact = artifactTask.Result;
-							UserInterface.SetGear(imageCollection.Bitmaps.Last(), artifact);
+							_userInterface.SetGear(imageCollection.Bitmaps.Last(), artifact);
 
 							string artifactPath = $"./logging/artifacts/artifact{artifact.Id}/";
 
@@ -400,14 +400,14 @@ namespace InventoryKamera
 
 							if (artifact.IsValid())
 							{
-								UserInterface.IncrementArtifactCount();
+								_userInterface.IncrementArtifactCount();
 								Inventory.Add(artifact);
 								if (!string.IsNullOrWhiteSpace(artifact.EquippedCharacter))
 									equippedArtifacts.Add(artifact);
 							}
 							else
 							{
-								UserInterface.AddError($"Unable to validate information for artifact ID#{artifact.Id}");
+								_userInterface.AddError($"Unable to validate information for artifact ID#{artifact.Id}");
 								string error = "";
 								if (!artifact.HasValidSlot()) error += "Invalid artifact gear slot\n";
 								if (!artifact.HasValidSetName()) error += "Invalid artifact set name\n";
@@ -416,7 +416,7 @@ namespace InventoryKamera
 								if (!artifact.HasValidMainStat()) error += "Invalid artifact main stat\n";
 								if (!artifact.HasValidSubStats()) error += "Invalid artifact sub stats\n";
 								if (!artifact.HasValidEquippedCharacter()) error += "Invalid equipped character\n";
-								UserInterface.AddError(error + artifact.ToString());
+								_userInterface.AddError(error + artifact.ToString());
 								Directory.CreateDirectory(artifactPath);
 								using (var writer = File.CreateText(artifactPath + "log.txt"))
 								{

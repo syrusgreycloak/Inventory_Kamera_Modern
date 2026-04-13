@@ -14,5 +14,6 @@ namespace InventoryKamera
     public interface IOcrEngine
     {
         string AnalyzeText(Bitmap bitmap, PageSegmentationMode mode = PageSegmentationMode.SingleLine, bool numbersOnly = false);
+        void RestartEngines();
     }
 }

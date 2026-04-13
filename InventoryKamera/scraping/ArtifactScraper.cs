@@ -318,7 +318,7 @@ namespace InventoryKamera
                 height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0475 : 0.0809))));
         }
 
-        public static async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
+        public async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
 		{
 			Logger.Debug("CatalogueFromBitmapsAsync starting for artifact #{0}", id);
 			// Init Variables
@@ -394,7 +394,7 @@ namespace InventoryKamera
 			return colors.IndexOf(c);
 		}
 
-		public static bool IsEnhancementMaterial(Bitmap card)
+		public bool IsEnhancementMaterial(Bitmap card)
 		{
 			RECT reference = Navigation.GetAspectRatio() == new Size(16, 9) ?
 				new RECT(new Rectangle(862, 80, 327, 560)) : (RECT)new Rectangle(862, 80, 328, 640);
