@@ -16,5 +16,6 @@ namespace InventoryKamera.Infrastructure
         public void SelectCharacterAttributes() => Navigation.SelectCharacterAttributes();
         public void SelectCharacterConstellation() => Navigation.SelectCharacterConstellation();
         public void SelectCharacterTalents() => Navigation.SelectCharacterTalents();
+        public void ClearArtifactFilters() => Navigation.ClearArtifactFilters();
     }
 }
