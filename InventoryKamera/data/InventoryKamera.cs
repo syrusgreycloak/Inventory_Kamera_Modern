@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,7 +24,13 @@ namespace InventoryKamera
 		private List<Weapon> equippedWeapons;
 		public static Queue<OCRImageCollection> workerQueue;
 		private List<Thread> ImageProcessors;
+
+		private WeaponScraper weaponScraper;
+		private ArtifactScraper artifactScraper;
+		private MaterialScraper materialScraper;
+
 		private volatile bool b_threadCancel;
+		public bool WasCancelled => b_threadCancel;
 		private readonly int NumWorkers;
 
 		public bool HasData
@@ -42,6 +47,10 @@ namespace InventoryKamera
 			ImageProcessors = new List<Thread>();
 			workerQueue = new Queue<OCRImageCollection>();
 
+			weaponScraper = new WeaponScraper();
+			artifactScraper = new ArtifactScraper();
+			materialScraper = new MaterialScraper();
+
 			b_threadCancel = false;
 
             switch (Properties.Settings.Default.ScannerDelay)
@@ -53,8 +62,7 @@ namespace InventoryKamera
 					NumWorkers = 2;
 					break;
             }
-
-            ResetLogging();
+			Logger.Info("Kamera initialized");
 		}
 
 		public void ResetLogging()
@@ -85,6 +93,11 @@ namespace InventoryKamera
 
 		public void GatherData()
 		{
+
+			ResetLogging();
+
+			GenshinProcesor.ReloadData();
+
 			// Initize Image Processors
 			for (int i = 0; i < NumWorkers; i++)
 			{
@@ -94,18 +107,18 @@ namespace InventoryKamera
 			}
 			Logger.Debug("Added {ImageProcessors.Count} workers", ImageProcessors.Count);
 
-			Scraper.RestartEngines();
+			GenshinProcesor.RestartEngines();
 
 
-			// Scan Main character Name
-			if (!string.IsNullOrEmpty(Properties.Settings.Default.TravelerName))
-            {
-				Scraper.AssignTravelerName(Properties.Settings.Default.TravelerName);
-            }
-			else
-            {
-				Scraper.AssignTravelerName(CharacterScraper.ScanMainCharacterName());
-			}
+			// Assign Traveler's custom name
+			GenshinProcesor.AssignTravelerName(Properties.Settings.Default.TravelerName);
+
+			// Assign Wanderer's custom name
+			GenshinProcesor.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
+
+			// Assign Mannequin names
+			GenshinProcesor.UpdateCharacterName("manequin1", Properties.Settings.Default.Manequin1Name);
+			GenshinProcesor.UpdateCharacterName("manequin2", Properties.Settings.Default.Manequin2Name);
 
 
 			if (Properties.Settings.Default.ScanWeapons)
@@ -116,10 +129,9 @@ namespace InventoryKamera
 				Navigation.SelectWeaponInventory();
 				try
 				{
-					WeaponScraper.ScanWeapons();
+                    weaponScraper.ScanWeapons();
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -137,10 +149,9 @@ namespace InventoryKamera
 				Navigation.SelectArtifactInventory();
 				try
 				{
-					ArtifactScraper.ScanArtifacts();
+					artifactScraper.ScanArtifacts();
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -160,7 +171,6 @@ namespace InventoryKamera
 				{
 					CharacterScraper.ScanCharacters(ref Characters);
 				}
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -191,10 +201,10 @@ namespace InventoryKamera
 				HashSet<Material> devItems = new HashSet<Material>();
 				try
 				{
-					MaterialScraper.Scan_Materials(InventorySection.CharacterDevelopmentItems, ref Inventory);
+					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
+					materialScraper.Scan_Materials(ref Inventory);
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -213,10 +223,10 @@ namespace InventoryKamera
 				HashSet<Material> materials = new HashSet<Material>();
 				try
 				{
-					MaterialScraper.Scan_Materials(InventorySection.Materials, ref Inventory);
+					materialScraper.SetInventoryPage(InventoryPage.Materials);
+					materialScraper.Scan_Materials(ref Inventory);
 				}
 				catch (FormatException ex) { UserInterface.AddError(ex.Message); }
-				catch (ThreadAbortException) { }
 				catch (Exception ex)
 				{
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
@@ -251,17 +261,25 @@ namespace InventoryKamera
 					switch (imageCollection.Type)
 					{
 						case "weapon":
-							if (WeaponScraper.IsEnhancementMaterial(imageCollection.Bitmaps.First()))
+							if (weaponScraper.IsEnhancementMaterial(imageCollection.Bitmaps.First()))
 							{
 								Logger.Debug("Enhancement Material found for weapon #{weaponID}", imageCollection.Id);
-								WeaponScraper.StopScanning = true;
+								weaponScraper.StopScanning = true;
 								break;
 							}
 
 							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
 
-							// Scan as weapon
-							Weapon weapon = WeaponScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id).Result;
+							// Scan as weapon with 30 second timeout
+							var weaponTask = weaponScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
+							if (!weaponTask.Wait(TimeSpan.FromSeconds(30)))
+							{
+								Logger.Error("Weapon #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
+								UserInterface.AddError($"Weapon #{imageCollection.Id} scan timed out - possibly problematic weapon data");
+								imageCollection.Bitmaps.ForEach(b => b.Dispose());
+								break;
+							}
+							Weapon weapon = weaponTask.Result;
 							UserInterface.SetGear(imageCollection.Bitmaps.Last(), weapon);
 
 							string weaponPath = $"./logging/weapons/weapon{weapon.Id}/";
@@ -288,13 +306,13 @@ namespace InventoryKamera
 								Directory.CreateDirectory(weaponPath);
 								using (var writer = File.CreateText(weaponPath + "log.txt"))
 								{
-									writer.WriteLine($"Version: {Regex.Replace(Assembly.GetExecutingAssembly().GetName().Version.ToString(), @"[.0]*$", string.Empty)}");
+									writer.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version.ToString(3)}");
 									writer.WriteLine($"Resolution: {Navigation.GetWidth()}x{Navigation.GetHeight()}");
 									writer.WriteLine($"Error log:\n\t{error.Replace("\n", "\n\t")}");
 								}
 							}
 
-                            if (!weapon.IsValid() || Properties.Settings.Default.LogScreenshots)
+                            if (!weapon.IsValid() || weapon.RefinementDefaulted || Properties.Settings.Default.LogScreenshots)
                             {
                                 Directory.CreateDirectory(weaponPath + "name");
                                 imageCollection.Bitmaps[0].Save(weaponPath + "name/name.png");
@@ -319,13 +337,24 @@ namespace InventoryKamera
 							if (ArtifactScraper.IsEnhancementMaterial(imageCollection.Bitmaps.Last()))
 							{
 								Logger.Debug("Enhancement Material found for artifact #{artifactID}", imageCollection.Id);
-								ArtifactScraper.StopScanning = true;
+								artifactScraper.StopScanning = true;
 								break;
 							}
 
 							UserInterface.SetGearPictureBox(imageCollection.Bitmaps.Last());
-							// Scan as artifact
-							Artifact artifact = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id).Result;
+
+							// Scan as artifact with 30 second timeout
+							Logger.Debug("Starting OCR for artifact #{0}", imageCollection.Id);
+							var artifactTask = ArtifactScraper.CatalogueFromBitmapsAsync(imageCollection.Bitmaps, imageCollection.Id);
+							if (!artifactTask.Wait(TimeSpan.FromSeconds(30)))
+							{
+								Logger.Error("Artifact #{0} OCR timed out after 30 seconds - skipping", imageCollection.Id);
+								UserInterface.AddError($"Artifact #{imageCollection.Id} scan timed out - possibly problematic artifact data");
+								imageCollection.Bitmaps.ForEach(b => b.Dispose());
+								break;
+							}
+							Logger.Debug("OCR completed for artifact #{0}", imageCollection.Id);
+							Artifact artifact = artifactTask.Result;
 							UserInterface.SetGear(imageCollection.Bitmaps.Last(), artifact);
 
 							string artifactPath = $"./logging/artifacts/artifact{artifact.Id}/";
@@ -354,7 +383,7 @@ namespace InventoryKamera
 								Directory.CreateDirectory(artifactPath);
 								using (var writer = File.CreateText(artifactPath + "log.txt"))
 								{
-									writer.WriteLine($"Version: {Regex.Replace(Assembly.GetExecutingAssembly().GetName().Version.ToString(), @"[.0]*$", string.Empty)}");
+									writer.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version.ToString(3)}");
 									writer.WriteLine($"Resolution: {Navigation.GetWidth()}x{Navigation.GetHeight()}");
 									writer.WriteLine($"Error Log:\n\t{error.Replace("\n", "\n\t")}");
 								}
@@ -362,20 +391,20 @@ namespace InventoryKamera
 
                             if (!artifact.IsValid() || Properties.Settings.Default.LogScreenshots)
                             {
-								Directory.CreateDirectory(artifactPath + "slot");
+                                Directory.CreateDirectory(artifactPath + "name");
+                                imageCollection.Bitmaps[0].Save(artifactPath + "name/name.png");
+                                Directory.CreateDirectory(artifactPath + "slot");
 								imageCollection.Bitmaps[1].Save(artifactPath + "slot/slot.png");
-								Directory.CreateDirectory(artifactPath + "set");
-								imageCollection.Bitmaps[4].Save(artifactPath + "set/set.png");
-								Directory.CreateDirectory(artifactPath + "rarity");
-								imageCollection.Bitmaps[0].Save(artifactPath + "rarity/rarity.png");
+                                Directory.CreateDirectory(artifactPath + "mainstat");
+                                imageCollection.Bitmaps[2].Save(artifactPath + "mainstat/mainstat.png");
 								Directory.CreateDirectory(artifactPath + "level");
 								imageCollection.Bitmaps[3].Save(artifactPath + "level/level.png");
-								Directory.CreateDirectory(artifactPath + "mainstat");
-								imageCollection.Bitmaps[2].Save(artifactPath + "mainstat/mainstat.png");
 								Directory.CreateDirectory(artifactPath + "substats");
 								imageCollection.Bitmaps[4].Save(artifactPath + "substats/substats.png");
 								Directory.CreateDirectory(artifactPath + "equipped");
 								imageCollection.Bitmaps[5].Save(artifactPath + "equipped/equipped.png");
+								Directory.CreateDirectory(artifactPath + "locked");
+								imageCollection.Bitmaps[6].Save(artifactPath + "locked/locked.png");
 
 								imageCollection.Bitmaps.Last().Save(artifactPath + "card.png");
 
@@ -422,10 +451,10 @@ namespace InventoryKamera
 			{
 				foreach (Character character in Characters)
 				{
-					if (artifact.EquippedCharacter == character.Name)
+					if (artifact.EquippedCharacter == character.NameGOOD)
 					{
 						character.AssignArtifact(artifact); // Do we even need to do this?
-						Logger.Debug("Assigned {fearSlot} to {character}", artifact.GearSlot, character.Name);
+						Logger.Debug("Assigned {fearSlot} to {character}", artifact.GearSlot, character.NameGOOD);
 						break;
 					}
 				}
@@ -438,17 +467,17 @@ namespace InventoryKamera
 			{
 				foreach (Weapon weapon in equippedWeapons)
 				{
-					if (weapon.EquippedCharacter == character.Name)
+					if (weapon.EquippedCharacter == character.NameGOOD)
 					{
 						character.AssignWeapon(weapon);
-						Logger.Debug("Assigned {weapon} to {character}", weapon.Name, character.Name);
+						Logger.Debug("Assigned {weapon} to {character}", weapon.Name, character.NameGOOD);
 						break;
 					}
 				}
 				if (character.Weapon is null)
 				{
-					Inventory.Add(new Weapon(character.WeaponType, character.Name));
-					Logger.Info("Default weapon assigned to {character}", character.Name);
+					Inventory.Add(new Weapon(character.WeaponType, character.NameGOOD));
+					Logger.Info("Default weapon assigned to {character}", character.NameGOOD);
 				}
 			}
 		}

@@ -1,0 +1,153 @@
+@startuml OCR Engine Pool Pattern
+
+title OCR Engine Pool - Thread-Safe Resource Management
+
+skinparam backgroundColor #FAFAFA
+
+package "Main Thread" {
+  component "MainForm" as UI
+  component "ScanOrchestrator" as Orchestrator
+  component "ArtifactScraper" as Scraper
+}
+
+package "Worker Threads" {
+  component "Worker 1" as W1 #LightBlue
+  component "Worker 2" as W2 #LightGreen
+  component "Worker 3" as W3 #LightCoral
+}
+
+package "OCR Engine Pool" {
+  storage "ConcurrentBag<IOcrEngine>" as Pool {
+    component "Engine 1" as E1
+    component "Engine 2" as E2
+    component "Engine 3" as E3
+    component "Engine 4" as E4
+    component "Engine 5" as E5
+    component "Engine 6" as E6
+    component "Engine 7" as E7
+    component "Engine 8" as E8
+  }
+
+  class OcrEnginePool {
+    - engines : ConcurrentBag<IOcrEngine>
+    - maxEngines : int = 8
+    + BorrowEngine() : IOcrEngine
+    + ReturnEngine(IOcrEngine) : void
+    + {static} Initialize() : void
+  }
+}
+
+queue "Work Queue" as Queue {
+  artifact "OCRImageCollection 1" as Item1
+  artifact "OCRImageCollection 2" as Item2
+  artifact "OCRImageCollection 3" as Item3
+  artifact "..." as More
+}
+
+UI -> Orchestrator : StartScan()
+Orchestrator -> Scraper : ScanArtifactsAsync()
+
+Scraper -> Queue : Enqueue(Item1)
+Scraper -> Queue : Enqueue(Item2)
+Scraper -> Queue : Enqueue(Item3)
+note right: Main thread captures screenshots\nand enqueues OCR tasks
+
+W1 -> Queue : Dequeue()
+Queue --> W1 : Item1
+W1 -> OcrEnginePool : BorrowEngine()
+activate W1
+OcrEnginePool -> E1 : TryTake()
+activate E1
+E1 --> W1 : Engine acquired
+note right: Thread-safe via ConcurrentBag
+
+W2 -> Queue : Dequeue()
+Queue --> W2 : Item2
+W2 -> OcrEnginePool : BorrowEngine()
+activate W2
+OcrEnginePool -> E2 : TryTake()
+activate E2
+E2 --> W2 : Engine acquired
+
+W3 -> Queue : Dequeue()
+Queue --> W3 : Item3
+W3 -> OcrEnginePool : BorrowEngine()
+activate W3
+OcrEnginePool -> E3 : TryTake()
+activate E3
+E3 --> W3 : Engine acquired
+
+W1 -> E1 : RecognizeAsync(image)
+note right: OCR processing (1-3 seconds typical)
+E1 --> W1 : OcrResult
+
+W1 -> OcrEnginePool : ReturnEngine(E1)
+OcrEnginePool -> E1 : Add()
+deactivate E1
+note right: Engine returned to pool\nAvailable for next task
+
+W1 -> Queue : Dequeue()
+note right: Worker immediately picks up next task
+
+W2 -> E2 : RecognizeAsync(image)
+E2 --> W2 : OcrResult
+W2 -> OcrEnginePool : ReturnEngine(E2)
+OcrEnginePool -> E2 : Add()
+deactivate E2
+
+W3 -> E3 : RecognizeAsync(image)
+E3 --> W3 : OcrResult
+W3 -> OcrEnginePool : ReturnEngine(E3)
+OcrEnginePool -> E3 : Add()
+deactivate E3
+
+deactivate W1
+deactivate W2
+deactivate W3
+
+note bottom of Pool
+  **Pool Initialization:**
+
+  static void Initialize()
+  {
+      for (int i = 0; i < 8; i++)
+      {
+          var engine = new TesseractEngine(
+              datapath: "./tessdata",
+              language: "genshin_best_eng",
+              engineMode: EngineMode.Default
+          );
+          engines.Add(engine);
+      }
+  }
+
+  **Why 8 Engines?**
+  - Initialization is expensive (50-100ms per engine)
+  - Pre-initialized pool avoids startup cost
+  - 8 engines > 3 workers = no starvation
+  - ConcurrentBag = thread-safe, lock-free
+end note
+
+note bottom of Queue
+  **Thread Coordination:**
+
+  Main Thread (Scraper):
+  - Captures screenshots (fast)
+  - Enqueues OCR tasks
+  - Never blocks on OCR
+
+  Worker Threads (2-3):
+  - Dequeue tasks
+  - Borrow engine from pool
+  - Process OCR (slow)
+  - Return engine
+  - Repeat
+
+  Benefits:
+  - Parallel OCR processing
+  - Main thread responsive
+  - No thread starvation
+  - Graceful degradation if OCR hangs
+end note
+
+@enduml

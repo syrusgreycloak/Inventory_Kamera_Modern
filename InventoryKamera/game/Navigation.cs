@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -12,21 +11,22 @@ using WindowsInput.Native;
 
 namespace InventoryKamera
 {
-	public static class Navigation
+    public static class Navigation
 	{
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
 		internal static InputSimulator sim = new InputSimulator();
-		internal static RECT WindowSize;
-		internal static RECT WindowPosition;
-		internal static Size AspectRatio;
+		private static RECT WindowSize;
+		private static RECT WindowPosition;
+		private static Size AspectRatio;
+		public static bool IsNormal { get; private set; }
 
-		private static double delay = 1;
+        private static double delay = 1;
 
 		public static VirtualKeyCode escapeKey = VirtualKeyCode.ESCAPE;
 		public static VirtualKeyCode characterKey = VirtualKeyCode.VK_C;
 		public static VirtualKeyCode inventoryKey = VirtualKeyCode.VK_B;
-		public static VirtualKeyCode oneKey = VirtualKeyCode.VK_1;
+		public static VirtualKeyCode slotOneKey = VirtualKeyCode.VK_1;
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool GetClientRect(IntPtr hWnd, ref RECT Rect);
@@ -36,15 +36,10 @@ namespace InventoryKamera
 
 		public static void Initialize()
 		{
-			var executables = new List<string>
-			{
-				"GenshinImpact",
-				"YuanShen"
-			};
-
+			var executables = Properties.Settings.Default.Executables;
 			foreach (var processName in executables)
 			{
-				Logger.Debug("Checking for {genshin}.exe", processName);
+				Logger.Debug("Checking for {0}.exe", processName);
 				if (InitializeProcess(processName, out IntPtr handle))
 				{
 					// Get area and position
@@ -65,6 +60,7 @@ namespace InventoryKamera
 					}
 
 					Logger.Debug("Found {0}.exe", processName);
+					Logger.Debug("Window location ({0}x{1}): x={2}, y={3}", WindowSize.Width, WindowSize.Height, WindowPosition.Left, WindowPosition.Top);
 					return;
 				}
 				Logger.Debug("Could not find {0}.exe", processName);
@@ -88,7 +84,7 @@ namespace InventoryKamera
 			Bitmap bmp = new Bitmap(GetWidth(), GetHeight(), format);
 			using (Graphics gfxBmp = Graphics.FromImage(bmp))
 			{
-				gfxBmp.CopyFromScreen(WindowPosition.Left, WindowPosition.Top, 0, 0, bmp.Size);
+				gfxBmp.CopyFromScreen(GetPosition().Left, GetPosition().Top, 0, 0, bmp.Size);
 
 				var uidRegion = new RECT(
 					Left: (int)( 1070 / 1280.0 * bmp.Width ),
@@ -105,7 +101,7 @@ namespace InventoryKamera
 			Bitmap bmp = new Bitmap(region.Width, region.Height, format);
 			using (Graphics gfxBmp = Graphics.FromImage(bmp))
 			{
-				gfxBmp.CopyFromScreen(WindowPosition.Left + region.Left, WindowPosition.Top + region.Top, 0, 0, bmp.Size);
+				gfxBmp.CopyFromScreen(GetPosition().Left + region.Left, GetPosition().Top + region.Top, 0, 0, bmp.Size);
 			}
 			return bmp;
 		}
@@ -121,23 +117,27 @@ namespace InventoryKamera
 
 		public static void DisplayBitmap(Bitmap bm, string text = "Image")
 		{
-			using (Form form = new Form())
+			Form form = new Form();
+			
+			int padding = 5;
+
+			form.StartPosition = FormStartPosition.Manual;
+			form.Location = Screen.PrimaryScreen.WorkingArea.Location;
+			form.Size = new Size(bm.Width + 5*padding, bm.Height + 10*padding);
+			form.Text = text;
+			form.BackColor = Color.Black;
+
+			PictureBox pb = new PictureBox
 			{
-				form.StartPosition = FormStartPosition.Manual;
-				form.Location = Screen.PrimaryScreen.WorkingArea.Location;
-				form.Size = new Size(bm.Width + 20, bm.Height + 40);
-				form.Text = text;
+				Dock = DockStyle.Fill,
+				Image = bm,
+				Padding = new Padding(5),
+				//Size = new Size(bm.Width + 2*padding, bm.Height + 2*padding),
+			};
 
-				PictureBox pb = new PictureBox
-				{
-					Dock = DockStyle.Fill,
-					Image = bm,
-					Location = new Point(0,0)
-				};
-
-				form.Controls.Add(pb);
-				form.ShowDialog();
-			}
+			form.Controls.Add(pb);
+			Application.Run(form);
+			
 		}
 
 		#endregion Image Displaying
@@ -244,7 +244,7 @@ namespace InventoryKamera
 		{
 			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
-			sim.Keyboard.KeyPress(oneKey);
+			sim.Keyboard.KeyPress(slotOneKey);
 			SystemWait(Speed.UI);
 			sim.Keyboard.KeyPress(characterKey);
 			SystemWait(Speed.UI);
@@ -283,7 +283,11 @@ namespace InventoryKamera
 			if (WindowSize.Height == 0) throw new DivideByZeroException("Genshin's window height cannot be 0");
 			int x = WindowSize.Width/GCD(WindowSize.Width, WindowSize.Height);
 			int y = WindowSize.Height/GCD(WindowSize.Width, WindowSize.Height);
-			return new Size(x, y);
+			var size = new Size(x, y);
+			
+			IsNormal = size == new Size(16, 9);
+
+			return size;
 		}
 
 		private static int GCD(int a, int b)
@@ -386,6 +390,11 @@ namespace InventoryKamera
 			return SetCursorPos(GetPosition().Left + X, GetPosition().Top + Y);
 		}
 
+		public static bool SetCursor(Point point)
+		{
+			return SetCursor(point.X, point.Y);
+		}
+
 		public static void Click()
 		{
 			if (SystemInformation.MouseButtonsSwapped)
@@ -394,11 +403,57 @@ namespace InventoryKamera
 				sim.Mouse.LeftButtonClick();
 		}
 
-		#endregion Mouse
+		public static void Click(int x, int y)
+		{
+			SetCursor(x, y);
+			Click();
+		}
 
-		#region Delays
+		public static void Click(Point point)
+		{
+			Click(point.X, point.Y);
+		}
 
-		public static void SystemWait(Speed speed = Speed.Normal)
+		public static void Scroll(Direction direction, int scrolls, int delay = 1)
+        {
+			Action Scroll;
+            switch (direction)
+            {
+                case Direction.UP:
+					Scroll = () => sim.Mouse.VerticalScroll(1);
+					break;
+                case Direction.DOWN:
+					Scroll = () => sim.Mouse.VerticalScroll(-1);
+                    break;
+                case Direction.LEFT:
+					Scroll = () => sim.Mouse.HorizontalScroll(-1);
+                    break;
+                case Direction.RIGHT:
+					Scroll = () => sim.Mouse.HorizontalScroll(1);
+                    break;
+                default:
+                    return;
+            }
+            for (int i = 0; i < scrolls; i++)
+            {
+				Scroll();
+				Wait(delay);
+            }
+        }
+
+		public enum Direction
+        {
+			UP = 0,
+			DOWN = 1,
+			LEFT = 2,
+			RIGHT = 3,
+        }
+
+        #endregion Mouse
+
+        #region Delays
+
+        public static void SystemWait(Speed speed = Speed.Normal)
 		{
 			double value;
 			switch (speed)
@@ -484,7 +539,21 @@ namespace InventoryKamera
 			return delay;
 		}
 
-		public enum Speed
+        internal static void ClearArtifactFilters()
+        {
+            var x = (IsNormal ? 0.0875 : 0.0868) * GetWidth();
+			var y = (IsNormal ? 0.9389 : 0.9444) * GetHeight();
+
+			for (var i = 0; i < 2; ++i)
+			{
+				Click((int)x, (int)y);
+				SystemWait(Speed.Normal);
+			}
+			sim.Keyboard.KeyPress(escapeKey);
+			SystemWait(Speed.Fast);
+        }
+
+        public enum Speed
 		{
 			Slowest,
 			Slower,

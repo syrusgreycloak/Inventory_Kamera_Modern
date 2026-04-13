@@ -62,5 +62,24 @@
     <Setting Name="TravelerName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="WandererName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">wanderer</Value>
+    </Setting>
+    <Setting Name="Executables" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+  &lt;string&gt;GenshinImpact&lt;/string&gt;
+  &lt;string&gt;YuanShen&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
+    </Setting>
+    <Setting Name="Slot1Key" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="Manequin1Name" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Manequin1</Value>
+    </Setting>
+    <Setting Name="Manequin2Name" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Manequin2</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

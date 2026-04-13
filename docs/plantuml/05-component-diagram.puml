@@ -1,0 +1,192 @@
+@startuml Component Diagram - Milestone 1 Layers
+
+title Milestone 1 Architecture - Component View & Dependencies
+
+!define CORE_COLOR #E1F5FE
+!define INFRA_COLOR #FFF9C4
+!define UI_COLOR #F3E5F5
+!define TEST_COLOR #E8F5E9
+
+package "Presentation Layer" <<Rectangle>> UI_COLOR {
+  [WinForms UI\n(.NET Framework 4.7.2)] as WinForms
+  [Avalonia UI\n(.NET 8)\n(Milestone 2)] as Avalonia #LightGray
+
+  note top of Avalonia
+    Future: Milestone 2
+    Cross-platform
+    Modern MVVM
+  end note
+
+  note bottom of WinForms
+    Current: Milestone 1
+    Windows-only (for now)
+    Adapter pattern for DI
+  end note
+}
+
+package "Core Library" <<Cloud>> CORE_COLOR {
+  component "Business Logic" {
+    [Scanning\n(Scrapers, Orchestrator)] as Scanning
+    [Data Management\n(DatabaseManager, GOOD)] as Data
+    [Configuration\n(ScanProfile, DataSource)] as Config
+    [Models\n(Character, Weapon, Artifact)] as Models
+  }
+
+  component "Abstractions" {
+    interface "IScreenCapture" as IScreen
+    interface "IImageProcessor" as IImage
+    interface "IOcrEngine" as IOcr
+    interface "IInputSimulator" as IInput
+  }
+
+  note top of "Core Library"
+    .NET 8 Class Library
+    Platform-agnostic
+    No UI dependencies
+    Fully testable
+  end note
+}
+
+package "Infrastructure Layer" <<Cloud>> INFRA_COLOR {
+  component "Platform Implementations" {
+    [Windows\n(ScreenCapture, Input)] as WinImpl
+    [macOS\n(ScreenCapture, Input)\n(Milestone 2)] as MacImpl #LightGray
+    [Linux\n(ScreenCapture, Input)\n(Milestone 2)] as LinuxImpl #LightGray
+  }
+
+  component "Cross-Platform Libraries" {
+    [ImageSharp\n(Image Processing)] as ImageSharp
+    [Tesseract\n(OCR Engine)] as Tesseract
+  }
+
+  note top of "Infrastructure Layer"
+    .NET 8 Class Library
+    Platform-specific code
+    Implements Core abstractions
+  end note
+}
+
+package "Testing" <<Cloud>> TEST_COLOR {
+  [Unit Tests\n(xUnit, Mock implementations)] as Tests
+  [Integration Tests\n(With real OCR)] as IntTests
+
+  note bottom of Tests
+    References Core only
+    Uses mock implementations
+    Fast, isolated tests
+  end note
+}
+
+package "Configuration Files" <<Database>> {
+  file "ScanProfile.json" as ScanProfile
+  file "datasources.json" as DataSource
+  file "inventorylists/*.json" as InventoryLists
+
+  note bottom of ScanProfile
+    External configuration
+    User-editable
+    No recompilation needed
+  end note
+}
+
+package "External Dependencies" {
+  cloud "GitHub\n(GenshinData)" as GitHub
+  cloud "Genshin Impact\n(Game Process)" as Game
+}
+
+' Dependencies - UI Layer
+WinForms --> Scanning : uses
+WinForms --> Data : uses
+WinForms --> Config : uses
+Avalonia ..> Scanning : (Milestone 2)
+
+' Dependencies - Core to Abstractions
+Scanning --> IScreen : depends on
+Scanning --> IImage : depends on
+Scanning --> IOcr : depends on
+Scanning --> IInput : depends on
+Scanning --> Models : uses
+Scanning --> Config : uses
+
+Data --> Config : uses
+Data --> Models : uses
+
+' Dependencies - Infrastructure implements Core
+WinImpl ..|> IScreen : implements
+WinImpl ..|> IInput : implements
+ImageSharp ..|> IImage : implements
+Tesseract ..|> IOcr : implements
+
+MacImpl ..|> IScreen : (Milestone 2)
+MacImpl ..|> IInput : (Milestone 2)
+LinuxImpl ..|> IScreen : (Milestone 2)
+LinuxImpl ..|> IInput : (Milestone 2)
+
+' Dependencies - Testing
+Tests --> Scanning : tests
+Tests --> Data : tests
+Tests ..> IScreen : mocks
+Tests ..> IOcr : mocks
+
+IntTests --> WinImpl : uses real implementations
+IntTests --> Tesseract : uses real OCR
+
+' Dependencies - Configuration
+Config --> ScanProfile : loads
+Config --> DataSource : loads
+Data --> InventoryLists : reads/writes
+
+' External dependencies
+Data --> GitHub : fetches updates
+Scanning --> Game : captures/controls
+
+' Dependency Injection Flow
+note as DIFlow
+  **Dependency Injection Flow:**
+
+  1. WinForms creates ServiceProvider
+  2. ServiceProvider registers:
+     - IScreenCapture → WindowsScreenCapture
+     - IImageProcessor → ImageSharpProcessor
+     - IOcrEngine → TesseractOcrEngine
+     - IArtifactScraper → ArtifactScraper
+  3. ScanOrchestrator receives injected dependencies
+  4. All abstractions resolved at runtime
+end note
+
+WinForms .. DIFlow
+WinImpl .. DIFlow
+ImageSharp .. DIFlow
+Tesseract .. DIFlow
+
+' Milestone 2 Notes
+note as Phase2Note
+  **Milestone 2 Changes:**
+  - Add Avalonia UI (references Core)
+  - Implement macOS/Linux platform layers
+  - Both WinForms and Avalonia can coexist
+  - Core library unchanged (already platform-agnostic)
+end note
+
+Avalonia .. Phase2Note
+MacImpl .. Phase2Note
+LinuxImpl .. Phase2Note
+
+' Layer constraints
+note bottom of "Core Library"
+  **Layer Constraints:**
+  Core must NEVER reference:
+  - System.Windows.Forms
+  - System.Drawing (except Color struct)
+  - Windows-specific APIs
+  - Any UI framework
+end note
+
+note bottom of WinForms
+  **Adapter Pattern:**
+  WinForms adapts to Core interfaces
+  Uses Microsoft.Extensions.DependencyInjection
+  ServiceProvider lifetime: Application
+end note
+
+@enduml

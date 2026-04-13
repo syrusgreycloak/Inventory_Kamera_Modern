@@ -1,0 +1,156 @@
+@startuml Before & After Comparison
+
+title Architecture Comparison: Current (v1.3.17) vs Milestone 1
+
+left to right direction
+
+package "Current Architecture (v1.3.17)" as Current {
+  component "MainForm.cs\n(WinForms)" as WinFormsCurrent #Pink {
+    note bottom: Fixed size, cramped layout\nAbsolute positioning\nWindows-only
+  }
+
+  component "InventoryKamera.cs" as IKCurrent #Pink {
+    note bottom: Monolithic class\nTight coupling to UI\nHard to test
+  }
+
+  component "ArtifactScraper.cs" as ScraperCurrent #Pink {
+    note bottom: Hard-coded coordinates:\n  if (Navigation.IsNormal)\n    y = 0.4216;\n  else\n    y = 0.3682;\n\nDirect System.Drawing usage\nWindows-specific
+  }
+
+  component "Navigation.cs\n(static)" as NavCurrent #Pink {
+    note bottom: Graphics.CopyFromScreen()\nWindowsInput library\nNot testable (static)
+  }
+
+  component "Scraper.cs\n(static)" as BaseScraperCurrent #Pink {
+    note bottom: Static engine pool\nTesseract 5.2.0\nDeadlock issues
+  }
+
+  WinFormsCurrent --> IKCurrent
+  IKCurrent --> ScraperCurrent
+  ScraperCurrent --> NavCurrent
+  ScraperCurrent --> BaseScraperCurrent
+}
+
+package "Milestone 1 Architecture" as Phase15 {
+  component "MainForm.cs\n(WinForms)" as WinFormsNew #LightGreen {
+    note bottom: Same UI (for now)\nAdapter for DI\nReferences Core library
+  }
+
+  component "Core Library\n(.NET 8)" as Core #LightBlue {
+    component "ScanOrchestrator" as Orchestrator
+    component "ArtifactScraper" as ScraperNew {
+      note bottom: Injected dependencies:\n  IScreenCapture\n  IImageProcessor\n  IOcrEngine\n  ScanProfile
+    }
+    component "Models" as Models
+    component "Configuration" as Config
+
+    Orchestrator --> ScraperNew
+    ScraperNew --> Models
+    ScraperNew --> Config
+  }
+
+  component "Infrastructure\n(.NET 8)" as Infra #LightYellow {
+    component "WindowsScreenCapture\n(IScreenCapture)" as WinCapture {
+      note bottom: Graphics.CopyFromScreen\nWrapper, testable
+    }
+    component "ImageSharpProcessor\n(IImageProcessor)" as ImageSharp {
+      note bottom: Cross-platform\nImageSharp library
+    }
+    component "TesseractOcrEngine\n(IOcrEngine)" as Tesseract {
+      note bottom: Newer package (5.5.2?)\nOr serialized calls
+    }
+  }
+
+  file "ScanProfile.json" as ScanProfile #LightCyan {
+    note bottom: External config:\n{\n  "16:9": {\n    "substats": {\n      "x": 0.0911,\n      "y": 0.4216\n    },\n    "sanctifyShift": 0.0520\n  }\n}
+  }
+
+  WinFormsNew --> Core : uses via DI
+  Core ..> Infra : depends on abstractions
+  Core ..> ScanProfile : loads at runtime
+}
+
+note as Problems
+  **Current Problems:**
+  ❌ Platform lock-in (Windows-only)
+  ❌ System.Drawing deprecated
+  ❌ Hard-coded coordinates
+  ❌ Tesseract deadlocks
+  ❌ Not testable (static, tight coupling)
+  ❌ Monolithic, difficult to maintain
+  ❌ Can't support new resolutions easily
+end note
+
+Current .. Problems
+
+note as Solutions
+  **Milestone 1 Solutions:**
+  ✅ Platform-agnostic Core library
+  ✅ ImageSharp (cross-platform)
+  ✅ External ScanProfile.json
+  ✅ Improved Tesseract handling
+  ✅ Fully testable (DI, mocks)
+  ✅ Separation of concerns
+  ✅ Easy to add new resolutions
+end note
+
+Phase15 .. Solutions
+
+note as Migration
+  **Migration Path (Milestone 1):**
+  1. Migrate to net8.0-windows (fix Thread.Abort)
+  2. Extract Core library (Strangler Fig)
+  3. Define abstractions (interfaces)
+  4. Implement Infrastructure (wrap Navigation, GenshinProcesor)
+  5. Remove Accord.Imaging + System.Drawing (ImageSharp)
+  6. Test: GOOD JSON output identical to pre-migration
+  → Milestone 2: Replace WinForms with Avalonia
+end note
+
+Solutions .. Migration
+
+' Comparison Table
+note bottom of Current
+  **Technology Stack:**
+  - .NET Framework 4.7.2
+  - WinForms UI
+  - System.Drawing
+  - Tesseract 5.2.0
+  - WindowsInput
+  - Newtonsoft.Json
+  - NLog
+
+  **Deployment:**
+  - Windows-only
+  - x64/x86
+  - Single EXE + DLLs
+
+  **Testing:**
+  - Manual testing only
+  - No unit tests
+  - Requires game running
+end note
+
+note bottom of Phase15
+  **Technology Stack:**
+  - .NET 8 (Core, Infrastructure)
+  - net8.0-windows (WinForms, migrated in Milestone 1)
+  - ImageSharp (cross-platform)
+  - Tesseract 5.5.2 or serialized
+  - Microsoft.Extensions.DependencyInjection
+  - System.Text.Json / Newtonsoft.Json
+  - Microsoft.Extensions.Logging / NLog
+
+  **Deployment:**
+  - Windows (Milestone 1)
+  - macOS, Linux (Milestone 2)
+  - Self-contained or framework-dependent
+
+  **Testing:**
+  - Unit tests (xUnit)
+  - Mock implementations
+  - No game required for unit tests
+  - Integration tests with game
+end note
+
+@enduml

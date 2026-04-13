@@ -1,0 +1,183 @@
+@startuml Proposed Artifact Scanning Sequence (Milestone 1)
+
+title Milestone 1 Architecture - Artifact Scanning with Abstractions
+
+actor User
+participant MainForm
+participant ScanOrchestrator
+participant ArtifactScraper
+participant IScreenCapture
+participant IImageProcessor
+participant ScanProfile
+participant IOcrEngine
+participant "Progress<T>" as Progress
+participant Inventory
+
+User -> MainForm : Click "Scan"
+activate MainForm
+
+' Load configuration
+MainForm -> ScanProfile : Load from ScanProfile.json
+ScanProfile --> MainForm : Profiles loaded
+
+' Detect resolution and select profile
+MainForm -> IScreenCapture : GetGameWindowSize()
+IScreenCapture --> MainForm : Size (e.g., 1600x900)
+
+MainForm -> ScanProfile : GetProfile(aspectRatio: 1.778)
+ScanProfile --> MainForm : ScanProfile (16:9)
+note right: Dynamically selects profile based on aspect ratio
+
+' Start orchestrated scan
+MainForm -> ScanOrchestrator : ScanAllAsync(options, progress)
+activate ScanOrchestrator
+
+ScanOrchestrator -> ArtifactScraper : ScanArtifactsAsync(progress)
+activate ArtifactScraper
+
+' Navigate to artifact screen (async)
+ArtifactScraper -> IScreenCapture : CaptureRegionAsync(countRegion)
+activate IScreenCapture
+IScreenCapture --> ArtifactScraper : IImage
+deactivate IScreenCapture
+
+ArtifactScraper -> IOcrEngine : Recognize(image, PageSegMode)
+activate IOcrEngine
+IOcrEngine --> ArtifactScraper : "895"
+deactivate IOcrEngine
+note right: Milestone 1: synchronous OCR\nCooperative cancellation via CancellationToken\nFull async/await is Milestone 2+
+
+loop For each artifact (895)
+  ' Report progress
+  ArtifactScraper -> Progress : Report(new ScanProgress { Current=i, Total=895 })
+  Progress --> MainForm : Update UI
+  MainForm -> MainForm : UpdateProgressBar(i/895)
+
+  ' Capture full artifact card (async)
+  ArtifactScraper -> IScreenCapture : CaptureRegionAsync(cardRegion)
+  note right: cardRegion from ScanProfile.Artifacts.Card
+  activate IScreenCapture
+  IScreenCapture --> ArtifactScraper : IImage card
+  deactivate IScreenCapture
+
+  ' Check for sanctified (async image processing)
+  ArtifactScraper -> IImageProcessor : Crop(card, sanctifyIndicatorRegion)
+  activate IImageProcessor
+  note right: sanctifyIndicatorRegion from ScanProfile
+  IImageProcessor --> ArtifactScraper : IImage indicator
+  deactivate IImageProcessor
+
+  ArtifactScraper -> IImageProcessor : GetPixel(indicator, center)
+  IImageProcessor --> ArtifactScraper : Color(220, 192, 255)
+
+  ArtifactScraper -> ArtifactScraper : IsPurple(color)
+  note right: isPurple = (B>R>=G) && (B>150)
+
+  alt Is Sanctified
+    ArtifactScraper -> ScanProfile : Get substatsRegion + sanctifyShift
+    ScanProfile --> ArtifactScraper : Rectangle {y: 0.4216 + 0.0520}
+  else Regular artifact
+    ArtifactScraper -> ScanProfile : Get substatsRegion
+    ScanProfile --> ArtifactScraper : Rectangle {y: 0.4216}
+  end
+
+  ' Crop all regions (parallel processing possible)
+  par Parallel region extraction
+    ArtifactScraper -> IImageProcessor : Crop(card, nameRegion)
+    IImageProcessor --> ArtifactScraper : IImage nameImg
+  and
+    ArtifactScraper -> IImageProcessor : Crop(card, substatsRegion)
+    IImageProcessor --> ArtifactScraper : IImage substatsImg
+  and
+    ArtifactScraper -> IImageProcessor : Crop(card, levelRegion)
+    IImageProcessor --> ArtifactScraper : IImage levelImg
+  end
+
+  ' OCR processing (async, with timeout)
+  ArtifactScraper -> IOcrEngine : Recognize(nameImg)
+  activate IOcrEngine
+  note right: Async with CancellationToken (30s timeout)
+
+  alt OCR completes within timeout
+    IOcrEngine --> ArtifactScraper : OcrResult("Cinder City Sands")
+    deactivate IOcrEngine
+  else OCR times out
+    IOcrEngine --> ArtifactScraper : TaskCanceledException
+    deactivate IOcrEngine
+    ArtifactScraper -> Progress : Report(new Error { Id=i, Message="OCR timeout" })
+    note right: Continues to next artifact instead of crashing
+  end
+
+  ' Parse OCR results into artifact
+  ArtifactScraper -> ArtifactScraper : ParseArtifact(ocrResults)
+  ArtifactScraper -> ArtifactScraper : artifact = new Artifact { ... }
+
+  ' Validation
+  alt artifact.IsValid()
+    ArtifactScraper -> Inventory : Add(artifact)
+    note right: Thread-safe collection
+  else Invalid
+    ArtifactScraper -> Progress : Report(new Error { ... })
+    ArtifactScraper -> ArtifactScraper : SaveDebugData(artifact, images)
+  end
+
+  ' Clean up images
+  ArtifactScraper -> ArtifactScraper : DisposeImages(card, nameImg, substatsImg, ...)
+  note right: IImage.Dispose() releases ImageSharp resources
+
+  ' Navigate to next (async input)
+  ArtifactScraper -> IScreenCapture : ScrollDownAsync()
+end
+
+ArtifactScraper --> ScanOrchestrator : List<Artifact>
+deactivate ArtifactScraper
+
+' Optionally scan other categories
+ScanOrchestrator -> ScanOrchestrator : ScanWeaponsAsync()
+ScanOrchestrator -> ScanOrchestrator : ScanCharactersAsync()
+
+ScanOrchestrator -> Inventory : Build final inventory
+ScanOrchestrator --> MainForm : Inventory complete
+deactivate ScanOrchestrator
+
+' Export to GOOD format
+MainForm -> GOOD : Export(inventory)
+GOOD --> MainForm : JSON string
+
+MainForm -> MainForm : SaveToFile(json)
+MainForm --> User : Show "Scan Complete"
+deactivate MainForm
+
+note over IScreenCapture, IOcrEngine
+  **Improvements over Current:**
+  1. All operations async (no thread blocking)
+  2. IScreenCapture abstraction (platform-agnostic)
+  3. IImageProcessor abstraction (ImageSharp, cross-platform)
+  4. IOcrEngine abstraction (testable, swappable)
+  5. ScanProfile (external config, no hard-coded coordinates)
+  6. IProgress<T> (proper progress reporting)
+  7. Timeout handling via CancellationToken (cleaner than Task.WhenAny)
+  8. Resource cleanup with IDisposable pattern
+end note
+
+note over ArtifactScraper, ScanProfile
+  **External Configuration Benefits:**
+  - ScanProfile loaded from JSON at runtime
+  - No recompilation to support new resolutions
+  - Users can create custom profiles
+  - Steam Deck, 4K, ultrawide all configurable
+end note
+
+note over MainForm
+  **Testability:**
+  Can inject MockScreenCapture and MockOcrEngine
+  for unit testing without actual game running.
+
+  Test example:
+  var mockCapture = new MockScreenCapture("./testdata/");
+  var scraper = new ArtifactScraper(mockCapture, ...);
+  var artifacts = await scraper.ScanArtifactsAsync();
+  Assert.Equal(5, artifacts.Count);
+end note
+
+@enduml
