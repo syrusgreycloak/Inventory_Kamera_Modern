@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Tesseract;
+using OcrPool = InventoryKamera.Infrastructure.OcrEnginePool;
 
 namespace InventoryKamera
 {
@@ -79,6 +80,8 @@ namespace InventoryKamera
 
 		internal static ConcurrentBag<TesseractEngine> engines;
 
+		internal static OcrPool _ocrPool;
+
 		internal static Dictionary<string, string> Weapons, DevItems, Materials, Elements;
 
 		internal static Dictionary<string, JObject> Characters, Artifacts;
@@ -88,6 +91,7 @@ namespace InventoryKamera
 		static GenshinProcesor()
         {
             InitEngines();
+            _ocrPool = new OcrPool();
             _gameData = new GameDataService(new DatabaseManager());
             // Sync static fields so existing callers still work
             Elements = _gameData.Elements;
@@ -132,71 +136,17 @@ namespace InventoryKamera
 
 		private static void InitEngines()
 		{
+			// Engine pool now lives in OcrEnginePool; keep field stub for any remaining references
 			engines = new ConcurrentBag<TesseractEngine>();
-			try
-			{
-				for (int i = 0; i < numEngines; i++)
-				{
-					engines.Add(new TesseractEngine(tesseractDatapath, tesseractLanguage, EngineMode.LstmOnly));
-				}
-			}
-			catch (Exception ex)
-			{
-				Logger.Error(ex, "Failed to initialize Tesseract engines.");
-				throw;
-			}
 		}
 
-		internal static void RestartEngines()
-		{
-			
-			if (engines is null) engines = new ConcurrentBag<TesseractEngine>();
-			lock (engines)
-			{
-				while (!engines.IsEmpty)
-				{
-					if (engines.TryTake(out TesseractEngine e))
-						e.Dispose();
-				}
-
-				for (int i = 0; i < numEngines; i++)
-				{
-					engines.Add(new TesseractEngine(tesseractDatapath, tesseractLanguage, EngineMode.LstmOnly));
-				}
-			}
-			Logger.Debug("{numEngines} Engines restarted", numEngines);
-		}
+		internal static void RestartEngines() => _ocrPool.RestartEngines();
 
 		/// <summary> Use Tesseract OCR to find words on picture to string </summary>
 		internal static string AnalyzeText(Bitmap bitmap, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
 		{
-			string text = "";
-			TesseractEngine e;
-			while (!engines.TryTake(out e)) { Thread.Sleep(10); }
-
-			if (numbersOnly) e.SetVariable("tessedit_char_whitelist", "0123456789");
-			byte[] pngBytes;
-			using (var ms = new System.IO.MemoryStream())
-			{
-				bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-				pngBytes = ms.ToArray();
-			}
-			using (var pix = Pix.LoadFromMemory(pngBytes))
-			using (var page = e.Process(pix, pageMode))
-			{
-				using (var iter = page.GetIterator())
-				{
-					iter.Begin();
-					do
-					{
-						text += iter.GetText(PageIteratorLevel.TextLine);
-					}
-					while (iter.Next(PageIteratorLevel.TextLine));
-				}
-			}
-			engines.Add(e);
-
-			return text;
+			var coreMode = (PageSegmentationMode)(int)pageMode;
+			return _ocrPool.AnalyzeText(bitmap, coreMode, numbersOnly);
 		}
 
 		#endregion OCR
