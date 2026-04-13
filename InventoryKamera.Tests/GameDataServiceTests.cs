@@ -3,6 +3,10 @@ using Xunit;
 
 namespace InventoryKamera.Tests
 {
+    [CollectionDefinition("GameDataService", DisableParallelization = true)]
+    public class GameDataServiceCollection { }
+
+    [Collection("GameDataService")]
     public class GameDataServiceTests
     {
         private readonly GameDataService _svc;
@@ -38,9 +42,16 @@ namespace InventoryKamera.Tests
         }
 
         [Fact]
-        public void IsValidCharacter_Traveler_ReturnsTrue()
+        public void IsValidCharacter_LoadedCharacterKey_ReturnsTrue()
         {
-            // "TravelerAnemo" contains "Traveler" so always valid
+            // "albedo" is a real character in characters.json — exercises actual JSON data loading
+            Assert.True(_svc.IsValidCharacter("albedo"));
+        }
+
+        [Fact]
+        public void IsValidCharacter_Traveler_UsesHardcodedBypass()
+        {
+            // Documents that Traveler uses a hardcoded Contains("Traveler") bypass, not JSON lookup
             Assert.True(_svc.IsValidCharacter("TravelerAnemo"));
         }
 
@@ -106,10 +117,27 @@ namespace InventoryKamera.Tests
         }
 
         [Fact]
+        public void FindClosestGearSlot_SubstringInput_ReturnsSlot()
+        {
+            // "flower of life" contains "flower" — OCR-style input should still resolve to "flower"
+            string result = _svc.FindClosestGearSlot("flower of life");
+            Assert.Equal("flower", result);
+        }
+
+        [Fact]
         public void ReloadData_DoesNotThrow()
         {
             var ex = Record.Exception(() => _svc.ReloadData());
             Assert.Null(ex);
+        }
+
+        [Fact]
+        public void ReloadData_PopulatesWeaponsAndCharacters()
+        {
+            _svc.ReloadData();
+            Assert.True(_svc.Weapons.Count > 0, "Weapons should be populated after reload");
+            Assert.True(_svc.Characters.Count > 0, "Characters should be populated after reload");
+            Assert.True(_svc.Materials.Count > 0, "Materials should be populated after reload");
         }
 
         [Fact]
@@ -134,7 +162,7 @@ namespace InventoryKamera.Tests
             // albedo is geo element in characters.json
             var result = _svc.GetCharactersElements("albedo");
             Assert.NotNull(result);
-            Assert.NotEmpty(result);
+            Assert.Single(result); // Albedo has exactly one element
             Assert.Contains("geo", result);
         }
 
