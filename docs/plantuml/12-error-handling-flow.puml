@@ -1,6 +1,6 @@
 @startuml Error Handling & Cancellation Flow
 
-title Phase 1.5 - Error Handling and Cancellation Strategy
+title Milestone 1 - Error Handling and Cancellation Strategy
 
 skinparam backgroundColor #FAFAFA
 
