@@ -15,17 +15,24 @@ namespace InventoryKamera.Configuration
 
         public void Load(string profilePath, double windowAspectRatio)
         {
-            string json = File.ReadAllText(profilePath);
-            _profileFile = JsonConvert.DeserializeObject<ScanProfileFile>(json);
-
-            _activeProfile = FindBestProfile(windowAspectRatio);
-            if (_activeProfile != null)
-                Logger.Info("Loaded scan profile: {0} (aspect ratio {1:F4})", _activeProfile.Name, windowAspectRatio);
-            else
-                Logger.Warn("No matching scan profile found for aspect ratio {0:F4}", windowAspectRatio);
+            try
+            {
+                string json = File.ReadAllText(profilePath);
+                _profileFile = JsonConvert.DeserializeObject<ScanProfileFile>(json);
+                _activeProfile = FindBestProfile(windowAspectRatio);
+                if (_activeProfile != null)
+                    Logger.Info("Loaded scan profile: {0} (aspect ratio {1:F4})", _activeProfile.Name, windowAspectRatio);
+                else
+                    Logger.Warn("No matching scan profile found for aspect ratio {0:F4}", windowAspectRatio);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to load scan profile from {0}", profilePath);
+                throw;
+            }
         }
 
-        private AspectRatioProfile FindBestProfile(double windowAspectRatio)
+        public AspectRatioProfile FindBestProfile(double windowAspectRatio)
         {
             if (_profileFile?.Profiles == null) return null;
 
