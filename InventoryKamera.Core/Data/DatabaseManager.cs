@@ -190,7 +190,6 @@ namespace InventoryKamera
                 if (force)
                 {
                     Logger.Info("Forcing update for game data");
-                    Properties.Settings.Default.LastUpdateCheck = DateTime.MinValue;
                     RemoteVersion = CheckRemoteVersion();
                 }
 
