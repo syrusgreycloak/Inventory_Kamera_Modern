@@ -67,6 +67,7 @@ namespace InventoryKamera
         protected IUserInterface _userInterface;
 
         protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+            : this()
         {
             _screenCapture = screenCapture;
             _ocrEngine = ocrEngine;
