@@ -69,6 +69,8 @@ namespace InventoryKamera
 					material.name = ScanMaterialName(out Bitmap nameplate);
 					material.count = 0;
 
+					Logger.Debug("Found {0}", material.name);
+
 					// Check if new material has been found
 					if (inventory.Materials.Contains(material))
 					{
@@ -90,6 +92,7 @@ namespace InventoryKamera
                             {
 								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
                             }
+							Logger.Debug("Final: {0} : {1}", material.name, material.count);
 							inventory.Materials.Add(material);
 							UserInterface.ResetCharacterDisplay();
 							UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
@@ -162,6 +165,8 @@ namespace InventoryKamera
 				material.name = ScanMaterialName(out Bitmap nameplate);
 				material.count = 0;
 
+				Logger.Debug("Found (LastPage) {0}", material.name);
+
 				if (inventory.Materials.Contains(material) && passby) continue;
 
 				if (!inventory.Materials.Contains(material))
@@ -179,6 +184,7 @@ namespace InventoryKamera
 						{
 							SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
 						}
+						Logger.Debug("Final (LastPage): {0} : {1}", material.name, material.count);
 						inventory.Materials.Add(material);
 						UserInterface.ResetCharacterDisplay();
 						UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
@@ -290,9 +296,12 @@ namespace InventoryKamera
 		public static int ScanMaterialCount(Rectangle rectangle, out Bitmap quantity)
 		{
 			Dictionary<int, int> counts = new Dictionary<int, int>();
+			// Anchor from the bottom of the rectangle using a fixed screen-height proportion.
+			// Percentage-from-top drifts when scroll misalignment makes rectangles taller than normal.
+			int captureHeight = (int)(0.015 * Navigation.GetHeight());
 			var region = new RECT(
 				Left: rectangle.X,
-				Top: (int)(rectangle.Y + (0.8 * rectangle.Height)), // Only get the bottom of inventory item
+				Top: rectangle.Bottom - captureHeight,
 				Right: rectangle.Right,
 				Bottom: rectangle.Bottom + 10);
 
@@ -353,14 +362,14 @@ namespace InventoryKamera
 			
 			var nullableMode = SafeExtractMaxCounter(counts);
 			if (nullableMode == null)
-				return 0;
+				return 1;
 
 			var mode = nullableMode.Value;
-			if (mode.Key == 0 && counts.Count >= 5) 
-				return 0;
-			
+			if (mode.Key == 0 && counts.Count >= 5)
+				return 1;
+
 			counts.Remove(mode.Key);
-			return SafeExtractMaxCounter(counts)?.Value ?? 0;
+			return SafeExtractMaxCounter(counts)?.Key ?? 1;
 		}
 
 		private static KeyValuePair<int, int>? SafeExtractMaxCounter(Dictionary<int, int> counts)
