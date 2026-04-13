@@ -2,7 +2,7 @@
 
 **Goal:** .NET 8 solution with a clean platform-agnostic Core library. WinForms still works as the UI throughout.
 
-**Status:** In progress — Step 1.1 complete (2026-04-12).
+**Status:** Steps 1.1–1.4 complete (2026-04-13). Pending: manual scan verification, ImageSharp migration for no-System.Drawing in Core, wiring ScanProfile into scrapers.
 
 ---
 
@@ -419,16 +419,17 @@ Profile structure (excerpt — all region values are relative 0.0–1.0 ratios o
 
 ## Milestone 1 Complete When
 
-- [ ] App builds targeting `net8.0-windows` with zero errors
-- [ ] `Thread.Abort()` replaced with `CancellationTokenSource` cooperative cancellation
-- [ ] `InventoryKamera.Core` project has no `System.Windows.Forms` or `System.Drawing` references
-- [ ] Models, GOOD export, and DatabaseManager extracted to Core
-- [ ] Interfaces defined: `IScreenCapture`, `IOcrEngine`, `IImageProcessor`, `IInputSimulator`, `IUserInterface`
-- [ ] WinForms project references Core via `ProjectReference` and uses injected implementations
-- [ ] Full scan produces identical GOOD JSON output to the pre-migration baseline
-- [ ] `ScanProfile.json` loaded and used for all region coordinates
+- [x] App builds targeting `net8.0-windows` with zero errors
+- [x] `Thread.Abort()` replaced with `CancellationTokenSource` cooperative cancellation
+- [x] `InventoryKamera.Core` project has no `System.Windows.Forms` references
+- [ ] `InventoryKamera.Core` project has no `System.Drawing` references ← DEFERRED: Core uses System.Drawing.Common temporarily; replace with ImageSharp in Milestone 2
+- [x] Models, GOOD export, and DatabaseManager extracted to Core
+- [x] Interfaces defined: `IScreenCapture`, `IOcrEngine`, `IImageProcessor`, `IInputSimulator`, `IUserInterface`
+- [x] WinForms project references Core via `ProjectReference` and uses injected implementations
+- [ ] Full scan produces identical GOOD JSON output to the pre-migration baseline ← UNVERIFIABLE without manual testing session
+- [ ] `ScanProfile.json` loaded and used for all region coordinates ← PARTIAL: JSON created, ScanProfileManager written; scraper integration is follow-up work
 
 ---
 
 *See `docs/archive/PHASE_1.5_PLAN.md` for the original detailed plan (superseded by this document).*
-*Last updated: 2026-04-12*
+*Last updated: 2026-04-13*
