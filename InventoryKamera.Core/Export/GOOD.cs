@@ -84,8 +84,11 @@ namespace InventoryKamera
             }
 
             // Assign materials
-            if (inventory.AllMaterials.Count > 0) Materials = new Dictionary<string, int>();
-            inventory.AllMaterials.ToList().ForEach(material => Materials.Add(material.name, material.count));
+            if (inventory.AllMaterials.Count > 0)
+            {
+                Materials = new Dictionary<string, int>();
+                inventory.AllMaterials.ToList().ForEach(material => Materials.Add(material.name, material.count));
+            }
         }
 
         internal void WriteToJSON(string outputDirectory)
