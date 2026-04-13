@@ -44,6 +44,7 @@ namespace InventoryKamera
                     if (!scanned.Contains(character.NameGOOD))
 					{
 						Characters.Add(character);
+						scanned.Add(character.NameGOOD);
 						_userInterface.IncrementCharacterCount();
 						Logger.Info("Scanned {0} successfully", character.NameGOOD);
 						if (Characters.Count == 1) first = character.NameGOOD;
@@ -140,10 +141,6 @@ namespace InventoryKamera
 
 				Logger.Info("{0} Level: {1}", character.NameGOOD, character.Level);
 				Logger.Info("{0} Ascended: {1}", character.NameGOOD, character.Ascended);
-
-				// Scan Experience
-				//experience = ScanExperience();
-				//Navigation.SystemRandomWait(Navigation.Speed.Normal);
 
 				// Scan Constellation
 				_inputSimulator.SelectCharacterConstellation();
@@ -267,12 +264,20 @@ namespace InventoryKamera
 				{
 					Bitmap n = _imageProcessor.SetGrayscale(bm);
 					// Increase contrast to make white text stand out from lighter backgrounds (fog effects)
-					n = _imageProcessor.SetContrast(n, 60);
+					var contrasted = _imageProcessor.SetContrast(n, 60);
+					n.Dispose();
+					n = contrasted;
 					// High threshold to capture only pure white text, filtering out light backgrounds
-					n = _imageProcessor.SetThreshold(n, 200);
-					n = _imageProcessor.SetInvert(n);
+					var thresholded = _imageProcessor.SetThreshold(n, 200);
+					n.Dispose();
+					n = thresholded;
+					var invertedN = _imageProcessor.SetInvert(n);
+					n.Dispose();
+					n = invertedN;
 
-					n = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+					var resized = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+					n.Dispose();
+					n = resized;
 					string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
 
 					Logger.Debug("Name OCR from right panel: '{0}'", text);
@@ -382,10 +387,16 @@ namespace InventoryKamera
 			using (Bitmap bm = _screenCapture.CaptureRegion(elementRegion))
 			{
 				Bitmap n = _imageProcessor.SetGrayscale(bm);
-				n = _imageProcessor.SetThreshold(n, 110);
-				n = _imageProcessor.SetInvert(n);
+				var thresholded = _imageProcessor.SetThreshold(n, 110);
+				n.Dispose();
+				n = thresholded;
+				var invertedN = _imageProcessor.SetInvert(n);
+				n.Dispose();
+				n = invertedN;
 
-				n = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+				var resizedN = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
+				n.Dispose();
+				n = resizedN;
 				string block = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.Auto).ToLower().Trim();
 				string line = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
 
@@ -438,10 +449,16 @@ namespace InventoryKamera
 			{
 				Bitmap bm = _screenCapture.CaptureRegion(region);
 
-				bm = _imageProcessor.ResizeImage(bm, bm.Width * 2, bm.Height * 2);
+				var resized = _imageProcessor.ResizeImage(bm, bm.Width * 2, bm.Height * 2);
+				bm.Dispose();
+				bm = resized;
 				Bitmap n = _imageProcessor.SetGrayscale(bm);
-				n = _imageProcessor.SetInvert(n);
-				bm = _imageProcessor.SetContrast(bm, 30.0);
+				var inverted = _imageProcessor.SetInvert(n);
+				n.Dispose();
+				n = inverted;
+				var contrasted = _imageProcessor.SetContrast(bm, 30.0);
+				bm.Dispose();
+				bm = contrasted;
 
 				string text = _ocrEngine.AnalyzeText(n).Trim();
 				Logger.Debug("Scanned character level as {0}", text);
@@ -473,34 +490,6 @@ namespace InventoryKamera
 
 			return -1;
 		}
-
-		private int ScanExperience()
-		{
-			int experience = 0;
-
-			int xOffset = 1117;
-			int yOffset = 151;
-			Bitmap bm = new Bitmap(90, 10);
-			Graphics g = Graphics.FromImage(bm);
-			int screenLocation_X = Navigation.GetPosition().Left + xOffset;
-			int screenLocation_Y = Navigation.GetPosition().Top + yOffset;
-			g.CopyFromScreen(screenLocation_X, screenLocation_Y, 0, 0, bm.Size);
-
-			//Image Operations
-			bm = _imageProcessor.ResizeImage(bm, bm.Width * 6, bm.Height * 6);
-			//Scraper.ConvertToGrayscale(ref bm);
-			//Scraper.SetInvert(ref bm);
-			bm = _imageProcessor.SetContrast(bm, 30.0);
-
-			string text = _ocrEngine.AnalyzeText(bm);
-			text = text.Trim();
-			text = Regex.Replace(text, @"(?![0-9\s/]).", string.Empty);
-
-			if (Regex.IsMatch(text, "/"))
-			{
-				string[] temp = text.Split('/');
-				experience = Convert.ToInt32(temp[0]);
-			}
 			else
 			{
 				Debug.Print("Error: Found " + experience + " instead of experience");
