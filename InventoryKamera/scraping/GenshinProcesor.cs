@@ -96,6 +96,14 @@ namespace InventoryKamera
 				Elements.Add(element, char.ToUpper(element[0]) + element.Substring(1));
 			}
 
+			// Wire up Core model validation delegates
+			ModelValidator.IsValidWeapon = IsValidWeapon;
+			ModelValidator.IsValidCharacter = IsValidCharacter;
+			ModelValidator.IsValidElement = IsValidElement;
+			ModelValidator.IsValidSlot = IsValidSlot;
+			ModelValidator.IsValidSetName = IsValidSetName;
+			ModelValidator.IsValidStat = IsValidStat;
+
 			Logger.Info("Scraper initialized");
         }
 

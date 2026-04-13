@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
@@ -53,11 +53,10 @@ namespace InventoryKamera
         public Dictionary<string, Artifact> Artifacts { get; internal set; }
 
         [JsonIgnore]
-        public WeaponType WeaponType { 
-            
-            get => GenshinProcesor.Characters[_nameKey.ToLower()]["WeaponType"].ToObject<WeaponType>();
-            
-            internal set { WeaponType = value; } 
+        public WeaponType WeaponType
+        {
+            get => _weaponType;
+            internal set { _weaponType = value; }
         }
 
         public Character()
@@ -95,7 +94,7 @@ namespace InventoryKamera
 
         public bool HasValidName()
         {
-            return !string.IsNullOrWhiteSpace(NameGOOD) && GenshinProcesor.IsValidCharacter(NameGOOD);
+            return !string.IsNullOrWhiteSpace(NameGOOD) && ModelValidator.IsValidCharacter(NameGOOD);
         }
 
         public bool HasValidLevel()
@@ -105,7 +104,7 @@ namespace InventoryKamera
 
         public bool HasValidElement()
         {
-            return !string.IsNullOrWhiteSpace(Element) && GenshinProcesor.IsValidElement(Element);
+            return !string.IsNullOrWhiteSpace(Element) && ModelValidator.IsValidElement(Element);
         }
 
         public bool HasValidConstellation()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -28,14 +28,14 @@ namespace InventoryKamera
 		public List<SubStat> SubStats { get; private set; }
 
 		[JsonProperty("location")]
-		public string EquippedCharacter { get; internal set; }	
+		public string EquippedCharacter { get; internal set; }
 
 		[JsonProperty("lock")]
 		public bool Lock { get; private set; }
 
         [JsonProperty("id")]
 		public int Id { get; private set; }
-		
+
 		public Artifact()
 		{
 			Rarity = -1;
@@ -79,17 +79,17 @@ namespace InventoryKamera
 
 		public bool HasValidSlot()
 		{
-			return GenshinProcesor.IsValidSlot(GearSlot);
+			return ModelValidator.IsValidSlot(GearSlot);
 		}
 
 		public bool HasValidSetName()
 		{
-			return GenshinProcesor.IsValidSetName(SetName);
+			return ModelValidator.IsValidSetName(SetName);
 		}
 
 		public bool HasValidMainStat()
 		{
-			return GenshinProcesor.IsValidStat(MainStat);
+			return ModelValidator.IsValidStat(MainStat);
 		}
 
 		public bool HasValidSubStats()
@@ -99,7 +99,7 @@ namespace InventoryKamera
 			SubStats.ForEach(s =>
 			{
                 if (!string.IsNullOrWhiteSpace(s.stat) &&
-                    (!GenshinProcesor.IsValidStat(s.stat) || s.value == (decimal)(-1.0)))
+                    (!ModelValidator.IsValidStat(s.stat) || s.value == (decimal)(-1.0)))
                 {
                     valid = false;
                 }
@@ -110,7 +110,7 @@ namespace InventoryKamera
 
 		public bool HasValidEquippedCharacter()
 		{
-			return string.IsNullOrWhiteSpace(EquippedCharacter) || GenshinProcesor.IsValidCharacter(EquippedCharacter);
+			return string.IsNullOrWhiteSpace(EquippedCharacter) || ModelValidator.IsValidCharacter(EquippedCharacter);
 		}
 
 		[Serializable]
