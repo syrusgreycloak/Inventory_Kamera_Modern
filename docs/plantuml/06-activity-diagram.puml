@@ -1,6 +1,6 @@
 @startuml Activity Diagram - Full Scan Workflow
 
-title Inventory Kamera - Complete Scanning Workflow (Phase 1.5)
+title Inventory Kamera - Complete Scanning Workflow (Milestone 1)
 
 |User|
 start

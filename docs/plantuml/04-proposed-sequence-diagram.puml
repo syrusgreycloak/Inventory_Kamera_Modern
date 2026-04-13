@@ -1,6 +1,6 @@
-@startuml Proposed Artifact Scanning Sequence (Phase 1.5)
+@startuml Proposed Artifact Scanning Sequence (Milestone 1)
 
-title Phase 1.5 Architecture - Artifact Scanning with Abstractions
+title Milestone 1 Architecture - Artifact Scanning with Abstractions
 
 actor User
 participant MainForm
@@ -41,11 +41,11 @@ activate IScreenCapture
 IScreenCapture --> ArtifactScraper : IImage
 deactivate IScreenCapture
 
-ArtifactScraper -> IOcrEngine : RecognizeAsync(image, options)
+ArtifactScraper -> IOcrEngine : Recognize(image, PageSegMode)
 activate IOcrEngine
-IOcrEngine --> ArtifactScraper : OcrResult("895")
+IOcrEngine --> ArtifactScraper : "895"
 deactivate IOcrEngine
-note right: Async OCR, no thread blocking
+note right: Milestone 1: synchronous OCR\nCooperative cancellation via CancellationToken\nFull async/await is Milestone 2+
 
 loop For each artifact (895)
   ' Report progress
@@ -94,7 +94,7 @@ loop For each artifact (895)
   end
 
   ' OCR processing (async, with timeout)
-  ArtifactScraper -> IOcrEngine : RecognizeAsync(nameImg)
+  ArtifactScraper -> IOcrEngine : Recognize(nameImg)
   activate IOcrEngine
   note right: Async with CancellationToken (30s timeout)
 

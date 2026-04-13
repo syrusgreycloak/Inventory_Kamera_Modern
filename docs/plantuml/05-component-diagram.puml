@@ -1,6 +1,6 @@
-@startuml Component Diagram - Phase 1.5 Layers
+@startuml Component Diagram - Milestone 1 Layers
 
-title Phase 1.5 Architecture - Component View & Dependencies
+title Milestone 1 Architecture - Component View & Dependencies
 
 !define CORE_COLOR #E1F5FE
 !define INFRA_COLOR #FFF9C4
@@ -9,16 +9,16 @@ title Phase 1.5 Architecture - Component View & Dependencies
 
 package "Presentation Layer" <<Rectangle>> UI_COLOR {
   [WinForms UI\n(.NET Framework 4.7.2)] as WinForms
-  [Avalonia UI\n(.NET 8)\n(Phase 2)] as Avalonia #LightGray
+  [Avalonia UI\n(.NET 8)\n(Milestone 2)] as Avalonia #LightGray
 
   note top of Avalonia
-    Future: Phase 2
+    Future: Milestone 2
     Cross-platform
     Modern MVVM
   end note
 
   note bottom of WinForms
-    Current: Phase 1.5
+    Current: Milestone 1
     Windows-only (for now)
     Adapter pattern for DI
   end note
@@ -50,8 +50,8 @@ package "Core Library" <<Cloud>> CORE_COLOR {
 package "Infrastructure Layer" <<Cloud>> INFRA_COLOR {
   component "Platform Implementations" {
     [Windows\n(ScreenCapture, Input)] as WinImpl
-    [macOS\n(ScreenCapture, Input)\n(Phase 2)] as MacImpl #LightGray
-    [Linux\n(ScreenCapture, Input)\n(Phase 2)] as LinuxImpl #LightGray
+    [macOS\n(ScreenCapture, Input)\n(Milestone 2)] as MacImpl #LightGray
+    [Linux\n(ScreenCapture, Input)\n(Milestone 2)] as LinuxImpl #LightGray
   }
 
   component "Cross-Platform Libraries" {
@@ -98,7 +98,7 @@ package "External Dependencies" {
 WinForms --> Scanning : uses
 WinForms --> Data : uses
 WinForms --> Config : uses
-Avalonia ..> Scanning : (Phase 2)
+Avalonia ..> Scanning : (Milestone 2)
 
 ' Dependencies - Core to Abstractions
 Scanning --> IScreen : depends on
@@ -117,10 +117,10 @@ WinImpl ..|> IInput : implements
 ImageSharp ..|> IImage : implements
 Tesseract ..|> IOcr : implements
 
-MacImpl ..|> IScreen : (Phase 2)
-MacImpl ..|> IInput : (Phase 2)
-LinuxImpl ..|> IScreen : (Phase 2)
-LinuxImpl ..|> IInput : (Phase 2)
+MacImpl ..|> IScreen : (Milestone 2)
+MacImpl ..|> IInput : (Milestone 2)
+LinuxImpl ..|> IScreen : (Milestone 2)
+LinuxImpl ..|> IInput : (Milestone 2)
 
 ' Dependencies - Testing
 Tests --> Scanning : tests
@@ -159,9 +159,9 @@ WinImpl .. DIFlow
 ImageSharp .. DIFlow
 Tesseract .. DIFlow
 
-' Phase 2 Notes
+' Milestone 2 Notes
 note as Phase2Note
-  **Phase 2 Changes:**
+  **Milestone 2 Changes:**
   - Add Avalonia UI (references Core)
   - Implement macOS/Linux platform layers
   - Both WinForms and Avalonia can coexist

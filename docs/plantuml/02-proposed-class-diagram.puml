@@ -1,18 +1,20 @@
-@startuml Proposed Architecture - Class Diagram (Phase 1.5)
+@startuml Proposed Architecture - Class Diagram (Milestone 1)
 
-title Phase 1.5 Target Architecture - Abstracted & Testable
+title Milestone 1 Target Architecture - Abstracted & Testable
 note as N1
   **Improvements:**
+  - .NET 8 migration (net8.0-windows for WinForms)
   - Platform-agnostic Core library
   - Interface-based abstractions
-  - ImageSharp (cross-platform)
+  - Accord.Imaging removed (replaced by ImageSharp)
+  - System.Drawing removed from Core
   - External configuration
   - Testable business logic
 end note
 
 package "InventoryKamera.Core" <<Cloud>> {
   note top of InventoryKamera.Core
-    .NET 8 Class Library
+    .NET 8 Class Library (no -windows suffix)
     No WinForms/System.Drawing dependencies
     Cross-platform compatible
   end note
@@ -59,39 +61,43 @@ package "InventoryKamera.Core" <<Cloud>> {
 
   package "Abstractions" {
     interface IScreenCapture {
-      + CaptureRegionAsync(Rectangle, CancellationToken) : Task<IImage>
-      + CaptureFullScreenAsync(CancellationToken) : Task<IImage>
-      + GetGameWindowSize() : Size
-      {note: Platform-specific implementation}
+      + CaptureRegion(Rectangle) : Bitmap
+      + CaptureWindow() : Bitmap
+      + GetWindowSize() : Size
+      + GetWindowPosition() : Point
+      {note: Milestone 1: System.Drawing.Bitmap\nMilestone 2+: ImageSharp IImage abstraction}
     }
 
     interface IInputSimulator {
-      + SendKey(KeyCode) : void
-      + SendMouseClick(int, int) : void
-      + ScrollDown() : void
+      + Click() : void
+      + SetCursor(int, int) : void
+      + KeyPress(VirtualKeyCode) : void
+      + ScrollDown(int) : void
       {note: Windows/macOS/Linux specific}
     }
 
     interface IImageProcessor {
-      + Crop(IImage, Rectangle) : IImage
-      + ApplyGrayscale(IImage) : IImage
-      + ApplyContrast(IImage, double) : IImage
-      {note: ImageSharp implementation}
+      + Crop(Bitmap, Rectangle) : Bitmap
+      + GetPixel(Bitmap, int, int) : Color
+      + ApplyGrayscale(Bitmap) : Bitmap
+      + ApplyThreshold(Bitmap, int) : Bitmap
+      + ApplyContrast(Bitmap, double) : Bitmap
+      {note: Milestone 1: wraps ImageSharp\nBitmap params replaced by IImage when\nSystem.Drawing is fully removed}
     }
 
     interface IOcrEngine {
-      + RecognizeAsync(IImage, OcrOptions, CancellationToken) : Task<OcrResult>
-      {note: Tesseract wrapper}
+      + Recognize(Bitmap, PageSegMode) : string
+      {note: Tesseract wrapper\nMilestone 1: synchronous — cooperative\ncancellation via CancellationTokenSource\nis sufficient, full async not required}
     }
 
-    interface IImage {
-      + Width : int
-      + Height : int
-      + GetPixel(int, int) : Color
-      + GetBytes() : byte[]
-      + GetStream() : Stream
-      + Dispose() : void
-      {note: Hot path: GetPixel() for color checks\nCold path: GetBytes()/GetStream() for OCR}
+    interface IUserInterface {
+      + SetWeaponMax(int) : void
+      + IncrementWeapon(int) : void
+      + SetArtifactMax(int) : void
+      + IncrementArtifact(int) : void
+      + UpdatePreview(Bitmap) : void
+      + AddLogMessage(string) : void
+      + SetStatus(string) : void
     }
   }
 
@@ -140,10 +146,10 @@ package "InventoryKamera.Core" <<Cloud>> {
       - imageProcessor : IImageProcessor
       - ocrEngine : IOcrEngine
       - scanProfile : ScanProfile
-      + ScanArtifactsAsync(IProgress, CancellationToken) : Task<List<Artifact>>
-      - IsSanctified(IImage) : bool
+      + ScanArtifacts(CancellationToken) : List<Artifact>
+      - IsSanctified(Bitmap) : bool
       - GetSubstatsRegion(bool) : Rectangle
-      {note: Uses injected dependencies\nCancellationToken for graceful shutdown}
+      {note: Uses injected dependencies\nCancellationToken for cooperative shutdown\n(check IsCancellationRequested in loops)}
     }
 
     class OcrEnginePool {
@@ -220,14 +226,18 @@ package "InventoryKamera.Infrastructure" <<Cloud>> {
     .NET 8 Class Library
     Platform-specific implementations
     References: ImageSharp, Tesseract
+    Note: Accord.Imaging 3.8.0 (abandoned 2018)
+    removed here — was coupled to System.Drawing,
+    both replaced together by ImageSharp
   end note
 
   package "Windows" {
     class WindowsScreenCapture {
-      + CaptureRegionAsync(Rectangle) : Task<IImage>
-      + CaptureFullScreenAsync() : Task<IImage>
-      + GetGameWindowSize() : Size
-      {note: Graphics.CopyFromScreen wrapper}
+      + CaptureRegion(Rectangle) : Bitmap
+      + CaptureWindow() : Bitmap
+      + GetWindowSize() : Size
+      + GetWindowPosition() : Point
+      {note: Graphics.CopyFromScreen wrapper\nDelegate to Navigation initially,\nthen migrate logic incrementally}
     }
 
     class WindowsInputSimulator {
@@ -257,8 +267,8 @@ package "InventoryKamera.Infrastructure" <<Cloud>> {
   package "Tesseract" {
     class TesseractOcrEngine {
       - engine : TesseractEngine
-      + RecognizeAsync(IImage, OcrOptions) : Task<OcrResult>
-      {note: Wraps Tesseract/TesseractOCR package}
+      + Recognize(Bitmap, PageSegMode) : string
+      {note: Wraps Tesseract 5.2.0 or TesseractOCR 5.5.2\n(evaluate in Milestone 1 Step 1.3)}
     }
   }
 
@@ -266,15 +276,14 @@ package "InventoryKamera.Infrastructure" <<Cloud>> {
   WindowsScreenCapture ..|> IScreenCapture
   WindowsInputSimulator ..|> IInputSimulator
   ImageSharpProcessor ..|> IImageProcessor
-  ImageSharpImage ..|> IImage
   TesseractOcrEngine ..|> IOcrEngine
 }
 
 package "InventoryKamera (WinForms)" <<Rectangle>> {
   note top of InventoryKamera
-    .NET Framework 4.7.2 (for now)
+    net8.0-windows — migrated in Milestone 1
     References Core + Infrastructure
-    Adapter pattern for DI
+    Deprecated in Milestone 2 (replaced by Avalonia)
   end note
 
   class MainForm {
@@ -303,13 +312,14 @@ package "InventoryKamera.Tests" <<Cloud>> {
 
   class MockScreenCapture {
     - testDataPath : string
-    + CaptureRegionAsync(Rectangle) : Task<IImage>
-    {note: Loads pre-captured test images}
+    + CaptureRegion(Rectangle) : Bitmap
+    + CaptureWindow() : Bitmap
+    {note: Loads pre-captured test images from disk}
   }
 
   class MockOcrEngine {
     - mockResults : Dictionary<string, string>
-    + RecognizeAsync(IImage, OcrOptions) : Task<OcrResult>
+    + Recognize(Bitmap, PageSegMode) : string
     {note: Returns pre-defined test results}
   }
 
@@ -333,11 +343,13 @@ ServiceProviderFactory ..> ImageSharpProcessor : registers
 ServiceProviderFactory ..> TesseractOcrEngine : registers
 
 note bottom of ServiceProviderFactory
-  **Dependency Injection:**
+  **Dependency Injection (Milestone 1 — WinForms):**
   services.AddSingleton<IScreenCapture, WindowsScreenCapture>();
+  services.AddSingleton<IInputSimulator, WindowsInputSimulator>();
   services.AddSingleton<IImageProcessor, ImageSharpProcessor>();
-  services.AddSingleton<IOcrEngine, TesseractOcrEngine>();
-  services.AddTransient<IArtifactScraper, ArtifactScraper>();
+  services.AddSingleton<IOcrEngine, OcrEnginePool>();
+  services.AddSingleton<IUserInterface, WinFormsUserInterface>();
+  services.AddTransient<ArtifactScraper>();
 end note
 
 note bottom of ScanProfile

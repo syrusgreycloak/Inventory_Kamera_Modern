@@ -1,6 +1,6 @@
 @startuml Before & After Comparison
 
-title Architecture Comparison: Current (v1.3.17) vs Phase 1.5
+title Architecture Comparison: Current (v1.3.17) vs Milestone 1
 
 left to right direction
 
@@ -31,7 +31,7 @@ package "Current Architecture (v1.3.17)" as Current {
   ScraperCurrent --> BaseScraperCurrent
 }
 
-package "Phase 1.5 Architecture" as Phase15 {
+package "Milestone 1 Architecture" as Phase15 {
   component "MainForm.cs\n(WinForms)" as WinFormsNew #LightGreen {
     note bottom: Same UI (for now)\nAdapter for DI\nReferences Core library
   }
@@ -84,7 +84,7 @@ end note
 Current .. Problems
 
 note as Solutions
-  **Phase 1.5 Solutions:**
+  **Milestone 1 Solutions:**
   ✅ Platform-agnostic Core library
   ✅ ImageSharp (cross-platform)
   ✅ External ScanProfile.json
@@ -97,13 +97,14 @@ end note
 Phase15 .. Solutions
 
 note as Migration
-  **Migration Path:**
-  1. Extract Core library
-  2. Define abstractions (interfaces)
-  3. Implement Infrastructure
-  4. Adapt WinForms to use Core
-  5. Test: Should work identically
-  6. Phase 2: Replace WinForms with Avalonia
+  **Migration Path (Milestone 1):**
+  1. Migrate to net8.0-windows (fix Thread.Abort)
+  2. Extract Core library (Strangler Fig)
+  3. Define abstractions (interfaces)
+  4. Implement Infrastructure (wrap Navigation, GenshinProcesor)
+  5. Remove Accord.Imaging + System.Drawing (ImageSharp)
+  6. Test: GOOD JSON output identical to pre-migration
+  → Milestone 2: Replace WinForms with Avalonia
 end note
 
 Solutions .. Migration
@@ -133,7 +134,7 @@ end note
 note bottom of Phase15
   **Technology Stack:**
   - .NET 8 (Core, Infrastructure)
-  - .NET Framework 4.7.2 (WinForms adapter)
+  - net8.0-windows (WinForms, migrated in Milestone 1)
   - ImageSharp (cross-platform)
   - Tesseract 5.5.2 or serialized
   - Microsoft.Extensions.DependencyInjection
@@ -141,8 +142,8 @@ note bottom of Phase15
   - Microsoft.Extensions.Logging / NLog
 
   **Deployment:**
-  - Windows (Phase 1.5)
-  - macOS, Linux (Phase 2)
+  - Windows (Milestone 1)
+  - macOS, Linux (Milestone 2)
   - Self-contained or framework-dependent
 
   **Testing:**
