@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -164,7 +164,7 @@ namespace InventoryKamera
 				var t = _ocrEngine.AnalyzeText(x).Trim().ToLower();
 				if (t != null && t.Contains("filter"))
 				{
-					Navigation.ClearArtifactFilters();
+					_inputSimulator.ClearArtifactFilters();
 				}
             }
         }
@@ -587,6 +587,7 @@ namespace InventoryKamera
         {
             GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref itemName);
             Bitmap grayscale = GenshinProcesor.ConvertToGrayscale(itemName);
+            itemName.Dispose();
             GenshinProcesor.SetInvert(ref grayscale);
 
             // Analyze

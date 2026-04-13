@@ -244,13 +244,20 @@ namespace InventoryKamera
 			using (var gray = GenshinProcesor.ConvertToGrayscale(screenshot))
 			{
 				var invert = (Bitmap)gray.Clone();
-				GenshinProcesor.SetInvert(ref invert);
-				var input = GenshinProcesor.AnalyzeText(invert).Split(' ').ToList();
-				Logger.Debug("Scanned mora input: {0}", input.ToString());
-				input.RemoveAll(e => Regex.IsMatch(e.Trim(), @"[^0-9]") || string.IsNullOrWhiteSpace(e.Trim()));
-				var mora = input.LastOrDefault();
-				Logger.Debug("Parsed mora input: {0}", mora);
-				return mora;
+				try
+				{
+					GenshinProcesor.SetInvert(ref invert);
+					var input = GenshinProcesor.AnalyzeText(invert).Split(' ').ToList();
+					Logger.Debug("Scanned mora input: {0}", input.ToString());
+					input.RemoveAll(e => Regex.IsMatch(e.Trim(), @"[^0-9]") || string.IsNullOrWhiteSpace(e.Trim()));
+					var mora = input.LastOrDefault();
+					Logger.Debug("Parsed mora input: {0}", mora);
+					return mora;
+				}
+				finally
+				{
+					invert?.Dispose();
+				}
 			}
 		}
 

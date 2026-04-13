@@ -21,5 +21,6 @@ namespace InventoryKamera
         void SelectCharacterAttributes();
         void SelectCharacterConstellation();
         void SelectCharacterTalents();
+        void ClearArtifactFilters();
     }
 }
