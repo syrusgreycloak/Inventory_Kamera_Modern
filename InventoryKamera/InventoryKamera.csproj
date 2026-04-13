@@ -44,6 +44,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\InventoryKamera.Core\InventoryKamera.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
 <PackageReference Include="InputSimulator" Version="1.0.4" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
