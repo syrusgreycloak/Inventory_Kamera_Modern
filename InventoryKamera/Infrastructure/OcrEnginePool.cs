@@ -45,27 +45,34 @@ namespace InventoryKamera.Infrastructure
             TesseractEngine engine;
             while (!_engines.TryTake(out engine)) Thread.Sleep(10);
 
-            if (numbersOnly) engine.SetVariable("tessedit_char_whitelist", "0123456789");
-
-            byte[] pngBytes;
-            using (var ms = new MemoryStream())
+            try
             {
-                bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                pngBytes = ms.ToArray();
-            }
+                if (numbersOnly) engine.SetVariable("tessedit_char_whitelist", "0123456789");
 
-            string text = "";
-            using (var pix = Pix.LoadFromMemory(pngBytes))
-            using (var page = engine.Process(pix, tessMode))
-            using (var iter = page.GetIterator())
+                byte[] pngBytes;
+                using (var ms = new MemoryStream())
+                {
+                    bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    pngBytes = ms.ToArray();
+                }
+
+                string text = "";
+                using (var pix = Pix.LoadFromMemory(pngBytes))
+                using (var page = engine.Process(pix, tessMode))
+                using (var iter = page.GetIterator())
+                {
+                    iter.Begin();
+                    do { text += iter.GetText(PageIteratorLevel.TextLine); }
+                    while (iter.Next(PageIteratorLevel.TextLine));
+                }
+
+                return text;
+            }
+            finally
             {
-                iter.Begin();
-                do { text += iter.GetText(PageIteratorLevel.TextLine); }
-                while (iter.Next(PageIteratorLevel.TextLine));
+                engine.SetVariable("tessedit_char_whitelist", ""); // always clear whitelist before returning
+                _engines.Add(engine);
             }
-
-            _engines.Add(engine);
-            return text;
         }
     }
 }

@@ -20,11 +20,6 @@ namespace InventoryKamera
 	{
 		private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		private const int numEngines = 8;
-
-		private static readonly string tesseractDatapath = $".\\tessdata";
-		private static readonly string tesseractLanguage = "genshin_fast_09_04_21";
-
 		internal static Dictionary<string, string> Stats = new Dictionary<string, string>
 		{
 			["hp"] = "hp",
@@ -78,8 +73,6 @@ namespace InventoryKamera
 			"Manequin2"
 		};
 
-		internal static ConcurrentBag<TesseractEngine> engines;
-
 		internal static OcrPool _ocrPool;
 
 		internal static Dictionary<string, string> Weapons, DevItems, Materials, Elements;
@@ -90,7 +83,6 @@ namespace InventoryKamera
 
 		static GenshinProcesor()
         {
-            InitEngines();
             _ocrPool = new OcrPool();
             _gameData = new GameDataService(new DatabaseManager());
             // Sync static fields so existing callers still work
@@ -133,12 +125,6 @@ namespace InventoryKamera
 		}
 
 		#region OCR
-
-		private static void InitEngines()
-		{
-			// Engine pool now lives in OcrEnginePool; keep field stub for any remaining references
-			engines = new ConcurrentBag<TesseractEngine>();
-		}
 
 		internal static void RestartEngines() => _ocrPool.RestartEngines();
 
