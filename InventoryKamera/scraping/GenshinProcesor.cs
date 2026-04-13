@@ -83,63 +83,34 @@ namespace InventoryKamera
 
 		internal static Dictionary<string, JObject> Characters, Artifacts;
 
+		private static GameDataService _gameData;
+
 		static GenshinProcesor()
         {
             InitEngines();
-
-			ReloadData();
-
-			Elements = new Dictionary<string, string>();
-			foreach (var element in elements)
-			{
-				Stats.Add($"{element.ToLower()}dmgbonus", $"{element.ToLower()}_dmg_");  // ["anemodmgbonus"] = "anemo_dmg_"
-				Elements.Add(element, char.ToUpper(element[0]) + element.Substring(1));
-			}
-
-			// Wire up Core model validation delegates
-			ModelValidator.IsValidWeapon = IsValidWeapon;
-			ModelValidator.IsValidCharacter = IsValidCharacter;
-			ModelValidator.IsValidElement = IsValidElement;
-			ModelValidator.IsValidSlot = IsValidSlot;
-			ModelValidator.IsValidSetName = IsValidSetName;
-			ModelValidator.IsValidStat = IsValidStat;
-			ModelValidator.MarkWiredUp();
-
-			Logger.Info("Scraper initialized");
+            _gameData = new GameDataService(new DatabaseManager());
+            // Sync static fields so existing callers still work
+            Elements = _gameData.Elements;
+            Characters = _gameData.Characters;
+            Artifacts = _gameData.Artifacts;
+            Weapons = _gameData.Weapons;
+            DevItems = _gameData.DevItems;
+            Materials = _gameData.Materials;
+            Logger.Info("Scraper initialized");
         }
 
 		internal static void ReloadData()
         {
-			var listManager = new DatabaseManager();
-
-			Characters = listManager.LoadCharacters();
-			Artifacts = listManager.LoadArtifacts();
-			Weapons = listManager.LoadWeapons();
-			DevItems = listManager.LoadDevItems();
-			Materials = listManager.LoadMaterials();
-
+            _gameData.ReloadData();
+            Characters = _gameData.Characters;
+            Artifacts = _gameData.Artifacts;
+            Weapons = _gameData.Weapons;
+            DevItems = _gameData.DevItems;
+            Materials = _gameData.Materials;
 		}
 
-		internal static void UpdateCharacterName(string target, string name)
-        {
-			target = target.ConvertToGood().ToLower();
-			name = name.ConvertToGood().ToLower();
-
-			if (target == name) return;
-
-			if (Characters.TryGetValue(name, out _))
-			{
-				Logger.Error("{0} already exists as a character in the game. " +
-					"This may wind up confusing Kamera when connecting items for {1}.", name, target);
-			}
-
-            if (Characters.TryGetValue(target, out _))
-			{
-				Characters[target]["CustomName"] = name;
-				Logger.Info("Internally set {0} custom name to {1}", target, Characters[target]["CustomName"]);
-			}
-			else throw new KeyNotFoundException($"Could not find '{target}' entry in characters.json");
-		}
+		internal static void UpdateCharacterName(string target, string name) =>
+            _gameData.UpdateCharacterName(target, name);
 
 		internal static void AssignTravelerName(string name)
 		{
@@ -230,327 +201,31 @@ namespace InventoryKamera
 
 		#region Check valid parameters
 
-		internal static bool IsValidSetName(string setName)
-		{
-			if (Artifacts.TryGetValue(setName, out var _) || Artifacts.TryGetValue(setName.ToLower(), out var _)) return true;
-			foreach (var artifactSet in Artifacts.Values)
-				foreach (var field in artifactSet)
-					if (field.ToString() == setName) return true;
-                
-			return false;
-		}
-
-		internal static bool IsValidMaterial(string name)
-		{
-			return Materials.ContainsValue(name) || Materials.ContainsKey(name.ToLower());
-		}
-
-		internal static bool IsValidStat(string stat)
-		{
-			return Stats.ContainsValue(stat);
-		}
-
-		internal static bool IsValidSlot(string gearSlot)
-		{
-			return gearSlots.Contains(gearSlot);
-		}
-
-		internal static bool IsValidCharacter(string character)
-		{
-			return character.Contains("Traveler") || character == "Wanderer" || character == "Manequin1" || character == "Manequin2" || Characters.ContainsKey(character.ToLower());
-		}
-
-		internal static bool IsValidElement(string element)
-		{
-			return Elements.ContainsValue(element) || Elements.ContainsKey(element.ToLower());
-		}
-
-		internal static bool IsEnhancementMaterial(string material)
-		{
-			return enhancementMaterials.Contains(material.ToLower()) || Materials.ContainsValue(material) || Materials.ContainsKey(material.ToLower());
-		}
-
-		internal static bool IsValidWeapon(string weapon)
-		{
-			return Weapons.ContainsValue(weapon) || Weapons.ContainsKey(weapon.ToLower());
-		}
+		internal static bool IsValidSetName(string s) => _gameData.IsValidSetName(s);
+		internal static bool IsValidMaterial(string s) => _gameData.IsValidMaterial(s);
+		internal static bool IsValidStat(string s) => _gameData.IsValidStat(s);
+		internal static bool IsValidSlot(string s) => _gameData.IsValidSlot(s);
+		internal static bool IsValidCharacter(string s) => _gameData.IsValidCharacter(s);
+		internal static bool IsValidElement(string s) => _gameData.IsValidElement(s);
+		internal static bool IsEnhancementMaterial(string s) => _gameData.IsEnhancementMaterial(s);
+		internal static bool IsValidWeapon(string s) => _gameData.IsValidWeapon(s);
 
 		#endregion Check valid parameters
 
 		#region Element Searching
 
-		internal static string FindClosestGearSlot(string input)
-		{
-			foreach (var slot in gearSlots)
-			{
-				if (input.Contains(slot))
-				{
-					return slot;
-				}
-			}
-			return input;
-		}
-
-		internal static string FindClosestStat(string stat, int minConfidence = 90)
-		{
-			return FindClosestInDict(source: stat, targets: Stats, minConfidence: minConfidence);
-		}
-
-		internal static string FindElementByName(string name, int minConfidence = 90)
-		{
-			return FindClosestInDict(source: name, targets: Elements, minConfidence: minConfidence);
-		}
-
-		internal static string FindClosestWeapon(string name, int maxEdits = 90)
-		{
-			return FindClosestInDict(source: name, targets: Weapons, minConfidence: maxEdits);
-		}
-
-		internal static string FindClosestSetName(string name, int minConfidence = 90)
-		{
-			return FindClosestInDict(source: name, targets: Artifacts, minConfidence: minConfidence);
-		}
-		
-		internal static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90)
-		{
-			if (string.IsNullOrWhiteSpace(name)) return "";
-			string closestMatch = null;
-			double highestConfidence = 0;
-
-
-            foreach (var artifactSet in Artifacts)
-            {
-                // Defensive null checks - skip malformed artifact set data
-			if (artifactSet.Value["GOOD"] == null || artifactSet.Value["artifacts"] == null)
-			{
-				Logger.Debug("Skipping artifact set '{0}' - missing GOOD or artifacts field", artifactSet.Key);
-				continue;
-			}
-
-            string currentSet = artifactSet.Value["GOOD"].ToString();
-
-                foreach (var slot in artifactSet.Value["artifacts"].Values())
-                {
-                    // Check if slot has normalizedName before accessing
-				if (slot["normalizedName"] == null)
-				{
-					Logger.Debug("Skipping artifact piece in set '{0}' - missing normalizedName field", currentSet);
-					continue;
-				}
-
-                string artifactName = slot["normalizedName"].ToString();
-                    if (artifactName == name) return currentSet;
-
-					double artifactSimilarity = StringSimilarity(name, artifactName);
-
-					if ( artifactSimilarity > minConfidence && artifactSimilarity > highestConfidence)
-					{
-						highestConfidence = artifactSimilarity;
-						closestMatch = currentSet;
-					}
-				}
-			}
-
-            
-            if (closestMatch == null)
-            {
-                Logger.Debug("No artifact set match found for input: '{0}' (after {1} sets checked)", name, Artifacts.Count);
-            }
-
-            return closestMatch;
-		}
-
-		internal static string FindClosestCharacterName(string name, int minConfidence = 90)
-		{
-			var temp = new Dictionary<string, JObject>();
-			foreach (var character in Characters)
-			{
-				if (character.Value.TryGetValue("CustomName", out var CustomName)) temp.Add(((string)CustomName), character.Value);
-				else temp.Add(character.Key, character.Value);
-			}
-			var n = FindClosestInDict(source: name, targets: temp, minConfidence: minConfidence);
-
-            return n;
-		}
-
-		internal static string FindClosestDevelopmentName(string name, int minConfidence = 90)
-		{
-			string value = FindClosestInDict(source: name, targets: DevItems, minConfidence: minConfidence);
-			return !string.IsNullOrWhiteSpace(value) ? value : FindClosestInDict(source: name, targets: Materials, minConfidence: minConfidence);
-		}
-
-		internal static string FindClosestMaterialName(string name, int minConfidence = 90)
-		{
-			string value = FindClosestInDict(source: name, targets: Materials, minConfidence: minConfidence);
-			return !string.IsNullOrWhiteSpace(value) ? value : FindClosestInDict(source: name, targets: Materials, minConfidence: minConfidence);
-		}
-
-		private static string FindClosestInDict(string source, Dictionary<string, string> targets, int minConfidence)
-		{
-			if (string.IsNullOrWhiteSpace(source)) return "";
-			if (targets.TryGetValue(source, out string value)) return value;
-
-			HashSet<string> keys = new HashSet<string>(targets.Keys);
-
-			if (keys.Where(key => key.Contains(source)).Count() == 1) return targets[keys.First(key => key.Contains(source))];
-
-			source = FindClosestInList(source, keys, minConfidence);
-
-			return targets.TryGetValue(source, out value) ? value : source;
-		}
-
-		private static string FindClosestInDict(string source, Dictionary<string, JObject> targets, int minConfidence)
-		{
-			if (string.IsNullOrWhiteSpace(source)) return "";
-			if (targets.TryGetValue(source, out JObject value)) return (string)value["GOOD"];
-
-			HashSet<string> keys = new HashSet<string>(targets.Keys);
-
-			if (keys.Where(key => key.Contains(source)).Count() == 1) return (string)targets[keys.First(key => key.Contains(source))]["GOOD"];
-
-			source = FindClosestInList(source, keys, minConfidence);
-
-			return targets.TryGetValue(source, out value) ? (string)value["GOOD"] : source;
-		}
-
-		private static string FindClosestInList(string source, HashSet<string> targets, double minConfidence)
-		{
-			if (targets.Contains(source)) return source;
-			if (string.IsNullOrWhiteSpace(source)) return null;
-
-			string mostSimilarString = "";
-			double mostSimilarValue = 0;
-
-			foreach (var target in targets)
-			{
-                double similarityValue = StringSimilarity(source, target);
-
-				if (similarityValue > minConfidence && similarityValue > mostSimilarValue)
-				{
-					mostSimilarValue = similarityValue;
-					mostSimilarString = target;
-				}
-			}
-
-			if (!string.IsNullOrWhiteSpace(mostSimilarString) && !targets.Contains("critrate"))	// Only print this statement when not looking to match for a closest stat
-				Logger.Debug("Most similar string found for {0} as {1} ({2}%)", source, mostSimilarString, mostSimilarValue);
-
-			return mostSimilarString;
-		}
-
-		// Adapted from https://stackoverflow.com/a/9454016/13205651
-		private static int CalcDistance_1(string text, string setName, int maxEdits)
-		{
-			int length1 = text.Length;
-			int length2 = setName.Length;
-
-			// Return trivial case - difference in string lengths exceeds threshhold
-			if (Math.Abs(length1 - length2) > maxEdits) { return int.MaxValue; }
-
-			// Ensure arrays [i] / length1 use shorter length
-			if (length1 > length2)
-			{
-				Swap(ref setName, ref text);
-				Swap(ref length1, ref length2);
-			}
-
-			int maxi = length1;
-			int maxj = length2;
-
-			int[] dCurrent = new int[maxi + 1];
-			int[] dMinus1 = new int[maxi + 1];
-			int[] dMinus2 = new int[maxi + 1];
-			int[] dSwap;
-
-			for (int i = 0; i <= maxi; i++) { dCurrent[i] = i; }
-
-			int jm1 = 0, im1 = 0, im2 = -1;
-
-			for (int j = 1; j <= maxj; j++)
-			{
-				// Rotate
-				dSwap = dMinus2;
-				dMinus2 = dMinus1;
-				dMinus1 = dCurrent;
-				dCurrent = dSwap;
-
-				// Initialize
-				int minDistance = int.MaxValue;
-				dCurrent[0] = j;
-				im1 = 0;
-				im2 = -1;
-
-				for (int i = 1; i <= maxi; i++)
-				{
-					int cost = text[im1] == setName[jm1] ? 0 : 1;
-
-					int del = dCurrent[im1] + 1;
-					int ins = dMinus1[i] + 1;
-					int sub = dMinus1[im1] + cost;
-
-					//Fastest execution for min value of 3 integers
-					int min = (del > ins) ? (ins > sub ? sub : ins) : (del > sub ? sub : del);
-
-					if (i > 1 && j > 1 && text[im2] == setName[jm1] && text[im1] == setName[j - 2])
-						min = Math.Min(min, dMinus2[im2] + cost);
-
-					dCurrent[i] = min;
-					if (min < minDistance) { minDistance = min; }
-					im1++;
-					im2++;
-				}
-				jm1++;
-				if (minDistance > maxEdits) { return int.MaxValue; }
-			}
-
-			int result = dCurrent[maxi];
-			return ( result > maxEdits ) ? int.MaxValue : result;
-
-			void Swap<T>(ref T arg1, ref T arg2)
-			{
-                (arg2, arg1) = (arg1, arg2);
-            }
-        }
-
-		private static int LevenshteinDistance(string s1, string s2)
-		{
-            int m = s1.Length;
-            int n = s2.Length;
-            int[,] dp = new int[m + 1, n + 1];
-
-            for (int i = 0; i <= m; i++)
-            {
-                for (int j = 0; j <= n; j++)
-                {
-                    if (i == 0)
-                    {
-                        dp[i, j] = j;
-                    }
-                    else if (j == 0)
-                    {
-                        dp[i, j] = i;
-                    }
-                    else if (s1[i - 1] == s2[j - 1])
-                    {
-                        dp[i, j] = dp[i - 1, j - 1];
-                    }
-                    else
-                    {
-                        dp[i, j] = 1 + Math.Min(Math.Min(dp[i - 1, j], dp[i, j - 1]), dp[i - 1, j - 1]);
-                    }
-                }
-            }
-
-            return dp[m, n];
-        }
-
-        private static double StringSimilarity(string s1, string s2)
-        {
-            int distance = LevenshteinDistance(s1, s2);
-            int maxLength = Math.Max(s1.Length, s2.Length);
-            double similarity = 1.0 - (distance / (double)maxLength);
-            return similarity * 100.0;
-        }
+		internal static string FindClosestGearSlot(string input) => _gameData.FindClosestGearSlot(input);
+		internal static string FindClosestStat(string stat, int minConfidence = 90) => _gameData.FindClosestStat(stat, minConfidence);
+		internal static string FindElementByName(string name, int minConfidence = 90) => _gameData.FindElementByName(name, minConfidence);
+		internal static string FindClosestWeapon(string name, int minConfidence = 90) => _gameData.FindClosestWeapon(name, minConfidence);
+		internal static string FindClosestSetName(string name, int minConfidence = 90) => _gameData.FindClosestSetName(name, minConfidence);
+		internal static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90) => _gameData.FindClosestArtifactSetFromArtifactName(name, minConfidence);
+		internal static string FindClosestCharacterName(string name, int minConfidence = 90) => _gameData.FindClosestCharacterName(name, minConfidence);
+		internal static string FindClosestDevelopmentName(string name, int minConfidence = 90) => _gameData.FindClosestDevelopmentName(name, minConfidence);
+		internal static string FindClosestMaterialName(string name, int minConfidence = 90) => _gameData.FindClosestMaterialName(name, minConfidence);
+		internal static bool CharacterMatchesElement(string name, string element) => _gameData.CharacterMatchesElement(name, element);
+		internal static List<string> GetCharactersElements(string name) => _gameData.GetCharactersElements(name);
+		internal static string GetElementForCharacter(string name) => _gameData.GetElementForCharacter(name);
 
         #endregion Element Searching
 
@@ -1171,47 +846,6 @@ namespace InventoryKamera
             return Regex.Replace(pascal, @"[\W]", string.Empty);
         }
 
-        internal static bool CharacterMatchesElement(string name, string element)
-        {
-            return !string.IsNullOrWhiteSpace(name.ToLower()) && GetCharactersElements(name.ToLower()).Contains(element.ToLower());
-        }
-
-        internal static List<string> GetCharactersElements(string name)
-		{
-            if (string.IsNullOrWhiteSpace(name.ToLower()))
-            {
-                return new List<string>();
-            }
-            else
-            {
-                if (Characters.TryGetValue(name.ToLower(), out var data))
-                {
-                    return data["Element"].ToObject<List<string>>();
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        internal static string GetElementForCharacter(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return "";
-            }
-
-            var elements = GetCharactersElements(name);
-            if (elements != null && elements.Count > 0)
-            {
-                // For Traveler, elements list will have multiple values
-                // Caller should handle Traveler specially to get active element
-                return elements[0];
-            }
-
-            return "";
-        }
     }
 
 }
