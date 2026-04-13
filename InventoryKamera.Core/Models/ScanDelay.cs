@@ -2,18 +2,18 @@ namespace InventoryKamera
 {
     public enum ScanDelay
     {
-        Fastest,
-        Faster,
-        Fast,
-        Normal,
-        Slow,
-        Slower,
         Slowest,
-        CharacterUI,
-        ArtifactIgnore,
+        Slower,
+        Slow,
+        Normal,
+        Fast,
+        Faster,
+        Fastest,
         UI,
+        ArtifactIgnore,
         SelectNextCharacter,
-        InventoryScroll,
         SelectNextInventoryItem,
+        InventoryScroll,
+        CharacterUI,
     }
 }
