@@ -65,14 +65,18 @@ namespace InventoryKamera
         protected IOcrEngine _ocrEngine;
         protected IImageProcessor _imageProcessor;
         protected IUserInterface _userInterface;
+        protected IGameDataService _gameDataService;
+        protected IInputSimulator _inputSimulator;
 
-        protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
+        protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
             : this()
         {
             _screenCapture = screenCapture;
             _ocrEngine = ocrEngine;
             _imageProcessor = imageProcessor;
             _userInterface = userInterface;
+            _gameDataService = gameDataService;
+            _inputSimulator = inputSimulator;
         }
 
         public InventoryScraper()
@@ -94,17 +98,17 @@ namespace InventoryKamera
         {
             Rectangle cardRectangle = new Rectangle();
 
-            using (var window = Navigation.CaptureWindow())
+            using (var window = _screenCapture.CaptureWindow())
             {
 
                 cardRectangle.X = (int)(window.Width * 0.6807);
-                cardRectangle.Y = (int)(window.Height * (Navigation.IsNormal ? 0.1102 : 0.0989));
+                cardRectangle.Y = (int)(window.Height * (_screenCapture.IsNormal ? 0.1102 : 0.0989));
 
                 cardRectangle.Width = (int)(window.Width * 0.2573);
-                cardRectangle.Height = (int)(window.Height * (Navigation.IsNormal ? 0.7787 : 0.8022));
+                cardRectangle.Height = (int)(window.Height * (_screenCapture.IsNormal ? 0.7787 : 0.8022));
 
 
-                return GenshinProcesor.CopyBitmap(window, cardRectangle);
+                return _imageProcessor.Crop(window, cardRectangle);
             }
 
         }
@@ -116,12 +120,12 @@ namespace InventoryKamera
         /// <returns>String parsed from nameplate</returns>
         internal string ScanItemName(Bitmap nameplate)
         {
-            GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref nameplate);
-            Bitmap n = GenshinProcesor.ConvertToGrayscale(nameplate);
-            GenshinProcesor.SetInvert(ref n);
+            nameplate = _imageProcessor.SetGamma(nameplate, 0.2, 0.2, 0.2);
+            Bitmap n = _imageProcessor.SetGrayscale(nameplate);
+            n = _imageProcessor.SetInvert(n);
 
             // Analyze
-            string text = Regex.Replace(GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleBlock).ToLower(), @"[\W]", string.Empty);
+            string text = Regex.Replace(_ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleBlock).ToLower(), @"[\W]", string.Empty);
 
             n.Dispose();
 
@@ -141,20 +145,20 @@ namespace InventoryKamera
         {
             //Find weapon count
             Rectangle region = new Rectangle(
-                x: (int)(1030 / 1280.0 * Navigation.GetWidth()),
-                y: (int)(20 / 720.0 * Navigation.GetHeight()),
-                width: (int)(175 / 1280.0 * Navigation.GetWidth()),
-                height: (int)(25 / 720.0 * Navigation.GetHeight()));
+                x: (int)(1030 / 1280.0 * _screenCapture.GetWidth()),
+                y: (int)(20 / 720.0 * _screenCapture.GetHeight()),
+                width: (int)(175 / 1280.0 * _screenCapture.GetWidth()),
+                height: (int)(25 / 720.0 * _screenCapture.GetHeight()));
 
-            using (Bitmap countBitmap = Navigation.CaptureRegion(region))
+            using (Bitmap countBitmap = _screenCapture.CaptureRegion(region))
             {
-                UserInterface.SetNavigation_Image(countBitmap);
+                _userInterface.SetNavigation_Image(countBitmap);
 
-                Bitmap n = GenshinProcesor.ConvertToGrayscale(countBitmap);
-                GenshinProcesor.SetContrast(60.0, ref n);
-                GenshinProcesor.SetInvert(ref n);
+                Bitmap n = _imageProcessor.SetGrayscale(countBitmap);
+                n = _imageProcessor.SetContrast(n, 60.0);
+                n = _imageProcessor.SetInvert(n);
 
-                string text = GenshinProcesor.AnalyzeText(n).Trim();
+                string text = _ocrEngine.AnalyzeText(n).Trim();
                 n.Dispose();
 
                 // Remove any non-numeric and '/' characters
@@ -163,7 +167,7 @@ namespace InventoryKamera
                 if (string.IsNullOrWhiteSpace(text) || Properties.Settings.Default.LogScreenshots)
                 {
                     SaveInventoryBitmap(countBitmap, "ItemCount.png");
-                    SaveInventoryBitmap(Navigation.CaptureWindow(), $"InventoryWindow_{Navigation.GetWidth()}x{Navigation.GetHeight()}.png");
+                    SaveInventoryBitmap(_screenCapture.CaptureWindow(), $"InventoryWindow_{_screenCapture.GetWidth()}x{_screenCapture.GetHeight()}.png");
                     if (string.IsNullOrWhiteSpace(text)) throw new FormatException($"Unable to locate {inventoryPage} item count.");
                 }
 
@@ -210,27 +214,27 @@ namespace InventoryKamera
             {
                 case InventoryPage.Weapons:
                     region = new Rectangle(
-                        x: (int)(100.0 / 1280.0 * Navigation.GetWidth()),
-                        y: (int)(660.0 / 720.0 * Navigation.GetHeight()),
-                        width: (int)(175.0 / 1280.0 * Navigation.GetWidth()),
-                        height: (int)(40.0 / 720.0 * Navigation.GetHeight()));
+                        x: (int)(100.0 / 1280.0 * _screenCapture.GetWidth()),
+                        y: (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
+                        width: (int)(175.0 / 1280.0 * _screenCapture.GetWidth()),
+                        height: (int)(40.0 / 720.0 * _screenCapture.GetHeight()));
                     break;
                 case InventoryPage.Artifacts:
                     // TODO: Update this
                     region = new Rectangle(
-                        x: (int)(140.0 / 1280.0 * Navigation.GetWidth()),
-                        y: (int)(660.0 / 720.0 * Navigation.GetHeight()),
-                        width: (int)(175.0 / 1280.0 * Navigation.GetWidth()),
-                        height: (int)(40.0 / 720.0 * Navigation.GetHeight()));
+                        x: (int)(140.0 / 1280.0 * _screenCapture.GetWidth()),
+                        y: (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
+                        width: (int)(175.0 / 1280.0 * _screenCapture.GetWidth()),
+                        height: (int)(40.0 / 720.0 * _screenCapture.GetHeight()));
                     break;
                 default:
                     throw new NotImplementedException($"{inventoryPage} cannot be sorted");
             }
 
-            using (var bm = Navigation.CaptureRegion(region))
+            using (var bm = _screenCapture.CaptureRegion(region))
             {
-                var g = GenshinProcesor.ConvertToGrayscale(bm);
-                var mode = GenshinProcesor.AnalyzeText(g).Trim().ToLower();
+                var g = _imageProcessor.SetGrayscale(bm);
+                var mode = _ocrEngine.AnalyzeText(g).Trim().ToLower();
                 return mode.Contains("level") ? "level" : mode.Contains("quality") ? "quality" : null;
             }
         }
@@ -244,9 +248,9 @@ namespace InventoryKamera
                 x: 0,
                 y: 0,
                 width: (int)(screenshot.Width * 0.0651),
-                height: (int)(screenshot.Height * (Navigation.IsNormal ? 0.1417: 0.1289)));
+                height: (int)(screenshot.Height * (_screenCapture.IsNormal ? 0.1417: 0.1289)));
 
-            if (Navigation.GetAspectRatio() == new Size(8, 5))
+            if (_screenCapture.GetAspectRatio() == new Size(8, 5))
             {
                 base_aspect_height = 800.0;
             }
@@ -259,11 +263,11 @@ namespace InventoryKamera
             {
                 // Image pre-processing — work on a separate clone so the caller's bitmap stays valid for retries
                 Bitmap processedForBlobs;
-                using (var kirschEdges = GenshinProcesor.KirschEdgeDetect(screenshot))
-                using (var grayscale = GenshinProcesor.ConvertToGrayscale(kirschEdges))
+                using (var kirschEdges = _imageProcessor.KirschEdgeDetect(screenshot))
+                using (var grayscale = _imageProcessor.SetGrayscale(kirschEdges))
                 {
                     processedForBlobs = (Bitmap)grayscale.Clone();
-                    GenshinProcesor.SetThreshold(75, ref processedForBlobs);
+                    processedForBlobs = _imageProcessor.SetThreshold(processedForBlobs, 75);
                 }
                 // Note: Processing won't always detect all item rectangles on screen. Since the
                 // background isn't a solid color it's a bit trickier to filter out.
@@ -457,7 +461,7 @@ namespace InventoryKamera
         internal (List<Rectangle> rectangles, int cols, int rows) GetPageOfItems(int pageNum, bool acceptLess = false)
         {
             // Screenshot of inventory
-            using (Bitmap screenshot = Navigation.CaptureWindow())
+            using (Bitmap screenshot = _screenCapture.CaptureWindow())
             {
                 Bitmap processedScreenshot = new Bitmap(screenshot);
                 using (Graphics g = Graphics.FromImage(processedScreenshot))

@@ -13,8 +13,11 @@ namespace InventoryKamera
 	{
 		private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		public ArtifactScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+		public ArtifactScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+        {
+            inventoryPage = InventoryPage.Artifacts;
+        }
 
         public ArtifactScraper()
 		{
@@ -32,7 +35,7 @@ namespace InventoryKamera
 			int totalRows = (int)Math.Ceiling(artifactCount / (decimal)cols);
 			int cardsQueued = 0;
 			int rowsQueued = 0;
-			UserInterface.SetArtifact_Max(artifactCount);
+			_userInterface.SetArtifact_Max(artifactCount);
 
 			StopScanning = false;
 
@@ -95,9 +98,9 @@ namespace InventoryKamera
 				for (int i = cardsRemaining < fullPage ? ( rows - ( totalRows - rowsQueued ) ) * cols : 0; i < rectangles.Count; i++)
 				{
 					Rectangle item = rectangles[i];
-					Navigation.SetCursor(item.Center().X, item.Center().Y);
-					Navigation.Click();
-					Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+					_inputSimulator.SetCursor(item.Center().X, item.Center().Y);
+					_inputSimulator.Click();
+					_inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
 
 					// Queue card for scanning
 					QueueScan(cardsQueued);
@@ -121,27 +124,27 @@ namespace InventoryKamera
 				{
 					for (int i = 0; i < 10 * ( totalRows - rowsQueued ) - 1; i++)
 					{
-						Navigation.sim.Mouse.VerticalScroll(-1);
-						Navigation.Wait(1);
+						_inputSimulator.MouseVerticalScroll(-1);
+						_inputSimulator.Wait(1);
 					}
-					Navigation.SystemWait(Navigation.Speed.Fast);
+					_inputSimulator.SystemWait(ScanDelay.Fast);
 				}
 				else
 				{
-                    
+
                     for (int i = 0; i < 10 * rows - 1; i++)
 					{
-						Navigation.sim.Mouse.VerticalScroll(-1);
-						Navigation.Wait(1);
+						_inputSimulator.MouseVerticalScroll(-1);
+						_inputSimulator.Wait(1);
 					}
                     // Scroll back one to keep it from getting too crazy
                     if (page % 12 == 0)
                     {
 						Logger.Debug("Scrolled back one");
-						Navigation.sim.Mouse.VerticalScroll(1);
-						Navigation.Wait(1);
+						_inputSimulator.MouseVerticalScroll(1);
+						_inputSimulator.Wait(1);
                     }
-                    Navigation.SystemWait(Navigation.Speed.Fast);
+                    _inputSimulator.SystemWait(ScanDelay.Fast);
 				}
 				++page;
 				(rectangles, cols, rows) = GetPageOfItems(page, acceptLess: totalRows - rowsQueued <= fullPage);
@@ -151,14 +154,14 @@ namespace InventoryKamera
         private void ClearFilters()
         {
 
-            using (var x = Navigation.CaptureRegion(
-                x: (int)((Navigation.IsNormal ? 0.0750 : 0.0757) * Navigation.GetWidth()),
-                y: (int)((Navigation.IsNormal ? 0.8522 : 0.8678) * Navigation.GetHeight()),
-                width: (int)((Navigation.IsNormal ? 0.2244 : 0.2236) * Navigation.GetWidth()),
-                height: (int)((Navigation.IsNormal ? 0.0422 : 0.0367) * Navigation.GetHeight())))
+            using (var x = _screenCapture.CaptureRegion(
+                x: (int)((_screenCapture.IsNormal ? 0.0750 : 0.0757) * _screenCapture.GetWidth()),
+                y: (int)((_screenCapture.IsNormal ? 0.8522 : 0.8678) * _screenCapture.GetHeight()),
+                width: (int)((_screenCapture.IsNormal ? 0.2244 : 0.2236) * _screenCapture.GetWidth()),
+                height: (int)((_screenCapture.IsNormal ? 0.0422 : 0.0367) * _screenCapture.GetHeight())))
             {
                 //Navigation.DisplayBitmap(x);
-				var t = GenshinProcesor.AnalyzeText(x).Trim().ToLower();
+				var t = _ocrEngine.AnalyzeText(x).Trim().ToLower();
 				if (t != null && t.Contains("filter"))
 				{
 					Navigation.ClearArtifactFilters();
@@ -233,14 +236,14 @@ namespace InventoryKamera
         private Bitmap GetSubstatsBitmap(Bitmap card)
         {
 			bool isSanctified = IsSanctified(card);
-			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0471;
+			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
 
-            return GenshinProcesor.CopyBitmap(card,new Rectangle(
+            return _imageProcessor.Crop(card, new Rectangle(
 				x:(int)(card.Width * 0.0911),
-				y:(int)(card.Height * ((Navigation.IsNormal ? 0.4216 : 0.3682) + yShift)),
+				y:(int)(card.Height * ((_screenCapture.IsNormal ? 0.4216 : 0.3682) + yShift)),
 				width:(int)(card.Width * 0.8097),
-				height:(int)(card.Height * (Navigation.IsNormal ? 0.1841 : 0.1573))));
+				height:(int)(card.Height * (_screenCapture.IsNormal ? 0.1841 : 0.1573))));
         }
 
 		private bool IsSanctified(Bitmap card)
@@ -263,56 +266,56 @@ namespace InventoryKamera
 
 		private Bitmap GetSanctifyBitmap(Bitmap card)
 		{
-			return GenshinProcesor.CopyBitmap(card, new Rectangle(
+			return _imageProcessor.Crop(card, new Rectangle(
 				x: (int)(card.Width * 0.40),
-				y: (int)(card.Height * (Navigation.IsNormal ? 0.3333 : 0.2941)),
+				y: (int)(card.Height * (_screenCapture.IsNormal ? 0.3333 : 0.2941)),
 				width: (int)(card.Width * 0.20),
-				height: (int)(card.Height * (Navigation.IsNormal ? 0.0526 : 0.0470))));
+				height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0526 : 0.0470))));
 		}
 
 		private Bitmap GetArtifactLockedBitmap(Bitmap card)
 		{
 			bool isSanctified = IsSanctified(card);
-			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0471;
+			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
 
-			return GenshinProcesor.CopyBitmap(card,
+			return _imageProcessor.Crop(card,
 				new Rectangle(
 					x: (int)(card.Width * 0.75),
-					y: (int)(card.Height * ((Navigation.IsNormal ? 0.353 : 0.309) + yShift)),
+					y: (int)(card.Height * ((_screenCapture.IsNormal ? 0.353 : 0.309) + yShift)),
 					width: (int)(card.Width * 0.0955),
-					height: (int)(card.Height * (Navigation.IsNormal ? 0.055 : 0.0495))));
+					height: (int)(card.Height * (_screenCapture.IsNormal ? 0.055 : 0.0495))));
 		}
 
         private Bitmap GetMainStatBitmap(Bitmap card)
         {
-			return GenshinProcesor.CopyBitmap(card, new Rectangle(
+			return _imageProcessor.Crop(card, new Rectangle(
 				x: (int)(card.Width * 0.0405),
-				y: (int)(card.Height * (Navigation.IsNormal ? 0.1722 : 0.1477)),
+				y: (int)(card.Height * (_screenCapture.IsNormal ? 0.1722 : 0.1477)),
 				width: (int)(card.Width * 0.4555),
-				height: (int)(card.Height * (Navigation.IsNormal ? 0.0416 : 0.0416))));
+				height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0416 : 0.0416))));
         }
 
         private Bitmap GetLevelBitmap(Bitmap card)
         {
 			bool isSanctified = IsSanctified(card);
-			double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0465;
+			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0465;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
 
-            return GenshinProcesor.CopyBitmap(card, new Rectangle(
+            return _imageProcessor.Crop(card, new Rectangle(
                 x: (int)(card.Width * 0.0506),
-                y: (int)(card.Height * ((Navigation.IsNormal ? 0.3634 : 0.3197) + yShift)),
+                y: (int)(card.Height * ((_screenCapture.IsNormal ? 0.3634 : 0.3197) + yShift)),
                 width: (int)(card.Width * 0.1417),
-                height: (int)(card.Height * (Navigation.IsNormal ? 0.0416 : 0.0347))));
+                height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0416 : 0.0347))));
         }
 
         private Bitmap GetGearSlotBitmap(Bitmap card)
         {
-            return GenshinProcesor.CopyBitmap(card, new Rectangle(
+            return _imageProcessor.Crop(card, new Rectangle(
                 x: (int)(card.Width * 0.0405),
-                y: (int)(card.Height * (Navigation.IsNormal ? 0.07720 : 0.0663)),
+                y: (int)(card.Height * (_screenCapture.IsNormal ? 0.07720 : 0.0663)),
                 width: (int)(card.Width * 0.4757),
-                height: (int)(card.Height * (Navigation.IsNormal ? 0.0475 : 0.0809))));
+                height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0475 : 0.0809))));
         }
 
         public static async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)

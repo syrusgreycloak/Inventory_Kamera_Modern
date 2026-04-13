@@ -11,8 +11,11 @@ namespace InventoryKamera
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
 
-		public MaterialScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface) { }
+		public MaterialScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+        {
+            inventoryPage = InventoryPage.CharacterDevelopmentItems;
+        }
 
         public MaterialScraper()
 		{
@@ -62,9 +65,9 @@ namespace InventoryKamera
 				foreach (var rectangle in r)
 				{
 					// Select Material
-					Navigation.SetCursor(rectangle.Center().X, rectangle.Center().Y);
-					Navigation.Click();
-					Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+					_inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
+					_inputSimulator.Click();
+					_inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
 
 					material.name = ScanMaterialName(out Bitmap nameplate);
 					material.count = 0;
@@ -85,7 +88,7 @@ namespace InventoryKamera
 							material.count = ScanMaterialCount(rectangle, out Bitmap quantity);
 							if (material.count == 0)
 							{
-								UserInterface.AddError($"Failed to parse quantity for {material.name}");
+								_userInterface.AddError($"Failed to parse quantity for {material.name}");
 								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
 							}
 							if (Properties.Settings.Default.LogScreenshots || material.count == 0)
@@ -94,19 +97,19 @@ namespace InventoryKamera
                             }
 							Logger.Debug("Final: {0} : {1}", material.name, material.count);
 							inventory.Materials.Add(material);
-							UserInterface.ResetCharacterDisplay();
+							_userInterface.ResetCharacterDisplay();
 							UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
 
 							previousMaterial.name = material.name;
 						}
 					}
 					nameplate.Dispose();
-					Navigation.Wait(150);
+					_inputSimulator.Wait(150);
 				}
 
-				Navigation.SetCursor(r.Last().Center().X, r.Last().Center().Y);
-				Navigation.Click();
-				Navigation.Wait(150);
+				_inputSimulator.SetCursor(r.Last().Center().X, r.Last().Center().Y);
+				_inputSimulator.Click();
+				_inputSimulator.Wait(150);
 
 				Logger.Debug("Finished page of materials. Scrolling...");
 
@@ -118,7 +121,7 @@ namespace InventoryKamera
 					// scroll down
 					for (int k = 0; k < 10; k++)
 					{
-						Navigation.sim.Mouse.VerticalScroll(-1);
+						_inputSimulator.MouseVerticalScroll(-1);
 						// skip a scroll
 						if (( k == 7 ) && ( ( scrollCount % 3 ) == 0 ))
 						{
@@ -131,14 +134,14 @@ namespace InventoryKamera
 								}
 								else
 								{
-									Navigation.sim.Mouse.VerticalScroll(-1);
+									_inputSimulator.MouseVerticalScroll(-1);
 								}
 							}
 						}
-						Navigation.SystemWait(Navigation.Speed.InventoryScroll);
+						_inputSimulator.SystemWait(ScanDelay.InventoryScroll);
 					}
 				}
-				Navigation.SystemWait(Navigation.Speed.Normal);
+				_inputSimulator.SystemWait(ScanDelay.Normal);
 				++page;
 			}
 
@@ -146,11 +149,11 @@ namespace InventoryKamera
 			// scroll down as much as possible
 			for (int i = 0; i < 20; i++)
 			{
-				Navigation.sim.Mouse.VerticalScroll(-1);
-				Navigation.SystemWait(Navigation.Speed.InventoryScroll);
+				_inputSimulator.MouseVerticalScroll(-1);
+				_inputSimulator.SystemWait(ScanDelay.InventoryScroll);
 			}
 
-			Navigation.Wait(500);
+			_inputSimulator.Wait(500);
 
 			(rectangles, _, _) = GetPageOfItems(page, acceptLess: true);
 			bool passby = true;
@@ -158,9 +161,9 @@ namespace InventoryKamera
 			{
 				// Select Material
 				Rectangle rectangle = rectangles[i];
-				Navigation.SetCursor(rectangle.Center().X, rectangle.Center().Y);
-				Navigation.Click();
-				Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+				_inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
+				_inputSimulator.Click();
+				_inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
 
 				material.name = ScanMaterialName(out Bitmap nameplate);
 				material.count = 0;
@@ -177,7 +180,7 @@ namespace InventoryKamera
 						material.count = ScanMaterialCount(rectangle, out Bitmap quantity);
 						if (material.count == 0)
 						{
-							UserInterface.AddError($"Failed to parse quantity for {material.name}");
+							_userInterface.AddError($"Failed to parse quantity for {material.name}");
 							SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
 						}
 						else if (Properties.Settings.Default.LogScreenshots)
@@ -186,7 +189,7 @@ namespace InventoryKamera
 						}
 						Logger.Debug("Final (LastPage): {0} : {1}", material.name, material.count);
 						inventory.Materials.Add(material);
-						UserInterface.ResetCharacterDisplay();
+						_userInterface.ResetCharacterDisplay();
 						UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
 						passby = false; // New material found so break on next old material
 						quantity.Dispose();
@@ -198,38 +201,38 @@ namespace InventoryKamera
 					nameplate.Dispose();
 					break;
 				}
-				Navigation.Wait(150);
+				_inputSimulator.Wait(150);
 			}
 		}
 
 		private int ScanMora()
 		{
 			var region = new Rectangle(
-				x: (int)(125 / 1280.0 * Navigation.GetWidth()),
-				y: (int)(665 / 720.0 * Navigation.GetHeight()),
-				width: (int)(300 / 1280.0 * Navigation.GetWidth()),
-				height: (int)(30 / 720.0 * Navigation.GetHeight()));
+				x: (int)(125 / 1280.0 * _screenCapture.GetWidth()),
+				y: (int)(665 / 720.0 * _screenCapture.GetHeight()),
+				width: (int)(300 / 1280.0 * _screenCapture.GetWidth()),
+				height: (int)(30 / 720.0 * _screenCapture.GetHeight()));
 
-			if (Navigation.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
 			{
-				region.Y = (int)( 740 / 800.0 * Navigation.GetHeight() );
+				region.Y = (int)( 740 / 800.0 * _screenCapture.GetHeight() );
 			}
 
-			using (var screenshot = Navigation.CaptureRegion(region))
+			using (var screenshot = _screenCapture.CaptureRegion(region))
 			{
 				string mora = ParseMoraFromScreenshot(screenshot);
 
 				if (int.TryParse(mora, out int count))
 				{
-					UserInterface.ResetCharacterDisplay();
-					UserInterface.SetMora(screenshot, count);
-                    if (Properties.Settings.Default.LogScreenshots) 
+					_userInterface.ResetCharacterDisplay();
+					_userInterface.SetMora(screenshot, count);
+                    if (Properties.Settings.Default.LogScreenshots)
 						SaveInventoryBitmap(screenshot, "mora.png");
 				}
 				else
 				{
-					UserInterface.SetNavigation_Image(screenshot);
-					UserInterface.AddError("Unable to parse mora count");
+					_userInterface.SetNavigation_Image(screenshot);
+					_userInterface.AddError("Unable to parse mora count");
 					SaveInventoryBitmap(screenshot, "mora.png");
 				}
 				return count;
@@ -255,10 +258,10 @@ namespace InventoryKamera
 		{
 			// Grab item name on right
 			var refWidth = 1280.0;
-			var refHeight = Navigation.GetAspectRatio() == new Size(16,9) ? 720.0 : 800.0;
+			var refHeight = _screenCapture.GetAspectRatio() == new Size(16,9) ? 720.0 : 800.0;
 
-			var width = Navigation.GetWidth();
-			var height = Navigation.GetHeight();
+			var width = _screenCapture.GetWidth();
+			var height = _screenCapture.GetHeight();
 
 			var reference = new Rectangle(872, 80, 327, 37);
 
@@ -269,15 +272,15 @@ namespace InventoryKamera
 				Right:  (int)( reference.Right  / refWidth  * width),
 				Bottom: (int)( reference.Bottom / refHeight * height));
 
-			Bitmap bm = Navigation.CaptureRegion(region);
+			Bitmap bm = _screenCapture.CaptureRegion(region);
 			nameplate = (Bitmap)bm.Clone();
 
 			// Alter Image
-			GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref bm);
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetInvert(ref n);
+			bm = _imageProcessor.SetGamma(bm, 0.2, 0.2, 0.2);
+			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			n = _imageProcessor.SetInvert(n);
 
-			string text = GenshinProcesor.AnalyzeText(n,Tesseract.PageSegMode.Auto);
+			string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.Auto);
 			text = Regex.Replace(text, @"[\W\s]", string.Empty).ToLower();
 
 			//UI
@@ -285,10 +288,10 @@ namespace InventoryKamera
 			bm.Dispose();
 
 			if (inventoryPage == InventoryPage.CharacterDevelopmentItems)
-				return GenshinProcesor.FindClosestDevelopmentName(text);
+				return _gameDataService.FindClosestDevelopmentName(text);
 
 			if (inventoryPage == InventoryPage.Materials)
-				return GenshinProcesor.FindClosestMaterialName(text);
+				return _gameDataService.FindClosestMaterialName(text);
 
 			return null;
 		}
