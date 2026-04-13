@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TesseractOCR" Version="5.5.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Copy tessdata from main project for testing -->
+    <None Include="..\InventoryKamera\tessdata\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>tessdata\%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+</Project>

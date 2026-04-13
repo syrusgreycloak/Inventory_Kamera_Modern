@@ -53,6 +53,16 @@ Validate that `TesseractOCR 5.5.2` fixes the threading deadlocks present in `Tes
 
 See [Milestone 1, Step 1.3](MILESTONE_1_NET8_CORE.md) for the validation checklist (traineddata loading, concurrent engine stress test, accuracy comparison).
 
+**Evaluation result (Step 1.3):** TesseractOCR 5.5.2 evaluation: build succeeds. Upgrade viable pending runtime testing.
+
+Key API differences from `Tesseract 5.2.0`:
+- Namespace: `TesseractOCR` (was `Tesseract`)
+- Engine class: `TesseractOCR.Engine` (was `TesseractEngine`)
+- Constructor: `new Engine(dataPath, language, EngineMode)` — same parameter shape, string overload supported for custom traineddata
+- `EngineMode` is now `TesseractOCR.Enums.EngineMode`
+
+The `TesseractEval` console project (`TesseractEval/`) initializes 8 engines with `genshin_fast_09_04_21` and compiled cleanly against net8.0. Runtime test (actual tessdata load) should be run before committing to the upgrade in Milestone 1 Core work.
+
 **Fallback if validation fails:** Add `SemaphoreSlim(4, 4)` to limit concurrent OCR calls in the existing engine pool. Keep `Tesseract 5.2.0`.
 
 ---
