@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Newtonsoft.Json;
 
@@ -28,7 +28,7 @@ namespace InventoryKamera
 		[JsonProperty("id")]
 		public int Id { get; private set; }
 		[JsonIgnore]
-		
+
 		public int Rarity { get; private set; }
 
 		[JsonIgnore]
@@ -111,12 +111,12 @@ namespace InventoryKamera
 
 		public bool HasValidWeaponName()
 		{
-			return GenshinProcesor.IsValidWeapon(Name);
+			return ModelValidator.IsValidWeapon(Name);
 		}
 
 		public bool HasValidEquippedCharacter()
 		{
-			return string.IsNullOrWhiteSpace(EquippedCharacter) || GenshinProcesor.IsValidCharacter(EquippedCharacter) ;
+			return string.IsNullOrWhiteSpace(EquippedCharacter) || ModelValidator.IsValidCharacter(EquippedCharacter);
 		}
 
 		public int AscensionCount()
@@ -207,14 +207,5 @@ namespace InventoryKamera
 			if (!string.IsNullOrWhiteSpace(EquippedCharacter)) output += $"Equipped character: {EquippedCharacter}";
 			return output;
 		}
-	}
-
-	public enum WeaponType
-	{
-		Sword,
-		Claymore,
-		Polearm,
-		Bow,
-		Catalyst
 	}
 }

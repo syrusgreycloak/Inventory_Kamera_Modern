@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace InventoryKamera
 {
@@ -41,7 +40,7 @@ namespace InventoryKamera
             Source = "NOT FILLED";
         }
 
-        public GOOD(InventoryKamera genshinData) : this()
+        public GOOD(List<Character> characters, Inventory inventory, bool equipWeapons, bool equipArtifacts) : this()
         {
             // Get rid of VS warning since we are converting this class to JSON
             Format = "GOOD";
@@ -50,11 +49,11 @@ namespace InventoryKamera
             Source = "Inventory_Kamera";
 
             // Assign Characters
-            if (genshinData.Characters.Count > 0)
+            if (characters.Count > 0)
             {
-                Characters = new List<Character>(genshinData.Characters);
+                Characters = new List<Character>(characters);
 
-                if (!Properties.Settings.Default.EquipWeapons)
+                if (!equipWeapons)
                 {
                     foreach (Character character in Characters) character.Weapon = null;
                 }
@@ -63,30 +62,30 @@ namespace InventoryKamera
 
 
             // Assign Weapons
-            if (genshinData.Inventory.Weapons.Count > 0)
+            if (inventory.Weapons.Count > 0)
             {
-                Weapons = new List<Weapon>(genshinData.Inventory.Weapons);
+                Weapons = new List<Weapon>(inventory.Weapons);
 
-                if (!Properties.Settings.Default.EquipWeapons)
+                if (!equipWeapons)
                 {
                     foreach (Weapon weapon in Weapons) weapon.EquippedCharacter = "";
                 }
             }
 
             // Assign Artifacts
-            if (genshinData.Inventory.Artifacts.Count > 0)
+            if (inventory.Artifacts.Count > 0)
             {
-                Artifacts = new List<Artifact>(genshinData.Inventory.Artifacts);
+                Artifacts = new List<Artifact>(inventory.Artifacts);
 
-                if (!Properties.Settings.Default.EquipArtifacts)
+                if (!equipArtifacts)
                 {
                     foreach (Artifact artifact in Artifacts) artifact.EquippedCharacter = "";
                 }
             }
 
             // Assign materials
-            if (genshinData.Inventory.AllMaterials.Count > 0) Materials = new Dictionary<string, int>();
-            genshinData.Inventory.AllMaterials.ToList().ForEach(material => Materials.Add(material.name, material.count));
+            if (inventory.AllMaterials.Count > 0) Materials = new Dictionary<string, int>();
+            inventory.AllMaterials.ToList().ForEach(material => Materials.Add(material.name, material.count));
         }
 
         internal void WriteToJSON(string outputDirectory)
@@ -101,10 +100,9 @@ namespace InventoryKamera
             // Write file
             WriteToJson(outputFile);
 
-
-            if (!File.Exists(outputFile)) // did not make file
+            if (!File.Exists(outputFile))
             {
-                UserInterface.AddError($"Failed to output at : {outputDirectory}");
+                throw new IOException($"Failed to write GOOD export to: {outputDirectory}");
             }
         }
 

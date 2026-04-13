@@ -271,7 +271,7 @@ namespace InventoryKamera
                         data.GatherData();
 
                         // Covert to GOOD
-                        GOOD good = new GOOD(data);
+                        GOOD good = new GOOD(data.Characters, data.Inventory, Properties.Settings.Default.EquipWeapons, Properties.Settings.Default.EquipArtifacts);
                         Logger.Info("Data converted to GOOD");
 
                         // Make Json File
@@ -616,7 +616,7 @@ namespace InventoryKamera
 
         private void Export_Button_Click(object sender, EventArgs e)
         {
-            OpenOptimizerDialog(new GOOD(data), true);
+            OpenOptimizerDialog(new GOOD(data.Characters, data.Inventory, Properties.Settings.Default.EquipWeapons, Properties.Settings.Default.EquipArtifacts), true);
         }
 
         private void MainForm_Activate()
