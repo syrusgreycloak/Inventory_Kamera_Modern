@@ -96,6 +96,7 @@ namespace InventoryKamera
             Weapons = _gameData.Weapons;
             DevItems = _gameData.DevItems;
             Materials = _gameData.Materials;
+            Stats = _gameData.Stats;
             Logger.Info("Scraper initialized");
         }
 
@@ -107,6 +108,7 @@ namespace InventoryKamera
             Weapons = _gameData.Weapons;
             DevItems = _gameData.DevItems;
             Materials = _gameData.Materials;
+            Stats = _gameData.Stats;
 		}
 
 		internal static void UpdateCharacterName(string target, string name) =>
