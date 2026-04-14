@@ -81,24 +81,34 @@ namespace InventoryKamera
 
 		private static GameDataService _gameData;
 
+		private static GameDataService GameData
+		{
+			get
+			{
+				if (_gameData == null)
+				{
+					_gameData = new GameDataService(new DatabaseManager());
+					Elements = _gameData.Elements;
+					Characters = _gameData.Characters;
+					Artifacts = _gameData.Artifacts;
+					Weapons = _gameData.Weapons;
+					DevItems = _gameData.DevItems;
+					Materials = _gameData.Materials;
+					Stats = _gameData.Stats;
+				}
+				return _gameData;
+			}
+		}
+
 		static GenshinProcesor()
         {
             _ocrPool = new OcrPool();
-            _gameData = new GameDataService(new DatabaseManager());
-            // Sync static fields so existing callers still work
-            Elements = _gameData.Elements;
-            Characters = _gameData.Characters;
-            Artifacts = _gameData.Artifacts;
-            Weapons = _gameData.Weapons;
-            DevItems = _gameData.DevItems;
-            Materials = _gameData.Materials;
-            Stats = _gameData.Stats;
             Logger.Info("Scraper initialized");
         }
 
 		internal static void ReloadData()
         {
-            _gameData.ReloadData();
+            GameData.ReloadData();
             Characters = _gameData.Characters;
             Artifacts = _gameData.Artifacts;
             Weapons = _gameData.Weapons;
@@ -108,7 +118,7 @@ namespace InventoryKamera
 		}
 
 		internal static void UpdateCharacterName(string target, string name) =>
-            _gameData.UpdateCharacterName(target, name);
+            GameData.UpdateCharacterName(target, name);
 
 		// TODO Task 9: replace with characterScraper.ScanMainCharacterName() — CharacterScraper is now an instance class
 		// internal static void AssignTravelerName(string name)
@@ -140,31 +150,31 @@ namespace InventoryKamera
 
 		#region Check valid parameters
 
-		internal static bool IsValidSetName(string s) => _gameData.IsValidSetName(s);
-		internal static bool IsValidMaterial(string s) => _gameData.IsValidMaterial(s);
-		internal static bool IsValidStat(string s) => _gameData.IsValidStat(s);
-		internal static bool IsValidSlot(string s) => _gameData.IsValidSlot(s);
-		internal static bool IsValidCharacter(string s) => _gameData.IsValidCharacter(s);
-		internal static bool IsValidElement(string s) => _gameData.IsValidElement(s);
-		internal static bool IsEnhancementMaterial(string s) => _gameData.IsEnhancementMaterial(s);
-		internal static bool IsValidWeapon(string s) => _gameData.IsValidWeapon(s);
+		internal static bool IsValidSetName(string s) => GameData.IsValidSetName(s);
+		internal static bool IsValidMaterial(string s) => GameData.IsValidMaterial(s);
+		internal static bool IsValidStat(string s) => GameData.IsValidStat(s);
+		internal static bool IsValidSlot(string s) => GameData.IsValidSlot(s);
+		internal static bool IsValidCharacter(string s) => GameData.IsValidCharacter(s);
+		internal static bool IsValidElement(string s) => GameData.IsValidElement(s);
+		internal static bool IsEnhancementMaterial(string s) => GameData.IsEnhancementMaterial(s);
+		internal static bool IsValidWeapon(string s) => GameData.IsValidWeapon(s);
 
 		#endregion Check valid parameters
 
 		#region Element Searching
 
-		internal static string FindClosestGearSlot(string input) => _gameData.FindClosestGearSlot(input);
-		internal static string FindClosestStat(string stat, int minConfidence = 90) => _gameData.FindClosestStat(stat, minConfidence);
-		internal static string FindElementByName(string name, int minConfidence = 90) => _gameData.FindElementByName(name, minConfidence);
-		internal static string FindClosestWeapon(string name, int minConfidence = 90) => _gameData.FindClosestWeapon(name, minConfidence);
-		internal static string FindClosestSetName(string name, int minConfidence = 90) => _gameData.FindClosestSetName(name, minConfidence);
-		internal static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90) => _gameData.FindClosestArtifactSetFromArtifactName(name, minConfidence);
-		internal static string FindClosestCharacterName(string name, int minConfidence = 90) => _gameData.FindClosestCharacterName(name, minConfidence);
-		internal static string FindClosestDevelopmentName(string name, int minConfidence = 90) => _gameData.FindClosestDevelopmentName(name, minConfidence);
-		internal static string FindClosestMaterialName(string name, int minConfidence = 90) => _gameData.FindClosestMaterialName(name, minConfidence);
-		internal static bool CharacterMatchesElement(string name, string element) => _gameData.CharacterMatchesElement(name, element);
-		internal static List<string> GetCharactersElements(string name) => _gameData.GetCharactersElements(name);
-		internal static string GetElementForCharacter(string name) => _gameData.GetElementForCharacter(name);
+		internal static string FindClosestGearSlot(string input) => GameData.FindClosestGearSlot(input);
+		internal static string FindClosestStat(string stat, int minConfidence = 90) => GameData.FindClosestStat(stat, minConfidence);
+		internal static string FindElementByName(string name, int minConfidence = 90) => GameData.FindElementByName(name, minConfidence);
+		internal static string FindClosestWeapon(string name, int minConfidence = 90) => GameData.FindClosestWeapon(name, minConfidence);
+		internal static string FindClosestSetName(string name, int minConfidence = 90) => GameData.FindClosestSetName(name, minConfidence);
+		internal static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90) => GameData.FindClosestArtifactSetFromArtifactName(name, minConfidence);
+		internal static string FindClosestCharacterName(string name, int minConfidence = 90) => GameData.FindClosestCharacterName(name, minConfidence);
+		internal static string FindClosestDevelopmentName(string name, int minConfidence = 90) => GameData.FindClosestDevelopmentName(name, minConfidence);
+		internal static string FindClosestMaterialName(string name, int minConfidence = 90) => GameData.FindClosestMaterialName(name, minConfidence);
+		internal static bool CharacterMatchesElement(string name, string element) => GameData.CharacterMatchesElement(name, element);
+		internal static List<string> GetCharactersElements(string name) => GameData.GetCharactersElements(name);
+		internal static string GetElementForCharacter(string name) => GameData.GetElementForCharacter(name);
 
         #endregion Element Searching
 
