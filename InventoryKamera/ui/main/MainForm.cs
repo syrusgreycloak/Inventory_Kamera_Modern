@@ -175,7 +175,7 @@ namespace InventoryKamera
             var textbox = sender as TextBox;
             var name = textbox.Text;
 
-            if (!string.IsNullOrWhiteSpace(name))
+            if (!string.IsNullOrWhiteSpace(name) && GenshinProcesor.Characters != null)
             {
                 if (GenshinProcesor.Characters.ContainsKey(name.ConvertToGood().ToLower()))
                 {
