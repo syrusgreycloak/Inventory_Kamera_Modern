@@ -159,26 +159,33 @@ namespace InventoryKamera
 				{
 					if (_gameDataService.Characters.ContainsKey(name.ToLower()))
 					{
-						string talentLeveledAtConst3 = character.NameGOOD.Contains("Traveler")
-                            ? (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][0]
-                            : (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][0];
+						var constellationData = _gameDataService.Characters[name.ToLower()]["ConstellationOrder"];
+						var elementOrder = character.NameGOOD.Contains("Traveler")
+							? constellationData?[character.Element.ToLower()]
+							: constellationData;
 
-                        // Scale down talents (constellations give +3 bonus in-game)
-						// Ensure talents don't go below 1 for low-level characters
-                        if (character.Constellation >= 5)
+						if (elementOrder == null)
 						{
-							string talentLeveledAtConst5 = character.NameGOOD.Contains("Traveler")
-                                ? (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()][1]
-                                : (string)_gameDataService.Characters[name.ToLower()]["ConstellationOrder"][1];
-
-							Logger.Info("{0} constellation 5+, adjusting scanned {1} and {2} levels", character.NameGOOD, talentLeveledAtConst3, talentLeveledAtConst5);
-							character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
-							character.Talents[talentLeveledAtConst5] = Math.Max(1, character.Talents[talentLeveledAtConst5] - 3);
+							Logger.Warn("{0} constellation order not found for element '{1}', skipping talent adjustment", character.NameGOOD, character.Element);
 						}
 						else
 						{
-							Logger.Info("{0} constellation 3+, adjusting scanned {1} level", character.NameGOOD, talentLeveledAtConst3);
-							character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
+							string talentLeveledAtConst3 = (string)elementOrder[0];
+
+							// Scale down talents (constellations give +3 bonus in-game)
+							// Ensure talents don't go below 1 for low-level characters
+							if (character.Constellation >= 5)
+							{
+								string talentLeveledAtConst5 = (string)elementOrder[1];
+								Logger.Info("{0} constellation 5+, adjusting scanned {1} and {2} levels", character.NameGOOD, talentLeveledAtConst3, talentLeveledAtConst5);
+								character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
+								character.Talents[talentLeveledAtConst5] = Math.Max(1, character.Talents[talentLeveledAtConst5] - 3);
+							}
+							else
+							{
+								Logger.Info("{0} constellation 3+, adjusting scanned {1} level", character.NameGOOD, talentLeveledAtConst3);
+								character.Talents[talentLeveledAtConst3] = Math.Max(1, character.Talents[talentLeveledAtConst3] - 3);
+							}
 						}
 					}
 					else
@@ -522,7 +529,7 @@ namespace InventoryKamera
 				_inputSimulator.Click();
 
 				var pause = constellation == 0 ? 700 : 550;
-				_inputSimulator.Wait(pause);
+				_inputSimulator.SystemWaitMs(pause);
 
 				if (Properties.Settings.Default.LogScreenshots)
 				{
@@ -592,7 +599,7 @@ namespace InventoryKamera
 				_inputSimulator.SetCursor((int)(1130 / xRef * _screenCapture.GetWidth()), yOffset);
 				_inputSimulator.Click();
 				int pause = i == 0 ? 700 : 550;
-				_inputSimulator.Wait(pause);
+				_inputSimulator.SystemWaitMs(pause);
                 switch (i)
                 {
 					default:

@@ -405,7 +405,7 @@
             // 
             this.Github_Label.AutoSize = true;
             this.Github_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Github_Label.Location = new System.Drawing.Point(500, 26);
+            this.Github_Label.Location = new System.Drawing.Point(545, 26);
             this.Github_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Github_Label.Name = "Github_Label";
             this.Github_Label.Size = new System.Drawing.Size(88, 13);
@@ -470,7 +470,7 @@
             // 
             this.Releases_Label.AutoSize = true;
             this.Releases_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Releases_Label.Location = new System.Drawing.Point(500, 45);
+            this.Releases_Label.Location = new System.Drawing.Point(545, 45);
             this.Releases_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Releases_Label.Name = "Releases_Label";
             this.Releases_Label.Size = new System.Drawing.Size(85, 13);
@@ -481,7 +481,7 @@
             // 
             // Navigation_Image
             // 
-            this.Navigation_Image.Location = new System.Drawing.Point(502, 83);
+            this.Navigation_Image.Location = new System.Drawing.Point(547, 83);
             this.Navigation_Image.Margin = new System.Windows.Forms.Padding(2);
             this.Navigation_Image.Name = "Navigation_Image";
             this.Navigation_Image.Size = new System.Drawing.Size(80, 40);
@@ -492,7 +492,7 @@
             // Navigation_Label
             // 
             this.Navigation_Label.AutoSize = true;
-            this.Navigation_Label.Location = new System.Drawing.Point(499, 67);
+            this.Navigation_Label.Location = new System.Drawing.Point(544, 67);
             this.Navigation_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Navigation_Label.Name = "Navigation_Label";
             this.Navigation_Label.Size = new System.Drawing.Size(61, 13);
@@ -755,7 +755,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(285, 33);
+            this.label3.Location = new System.Drawing.Point(318, 33);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(114, 13);
             this.label3.TabIndex = 91;
@@ -773,7 +773,7 @@
             // MinimumArtifactLevelLabel
             // 
             this.MinimumArtifactLevelLabel.AutoSize = true;
-            this.MinimumArtifactLevelLabel.Location = new System.Drawing.Point(286, 67);
+            this.MinimumArtifactLevelLabel.Location = new System.Drawing.Point(318, 67);
             this.MinimumArtifactLevelLabel.Name = "MinimumArtifactLevelLabel";
             this.MinimumArtifactLevelLabel.Size = new System.Drawing.Size(113, 13);
             this.MinimumArtifactLevelLabel.TabIndex = 93;
@@ -803,7 +803,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(238, 114);
+            this.label1.Location = new System.Drawing.Point(200, 114);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(87, 13);
             this.label1.TabIndex = 102;
@@ -812,7 +812,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(230, 148);
+            this.label4.Location = new System.Drawing.Point(188, 148);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(95, 13);
             this.label4.TabIndex = 106;
@@ -824,7 +824,7 @@
             this.EquipWeaponsCheckBox.Checked = global::InventoryKamera.Properties.Settings.Default.EquipWeapons;
             this.EquipWeaponsCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.EquipWeaponsCheckBox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "EquipWeapons", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.EquipWeaponsCheckBox.Location = new System.Drawing.Point(129, 88);
+            this.EquipWeaponsCheckBox.Location = new System.Drawing.Point(158, 88);
             this.EquipWeaponsCheckBox.Name = "EquipWeaponsCheckBox";
             this.EquipWeaponsCheckBox.Size = new System.Drawing.Size(102, 17);
             this.EquipWeaponsCheckBox.TabIndex = 99;
@@ -838,7 +838,7 @@
             this.EquipArtifactsCheckBox.Checked = global::InventoryKamera.Properties.Settings.Default.EquipArtifacts;
             this.EquipArtifactsCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.EquipArtifactsCheckBox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "EquipArtifacts", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.EquipArtifactsCheckBox.Location = new System.Drawing.Point(328, 88);
+            this.EquipArtifactsCheckBox.Location = new System.Drawing.Point(368, 88);
             this.EquipArtifactsCheckBox.Name = "EquipArtifactsCheckBox";
             this.EquipArtifactsCheckBox.Size = new System.Drawing.Size(94, 17);
             this.EquipArtifactsCheckBox.TabIndex = 98;
@@ -867,9 +867,9 @@
             // wandererNameTextBox
             // 
             this.wandererNameTextBox.DataBindings.Add(new System.Windows.Forms.Binding("Text", global::InventoryKamera.Properties.Settings.Default, "WandererName", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.wandererNameTextBox.Location = new System.Drawing.Point(328, 145);
+            this.wandererNameTextBox.Location = new System.Drawing.Point(325, 145);
             this.wandererNameTextBox.Name = "wandererNameTextBox";
-            this.wandererNameTextBox.Size = new System.Drawing.Size(169, 20);
+            this.wandererNameTextBox.Size = new System.Drawing.Size(195, 23);
             this.wandererNameTextBox.TabIndex = 105;
             this.wandererNameTextBox.Text = global::InventoryKamera.Properties.Settings.Default.WandererName;
             this.wandererNameTextBox.TextChanged += new System.EventHandler(this.ValidateCustomName);
@@ -879,9 +879,9 @@
             // travelerNameTextBox
             // 
             this.travelerNameTextBox.DataBindings.Add(new System.Windows.Forms.Binding("Text", global::InventoryKamera.Properties.Settings.Default, "TravelerName", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.travelerNameTextBox.Location = new System.Drawing.Point(328, 111);
+            this.travelerNameTextBox.Location = new System.Drawing.Point(325, 111);
             this.travelerNameTextBox.Name = "travelerNameTextBox";
-            this.travelerNameTextBox.Size = new System.Drawing.Size(169, 20);
+            this.travelerNameTextBox.Size = new System.Drawing.Size(195, 23);
             this.travelerNameTextBox.TabIndex = 101;
             this.travelerNameTextBox.Text = global::InventoryKamera.Properties.Settings.Default.TravelerName;
             this.travelerNameTextBox.TextChanged += new System.EventHandler(this.ValidateCustomName);
@@ -891,21 +891,21 @@
             // numericUpDown1
             // 
             this.numericUpDown1.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::InventoryKamera.Properties.Settings.Default, "MinimumArtifactLevel", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.numericUpDown1.Location = new System.Drawing.Point(413, 62);
+            this.numericUpDown1.Location = new System.Drawing.Point(458, 62);
             this.numericUpDown1.Maximum = new decimal(new int[] {
             20,
             0,
             0,
             0});
             this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(48, 20);
+            this.numericUpDown1.Size = new System.Drawing.Size(54, 23);
             this.numericUpDown1.TabIndex = 95;
             this.numericUpDown1.Value = global::InventoryKamera.Properties.Settings.Default.MinimumArtifactLevel;
             // 
             // MinimumWeaponLevelControl
             // 
             this.MinimumWeaponLevelControl.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::InventoryKamera.Properties.Settings.Default, "MinimumWeaponLevel", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.MinimumWeaponLevelControl.Location = new System.Drawing.Point(224, 62);
+            this.MinimumWeaponLevelControl.Location = new System.Drawing.Point(244, 62);
             this.MinimumWeaponLevelControl.Maximum = new decimal(new int[] {
             90,
             0,
@@ -917,14 +917,14 @@
             0,
             0});
             this.MinimumWeaponLevelControl.Name = "MinimumWeaponLevelControl";
-            this.MinimumWeaponLevelControl.Size = new System.Drawing.Size(48, 20);
+            this.MinimumWeaponLevelControl.Size = new System.Drawing.Size(54, 23);
             this.MinimumWeaponLevelControl.TabIndex = 94;
             this.MinimumWeaponLevelControl.Value = global::InventoryKamera.Properties.Settings.Default.MinimumWeaponLevel;
             // 
             // ArtifactRarityControl
             // 
             this.ArtifactRarityControl.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::InventoryKamera.Properties.Settings.Default, "MinimumArtifactRarity", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.ArtifactRarityControl.Location = new System.Drawing.Point(413, 26);
+            this.ArtifactRarityControl.Location = new System.Drawing.Point(458, 26);
             this.ArtifactRarityControl.Maximum = new decimal(new int[] {
             5,
             0,
@@ -936,14 +936,14 @@
             0,
             0});
             this.ArtifactRarityControl.Name = "ArtifactRarityControl";
-            this.ArtifactRarityControl.Size = new System.Drawing.Size(48, 20);
+            this.ArtifactRarityControl.Size = new System.Drawing.Size(54, 23);
             this.ArtifactRarityControl.TabIndex = 90;
             this.ArtifactRarityControl.Value = global::InventoryKamera.Properties.Settings.Default.MinimumArtifactRarity;
             // 
             // WeaponRarityControl
             // 
             this.WeaponRarityControl.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::InventoryKamera.Properties.Settings.Default, "MinimumWeaponRarity", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.WeaponRarityControl.Location = new System.Drawing.Point(224, 27);
+            this.WeaponRarityControl.Location = new System.Drawing.Point(244, 27);
             this.WeaponRarityControl.Maximum = new decimal(new int[] {
             5,
             0,
@@ -955,7 +955,7 @@
             0,
             0});
             this.WeaponRarityControl.Name = "WeaponRarityControl";
-            this.WeaponRarityControl.Size = new System.Drawing.Size(48, 20);
+            this.WeaponRarityControl.Size = new System.Drawing.Size(54, 23);
             this.WeaponRarityControl.TabIndex = 88;
             this.WeaponRarityControl.Value = global::InventoryKamera.Properties.Settings.Default.MinimumWeaponRarity;
             // 
@@ -1040,7 +1040,7 @@
             this.OutputPath_TextBox.Location = new System.Drawing.Point(202, 182);
             this.OutputPath_TextBox.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.OutputPath_TextBox.Name = "OutputPath_TextBox";
-            this.OutputPath_TextBox.Size = new System.Drawing.Size(386, 18);
+            this.OutputPath_TextBox.Size = new System.Drawing.Size(428, 18);
             this.OutputPath_TextBox.TabIndex = 79;
             this.OutputPath_TextBox.Text = global::InventoryKamera.Properties.Settings.Default.OutputPath;
             // 
@@ -1061,7 +1061,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(234)))), ((int)(((byte)(230)))), ((int)(((byte)(230)))));
-            this.ClientSize = new System.Drawing.Size(595, 519);
+            this.ClientSize = new System.Drawing.Size(640, 519);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.wandererNameTextBox);
             this.Controls.Add(this.label1);

@@ -17,17 +17,20 @@ namespace InventoryKamera.UI
 
         public void SetGear(Bitmap bm, Weapon weapon)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetGear(bm, weapon)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGear(clone, weapon); clone.Dispose(); }));
         }
 
         public void SetGear(Bitmap bm, Artifact artifact)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetGear(bm, artifact)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGear(clone, artifact); clone.Dispose(); }));
         }
 
         public void SetGearPictureBox(Bitmap bm)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetGearPictureBox(bm)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGearPictureBox(clone); clone.Dispose(); }));
         }
 
         public void SetGearTextBox(string text)
@@ -39,12 +42,14 @@ namespace InventoryKamera.UI
 
         public void SetCharacter_NameAndElement(Bitmap bm, string name, string element)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetCharacter_NameAndElement(bm, name, element)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_NameAndElement(clone, name, element); clone.Dispose(); }));
         }
 
         public void SetCharacter_Level(Bitmap bm, int level, int maxLevel)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetCharacter_Level(bm, level, maxLevel)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_Level(clone, level, maxLevel); clone.Dispose(); }));
         }
 
         public void SetCharacter_Constellation(int level)
@@ -54,14 +59,16 @@ namespace InventoryKamera.UI
 
         public void SetCharacter_Talent(Bitmap bm, string text, int i)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetCharacter_Talent(bm, text, i)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_Talent(clone, text, i); clone.Dispose(); }));
         }
 
         // Materials / Mora
 
         public void SetMora(Bitmap mora, int count)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetMora(mora, count)));
+            var clone = (Bitmap)mora.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetMora(clone, count); clone.Dispose(); }));
         }
 
         // Counters / Max
@@ -112,7 +119,8 @@ namespace InventoryKamera.UI
 
         public void SetNavigation_Image(Bitmap bm)
         {
-            _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetNavigation_Image(bm)));
+            var clone = (Bitmap)bm.Clone();
+            _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetNavigation_Image(clone); clone.Dispose(); }));
         }
 
         // Reset methods
