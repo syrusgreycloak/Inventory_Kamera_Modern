@@ -42,9 +42,9 @@ namespace InventoryKamera
 #if DEBUG
             version = Assembly.GetExecutingAssembly().GetName().Version.ToString(4);
 #endif
-            Logger.Info("Inventory Kamera version {0}", version);
+            Logger.Info("Inventory Kamera Modern version {0}", version);
 
-            Text = $"Inventory Kamera V{version}";
+            Text = $"Inventory Kamera Modern V{version}";
 
             UserInterface.Init(
                 GearPictureBox,
