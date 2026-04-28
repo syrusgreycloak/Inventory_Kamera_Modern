@@ -529,7 +529,7 @@ namespace InventoryKamera
                     {
                         SaveInventoryBitmap(screenshot, $"{inventoryPage}Inventory.png");
                         using (Graphics g = Graphics.FromImage(screenshot))
-                            rectangles.ForEach(r => g.DrawRectangle(new Pen(Color.Green, 2), r));
+                            rectangles?.ForEach(r => g.DrawRectangle(new Pen(Color.Green, 2), r));
 
                         SaveInventoryBitmap(screenshot, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows} - weight {weight}.png");
                     }

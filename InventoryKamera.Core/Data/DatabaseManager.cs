@@ -378,6 +378,7 @@ namespace InventoryKamera
                     {
 
                         if (name.ToLower() == "PlayerGirl".ToLower()) return; // Both travelers are listed but are essentially identical
+                        if (name.Contains("Mannequin")) return; // Serenitea Pot mannequins have no skills
 
                         string PascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(name);
                         string nameGOOD = Regex.Replace(PascalCase, @"[\W]", string.Empty);
@@ -392,7 +393,11 @@ namespace InventoryKamera
 
                         var value = new JObject();
 
-                        if (!newData.ContainsKey(nameKey))
+                        bool travelerMissingConstellationOrder = nameKey == "traveler" &&
+                            newData.ContainsKey("traveler") &&
+                            !newData["traveler"]["ConstellationOrder"].HasValues;
+
+                        if (!newData.ContainsKey(nameKey) || travelerMissingConstellationOrder)
                         {
                             value.Add("GOOD", nameGOOD);
 
@@ -419,7 +424,7 @@ namespace InventoryKamera
 
                                 foreach (var element in playerElements)
                                 {
-                                    var elementSkill = skills.FirstOrDefault(entry => entry["skillIcon"].ToString().Contains($"Player{element.Key}") && !entry.ContainsKey("costElemType"));
+                                    var elementSkill = skills.FirstOrDefault(entry => entry["skillIcon"].ToString().Contains($"Skill_S_Player{element.Key}"));
                                     
 
                                     if (elementSkill == null) continue;
@@ -512,7 +517,12 @@ namespace InventoryKamera
 
                             value.Add("WeaponType", (int)weaponType);
 
-                            if (newData.TryAdd(nameKey, value)) status = UpdateStatus.Success;
+                            if (travelerMissingConstellationOrder)
+                            {
+                                newData[nameKey] = value;
+                                status = UpdateStatus.Success;
+                            }
+                            else if (newData.TryAdd(nameKey, value)) status = UpdateStatus.Success;
                         }
                     }
                     catch (Exception ex)
@@ -845,7 +855,7 @@ namespace InventoryKamera
             }
 
             // Check that critical weapons exist
-            string[] criticalWeapons = { "dullblade", "silvansword", "beginnerprotector" };
+            string[] criticalWeapons = { "dullblade", "silversword", "beginnersprotector" };
             foreach (var weaponKey in criticalWeapons)
             {
                 if (!data.ContainsKey(weaponKey))

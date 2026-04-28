@@ -8,6 +8,7 @@ namespace InventoryKamera.Infrastructure
         public void ScrollDown(int scrolls) => Navigation.Scroll(Navigation.Direction.DOWN, scrolls);
         public void ScrollUp(int scrolls) => Navigation.Scroll(Navigation.Direction.UP, scrolls);
         public void Wait(int ms) => Navigation.Wait(ms);
+        public void SystemWaitMs(int ms) => Navigation.SystemWait(ms);
         public void MouseVerticalScroll(int clicks) => Navigation.sim.Mouse.VerticalScroll(clicks);
         public void SystemWait(ScanDelay delay = ScanDelay.Normal) => Navigation.SystemWait((Navigation.Speed)(int)delay);
         public void SetDelay(double ms) => Navigation.SetDelay(ms);

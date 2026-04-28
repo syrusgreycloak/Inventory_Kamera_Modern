@@ -9,6 +9,7 @@ namespace InventoryKamera
         void ScrollDown(int scrolls);
         void ScrollUp(int scrolls);
         void Wait(int ms);
+        void SystemWaitMs(int ms);
 
         // New
         void MouseVerticalScroll(int clicks);

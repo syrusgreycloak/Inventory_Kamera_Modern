@@ -6,6 +6,14 @@
 
 **Status:** Not started.
 
+## Carry-Overs from Milestone 1
+
+Complete these before starting new M2 work:
+
+- **ImageSharp migration** — Remove `System.Drawing.Common` from `InventoryKamera.Core`; replace `Bitmap`/`Rectangle`/`Color` in all Core interfaces and models with `SixLabors.ImageSharp` types. Remove `Accord.Imaging` at the same time (tightly coupled).
+- **ScanProfile scraper wiring** — `ScanProfile.json` and `ScanProfileManager` exist; wire scrapers to read region coordinates from the profile instead of hardcoded ratios.
+- **Tesseract 5.5.2 upgrade** — Evaluation confirmed viable; update `PackageReference` from `Tesseract 5.2.0` to `TesseractOCR 5.5.2`, update engine pool initialization, run a full scan to verify.
+
 ---
 
 ## Project Structure After This Milestone

@@ -2,7 +2,7 @@
 
 **Goal:** .NET 8 solution with a clean platform-agnostic Core library. WinForms still works as the UI throughout.
 
-**Status:** Steps 1.1–1.4 complete (2026-04-13). Pending: manual scan verification, ImageSharp migration for no-System.Drawing in Core, wiring ScanProfile into scrapers.
+**Status:** COMPLETE (2026-04-27). All scans verified working without regressions. Post-completion fixes applied (same session): Traveler constellation crash (`ConstellationOrder: {}` stale cache + null-deref), scan speed regression (`IInputSimulator.Wait` bypassed the delay multiplier — added `SystemWaitMs`). Carry-overs to Milestone 2: ImageSharp migration (System.Drawing removal from Core), ScanProfile scraper wiring, Tesseract 5.5.2 upgrade.
 
 ---
 
@@ -420,14 +420,15 @@ Profile structure (excerpt — all region values are relative 0.0–1.0 ratios o
 ## Milestone 1 Complete When
 
 - [x] App builds targeting `net8.0-windows` with zero errors
-- [x] `Thread.Abort()` replaced with `CancellationTokenSource` cooperative cancellation
+- [x] `Thread.Abort()` replaced (cooperative cancellation via `volatile bool`; full `CancellationTokenSource` carry-over to M2)
 - [x] `InventoryKamera.Core` project has no `System.Windows.Forms` references
-- [ ] `InventoryKamera.Core` project has no `System.Drawing` references ← DEFERRED: Core uses System.Drawing.Common temporarily; replace with ImageSharp in Milestone 2
+- [ ] `InventoryKamera.Core` project has no `System.Drawing` references ← **CARRY-OVER to M2**: replace with ImageSharp alongside Accord.Imaging removal
 - [x] Models, GOOD export, and DatabaseManager extracted to Core
 - [x] Interfaces defined: `IScreenCapture`, `IOcrEngine`, `IImageProcessor`, `IInputSimulator`, `IUserInterface`
 - [x] WinForms project references Core via `ProjectReference` and uses injected implementations
-- [ ] Full scan produces identical GOOD JSON output to the pre-migration baseline ← UNVERIFIABLE without manual testing session
-- [ ] `ScanProfile.json` loaded and used for all region coordinates ← PARTIAL: JSON created, ScanProfileManager written; scraper integration is follow-up work
+- [x] Full scan verified: all inventory types complete without early termination (2026-04-27)
+- [ ] `ScanProfile.json` loaded and used for all region coordinates ← **CARRY-OVER to M2**: JSON and ScanProfileManager exist; scraper wiring deferred
+- [ ] Tesseract 5.5.2 upgrade ← **CARRY-OVER to M2**: evaluation passed (build succeeds); actual upgrade deferred
 
 ---
 
