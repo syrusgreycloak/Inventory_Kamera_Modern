@@ -1,15 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Targets net8.0-windows for chunk 2 (Windows-only phase).
-         Chunk 9 switches this to net8.0 and adds cross-platform platform stubs. -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Multi-targeted: net8.0 for cross-platform base; net8.0-windows for Windows runtime.
+         Infrastructure reference is TFM-scoped to net8.0-windows (see ItemGroup below).
+         Chunk 9 adds platform stubs for the net8.0 TFM. -->
+    <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>InventoryKamera.Avalonia</RootNamespace>
     <AssemblyName>InventoryKamera.Avalonia</AssemblyName>
     <ApplicationIcon>..\InventoryKamera\Item_Special_Kamera.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <!-- Define WINDOWS preprocessor symbol for the Windows TFM so DI registration
+       of platform-specific types can be gated at compile time. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.3" />
@@ -20,9 +26,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="NLog" Version="5.3.4" />
     <ProjectReference Include="..\InventoryKamera.Core\InventoryKamera.Core.csproj" />
-    <!-- Conditional reference: Infrastructure is Windows-only.
-         Chunk 9 re-enables the condition and adds non-Windows stubs. -->
-    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj" />
+    <!-- Infrastructure is Windows-only: scoped to net8.0-windows TFM.
+         Chunk 9 adds non-Windows stubs so the net8.0 TFM still resolves platform services. -->
+    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj"
+                      Condition="'$(TargetFramework)' == 'net8.0-windows'" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />

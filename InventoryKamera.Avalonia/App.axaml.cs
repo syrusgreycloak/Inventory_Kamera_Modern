@@ -5,7 +5,6 @@ using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Runtime.InteropServices;
 
 namespace InventoryKamera.Avalonia
 {
@@ -36,25 +35,24 @@ namespace InventoryKamera.Avalonia
 
         private static void ConfigureServices(ServiceCollection services)
         {
-            // Register infrastructure services.
-            // The Infrastructure project is referenced conditionally for Windows only (see .csproj).
-            // On non-Windows platforms these registrations are skipped; chunk 9 adds platform stubs.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // Register platform-specific infrastructure services.
+            // WINDOWS is defined for the net8.0-windows TFM (see .csproj DefineConstants).
+            // On the net8.0 TFM this block is compiled out; chunk 9 adds platform stubs.
+#if WINDOWS
+            services.AddSingleton<IScreenCapture, InventoryKamera.Infrastructure.WindowsScreenCapture>();
+            services.AddSingleton<IInputSimulator, InventoryKamera.Infrastructure.WindowsInputSimulator>();
+            services.AddSingleton<IOcrEngine, InventoryKamera.Infrastructure.OcrEnginePool>();
+            services.AddSingleton<IImageProcessor, InventoryKamera.Infrastructure.WinFormsImageProcessor>();
+            // IGameDataService needs a GameDataService instance; construct it here.
+            services.AddSingleton<IGameDataService>(sp =>
             {
-                services.AddSingleton<IScreenCapture, InventoryKamera.Infrastructure.WindowsScreenCapture>();
-                services.AddSingleton<IInputSimulator, InventoryKamera.Infrastructure.WindowsInputSimulator>();
-                services.AddSingleton<IOcrEngine, InventoryKamera.Infrastructure.OcrEnginePool>();
-                services.AddSingleton<IImageProcessor, InventoryKamera.Infrastructure.WinFormsImageProcessor>();
-                // IGameDataService needs a GameDataService instance; construct it here.
-                services.AddSingleton<IGameDataService>(sp =>
-                {
-                    var db = new DatabaseManager();
-                    var core = new GameDataService(db);
-                    return new InventoryKamera.Infrastructure.InfraGameDataService(core);
-                });
-            }
+                var db = new DatabaseManager();
+                var core = new GameDataService(db);
+                return new InventoryKamera.Infrastructure.InfraGameDataService(core);
+            });
+#endif
 
-            // Register view models
+            // Register view models (cross-platform — no Infrastructure dependency)
             services.AddTransient<MainViewModel>();
             services.AddTransient<ScanViewModel>();
             services.AddTransient<SettingsViewModel>();
