@@ -6,10 +6,11 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using TesseractOCR;
 using TesseractOCR.Enums;
+using InventoryKamera; // IOcrEngine, PageSegmentationMode
 
 namespace InventoryKamera.Infrastructure
 {
-    internal class OcrEnginePool : IOcrEngine
+    public class OcrEnginePool : IOcrEngine
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 

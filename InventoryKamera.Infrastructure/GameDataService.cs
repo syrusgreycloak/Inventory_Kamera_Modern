@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using InventoryKamera; // IGameDataService, GameDataService, DatabaseManager
 
 namespace InventoryKamera.Infrastructure
 {
@@ -7,7 +8,7 @@ namespace InventoryKamera.Infrastructure
     /// Infrastructure wrapper around the Core GameDataService.
     /// Implements IGameDataService for injection into scrapers.
     /// </summary>
-    internal class InfraGameDataService : IGameDataService
+    public class InfraGameDataService : IGameDataService
     {
         private readonly GameDataService _core;
 

@@ -1,5 +1,6 @@
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using InventoryKamera; // IUserInterface, Weapon, Artifact
 
 namespace InventoryKamera.Infrastructure
 {
@@ -7,7 +8,7 @@ namespace InventoryKamera.Infrastructure
     /// No-op implementation of IUserInterface used when no UI form is available
     /// (e.g., during static initialization before the main form is shown).
     /// </summary>
-    internal class NullUserInterface : IUserInterface
+    public class NullUserInterface : IUserInterface
     {
         public void SetGear(Image<Rgba32> bm, Weapon weapon) { }
         public void SetGear(Image<Rgba32> bm, Artifact artifact) { }
