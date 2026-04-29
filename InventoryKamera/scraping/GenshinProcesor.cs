@@ -7,12 +7,20 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using TesseractOCR.Enums;
 using OcrPool = InventoryKamera.Infrastructure.OcrEnginePool;
+using DrawingColor     = System.Drawing.Color;
+using DrawingRectangle = System.Drawing.Rectangle;
+using DrawingSize      = System.Drawing.Size;
+using ISRect           = SixLabors.ImageSharp.Rectangle;
 
 namespace InventoryKamera
 {
@@ -139,11 +147,24 @@ namespace InventoryKamera
 
 		internal static void RestartEngines() => _ocrPool.RestartEngines();
 
-		/// <summary> Use Tesseract OCR to find words on picture to string </summary>
+		/// <summary> Use Tesseract OCR to find words on picture to string (ImageSharp overload). </summary>
+		internal static string AnalyzeText(Image<Rgba32> image, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
+		{
+			var coreMode = (PageSegmentationMode)(int)pageMode;
+			return _ocrPool.AnalyzeText(image, coreMode, numbersOnly);
+		}
+
+		/// <summary> Use Tesseract OCR to find words on picture to string (GDI+ overload — used by internal Bitmap-based scan methods). </summary>
 		internal static string AnalyzeText(Bitmap bitmap, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
 		{
 			var coreMode = (PageSegmentationMode)(int)pageMode;
-			return _ocrPool.AnalyzeText(bitmap, coreMode, numbersOnly);
+			using (var ms = new MemoryStream())
+			{
+				bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+				ms.Position = 0;
+				var img = SixLabors.ImageSharp.Image.Load<Rgba32>(ms);
+				return _ocrPool.AnalyzeText(img, coreMode, numbersOnly);
+			}
 		}
 
 		#endregion OCR
@@ -179,21 +200,21 @@ namespace InventoryKamera
         #endregion Element Searching
 
 
-        internal static void FindDelay(List<Rectangle> rectangles)
+        internal static void FindDelay(List<DrawingRectangle> rectangles)
 		{
 			Navigation.SetDelay(180);
 			int delayOffset = 20;
 			bool bStoppedOnce = false;
 			Bitmap card1; Bitmap card2; Bitmap card3;
-			Rectangle item1 = rectangles[0];
+			DrawingRectangle item1 = rectangles[0];
 
 			RECT reference; int width = Navigation.GetWidth(); int height = Navigation.GetHeight();
 
 			#region Get first card
 
-			if (Navigation.GetAspectRatio() == new Size(16, 9))
+			if (Navigation.GetAspectRatio() == new DrawingSize(16, 9))
 			{
-				reference = new RECT(new Rectangle(862, 80, 327, 560));
+				reference = new RECT(new DrawingRectangle(862, 80, 327, 560));
 
 				int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 				int top = (int)Math.Round(reference.Top / 720.0 * height, MidpointRounding.AwayFromZero);
@@ -202,9 +223,9 @@ namespace InventoryKamera
 
 				card1 = Navigation.CaptureRegion(new RECT(left, top, right, bottom));
 			}
-			else // if (Navigation.GetAspectRatio() == new Size(8, 5))
+			else // if (Navigation.GetAspectRatio() == new DrawingSize(8, 5))
 			{
-				reference = new RECT(new Rectangle(862, 80, 327, 640));
+				reference = new RECT(new DrawingRectangle(862, 80, 327, 640));
 
 				int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 				int top = (int)Math.Round(reference.Top / 800.0 * height, MidpointRounding.AwayFromZero);
@@ -226,13 +247,13 @@ namespace InventoryKamera
 				Navigation.Click();
 				Navigation.Wait(((int)Navigation.GetDelay()) - delayOffset);
 
-				Rectangle item2 = rectangles[1];
+				DrawingRectangle item2 = rectangles[1];
 				Navigation.SetCursor(item2.Center().X, item2.Center().Y);
 				Navigation.Click();
 				Navigation.Wait(((int)Navigation.GetDelay()) - delayOffset);
 
 				// Take image after second click
-				if (Navigation.GetAspectRatio() == new Size(16, 9))
+				if (Navigation.GetAspectRatio() == new DrawingSize(16, 9))
 				{
 					int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 					int top = (int)Math.Round(reference.Top / 720.0 * height, MidpointRounding.AwayFromZero);
@@ -251,13 +272,13 @@ namespace InventoryKamera
 					card2 = Navigation.CaptureRegion(new RECT(left, top, right, bottom));
 				}
 
-				Rectangle item3 = rectangles[2];
+				DrawingRectangle item3 = rectangles[2];
 				Navigation.SetCursor(item3.Center().X, item3.Center().Y);
 				Navigation.Click();
 				Navigation.Wait(((int)Navigation.GetDelay()) - delayOffset);
 
 				// Take image after third click
-				if (Navigation.GetAspectRatio() == new Size(16, 9))
+				if (Navigation.GetAspectRatio() == new DrawingSize(16, 9))
 				{
 					int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 					int top = (int)Math.Round(reference.Top / 720.0 * height, MidpointRounding.AwayFromZero);
@@ -311,7 +332,7 @@ namespace InventoryKamera
 
         internal static Bitmap ResizeImage(System.Drawing.Image image, int width, int height)
 		{
-			var destRect = new Rectangle(0, 0, width, height);
+			var destRect = new DrawingRectangle(0, 0, width, height);
 			var destImage = new Bitmap(width, height);
 
 			destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
@@ -334,7 +355,7 @@ namespace InventoryKamera
 			return destImage;
 		}
 
-		internal static Bitmap ResizeImage(Bitmap image, Size tSize)
+		internal static Bitmap ResizeImage(Bitmap image, DrawingSize tSize)
 		{
 			int targetWidth = (int)Math.Round((double)image.Width * (tSize.Height / tSize.Width));
 			int targetHeight = (int)Math.Round((double)image.Height * (tSize.Height / tSize.Width));
@@ -351,7 +372,7 @@ namespace InventoryKamera
 			return ResizeImage(image, (int)( image.Width * factor ), (int)( image.Height * factor ));
 		}
 
-		internal static bool CompareColors(Color a, Color b)
+		internal static bool CompareColors(DrawingColor a, DrawingColor b)
 		{
 			int[] diff = new int[3];
 			diff[0] = Math.Abs(a.R - b.R);
@@ -361,7 +382,7 @@ namespace InventoryKamera
 			return diff[0] < 10 && diff[1] < 10 && diff[2] < 10;
 		}
 
-		internal static Color ClosestColor(List<Color> colors, Color color)
+		internal static DrawingColor ClosestColor(List<DrawingColor> colors, DrawingColor color)
 		{
 			var diff = colors.Select(x => new { Value = x, Diff = GetColorDifference(x, color) }).ToList();
 
@@ -373,13 +394,13 @@ namespace InventoryKamera
             return diff.Find(x=> x.Diff == diff.Min(y=>y.Diff)).Value;
 		}
 
-		internal static Color GetAverageColor(Bitmap bitmap)
+		internal static DrawingColor GetAverageColor(Bitmap bitmap)
 		{
 			long r = 0, g = 0, b = 0;
 			int count = 0;
-			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadOnly, bitmap.PixelFormat);
-			int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+			int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 			int stride = data.Stride;
 			byte[] pixels = new byte[stride * bitmap.Height];
 			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
@@ -396,11 +417,11 @@ namespace InventoryKamera
 						count++;
 					}
 				}
-			if (count == 0) return Color.Black;
-			return Color.FromArgb((int)(r / count), (int)(g / count), (int)(b / count));
+			if (count == 0) return DrawingColor.Black;
+			return DrawingColor.FromArgb((int)(r / count), (int)(g / count), (int)(b / count));
 		}
 
-        private static int GetColorDifference(Color c, Color c2)
+        private static int GetColorDifference(DrawingColor c, DrawingColor c2)
         {
 			int r = c.R - c2.R, g = c.G - c2.G, b = c.B - c2.B;
 			return r*r + g*g + b*b;
@@ -411,7 +432,7 @@ namespace InventoryKamera
 			Bitmap grayscale = new Bitmap(bitmap.Width, bitmap.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 			using (Graphics g = Graphics.FromImage(grayscale))
 			{
-				ColorMatrix cm = new ColorMatrix(new float[][]
+				System.Drawing.Imaging.ColorMatrix cm = new System.Drawing.Imaging.ColorMatrix(new float[][]
 				{
 					new float[] { 0.2125f, 0.2125f, 0.2125f, 0, 0 },
 					new float[] { 0.7154f, 0.7154f, 0.7154f, 0, 0 },
@@ -422,7 +443,7 @@ namespace InventoryKamera
 				using (ImageAttributes ia = new ImageAttributes())
 				{
 					ia.SetColorMatrix(cm);
-					g.DrawImage(bitmap, new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+					g.DrawImage(bitmap, new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 						0, 0, bitmap.Width, bitmap.Height, GraphicsUnit.Pixel, ia);
 				}
 			}
@@ -437,11 +458,11 @@ namespace InventoryKamera
 			for (int i = 0; i < 256; i++)
 				lut[i] = (byte)Math.Max(0, Math.Min(255, (int)(factor * (i - 128) + 128)));
 
-			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadWrite, bitmap.PixelFormat);
 			try
 			{
-				int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+				int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 				int stride = data.Stride;
 				byte[] pixels = new byte[stride * bitmap.Height];
 				Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
@@ -465,7 +486,7 @@ namespace InventoryKamera
 		{
 			Bitmap temp = bitmap;
 			Bitmap bmap = (Bitmap)temp.Clone();
-			Color c;
+			DrawingColor c;
 			byte[] redGamma = CreateGammaArray(red);
 			byte[] greenGamma = CreateGammaArray(green);
 			byte[] blueGamma = CreateGammaArray(blue);
@@ -474,7 +495,7 @@ namespace InventoryKamera
 				for (int j = 0; j < bmap.Height; j++)
 				{
 					c = bmap.GetPixel(i, j);
-					bmap.SetPixel(i, j, Color.FromArgb(redGamma[c.R],
+					bmap.SetPixel(i, j, DrawingColor.FromArgb(redGamma[c.R],
 					   greenGamma[c.G], blueGamma[c.B]));
 				}
 			}
@@ -494,11 +515,11 @@ namespace InventoryKamera
 
 		internal static void SetInvert(ref Bitmap bitmap)
 		{
-			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadWrite, bitmap.PixelFormat);
 			try
 			{
-				int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+				int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 				int stride = data.Stride;
 				byte[] pixels = new byte[stride * bitmap.Height];
 				Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
@@ -522,7 +543,7 @@ namespace InventoryKamera
 		{
 			Bitmap temp = bitmap;
 			Bitmap bmap = (Bitmap)temp.Clone();
-			Color c;
+			DrawingColor c;
 			for (int i = 0; i < bmap.Width; i++)
 			{
 				for (int j = 0; j < bmap.Height; j++)
@@ -558,7 +579,7 @@ namespace InventoryKamera
 					nPixelB = Math.Max(nPixelB, 0);
 					nPixelB = Math.Min(255, nPixelB);
 
-					bmap.SetPixel(i, j, Color.FromArgb((byte)nPixelR,
+					bmap.SetPixel(i, j, DrawingColor.FromArgb((byte)nPixelR,
 					  (byte)nPixelG, (byte)nPixelB));
 				}
 			}
@@ -572,7 +593,7 @@ namespace InventoryKamera
 
 			Bitmap temp = bitmap;
 			Bitmap bmap = (Bitmap)temp.Clone();
-			Color c;
+			DrawingColor c;
 			for (int i = 0; i < bmap.Width; i++)
 			{
 				for (int j = 0; j < bmap.Height; j++)
@@ -591,7 +612,7 @@ namespace InventoryKamera
 					if (cB < 0) cB = 1;
 					if (cB > 255) cB = 255;
 
-					bmap.SetPixel(i, j, Color.FromArgb((byte)cR, (byte)cG, (byte)cB));
+					bmap.SetPixel(i, j, DrawingColor.FromArgb((byte)cR, (byte)cG, (byte)cB));
 				}
 			}
 			bitmap = (Bitmap)bmap.Clone();
@@ -599,11 +620,11 @@ namespace InventoryKamera
 
 		internal static void SetThreshold(int threshold, ref Bitmap bitmap)
 		{
-			BitmapData data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadWrite, bitmap.PixelFormat);
 			try
 			{
-				int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+				int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 				int stride = data.Stride;
 				byte[] pixels = new byte[stride * bitmap.Height];
 				Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
@@ -627,11 +648,11 @@ namespace InventoryKamera
 
 		internal static void FilterColors(ref Bitmap bm, IntRange red, IntRange green, IntRange blue)
 		{
-			BitmapData data = bm.LockBits(new Rectangle(0, 0, bm.Width, bm.Height),
+			BitmapData data = bm.LockBits(new DrawingRectangle(0, 0, bm.Width, bm.Height),
 				ImageLockMode.ReadWrite, bm.PixelFormat);
 			try
 			{
-			int bytesPerPixel = Image.GetPixelFormatSize(bm.PixelFormat) / 8;
+			int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bm.PixelFormat) / 8;
 			int stride = data.Stride;
 			byte[] pixels = new byte[stride * bm.Height];
 			Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
@@ -676,8 +697,8 @@ namespace InventoryKamera
 			byte[] b1bytes = new byte[bytes];
 			byte[] b2bytes = new byte[bytes];
 
-			BitmapData bitmapData1 = bmp1.LockBits(new Rectangle(0, 0, bmp1.Width, bmp1.Height), ImageLockMode.ReadOnly, bmp1.PixelFormat);
-			BitmapData bitmapData2 = bmp2.LockBits(new Rectangle(0, 0, bmp2.Width, bmp2.Height), ImageLockMode.ReadOnly, bmp2.PixelFormat);
+			BitmapData bitmapData1 = bmp1.LockBits(new DrawingRectangle(0, 0, bmp1.Width, bmp1.Height), ImageLockMode.ReadOnly, bmp1.PixelFormat);
+			BitmapData bitmapData2 = bmp2.LockBits(new DrawingRectangle(0, 0, bmp2.Width, bmp2.Height), ImageLockMode.ReadOnly, bmp2.PixelFormat);
 
 			Marshal.Copy(bitmapData1.Scan0, b1bytes, 0, bytes);
 			Marshal.Copy(bitmapData2.Scan0, b2bytes, 0, bytes);
@@ -726,9 +747,9 @@ namespace InventoryKamera
 			using (Graphics g = Graphics.FromImage(src)) g.DrawImage(source, 0, 0);
 			Bitmap result = new Bitmap(source.Width, source.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
-			BitmapData srcData = src.LockBits(new Rectangle(0, 0, src.Width, src.Height),
+			BitmapData srcData = src.LockBits(new DrawingRectangle(0, 0, src.Width, src.Height),
 				ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-			BitmapData dstData = result.LockBits(new Rectangle(0, 0, result.Width, result.Height),
+			BitmapData dstData = result.LockBits(new DrawingRectangle(0, 0, result.Width, result.Height),
 				ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 			try
 			{
@@ -774,12 +795,12 @@ namespace InventoryKamera
 			return result;
 		}
 
-		internal static Bitmap CopyBitmap(Bitmap source, Rectangle region)
+		internal static Bitmap CopyBitmap(Bitmap source, DrawingRectangle region)
 		{
 			ClipToSource(source, ref region);
             return source.Clone(region, source.PixelFormat);
 
-			void ClipToSource(Bitmap s, ref Rectangle r)
+			void ClipToSource(Bitmap s, ref DrawingRectangle r)
 			{
 				if (r.X + r.Width > source.Width) { r.Width = s.Width - r.X; }
 				if (r.Y + r.Height > source.Height) { r.Height = s.Height - r.Y; }
@@ -787,6 +808,174 @@ namespace InventoryKamera
         }
 
 		#endregion Image Operations
+
+		#region ImageSharp Bridge
+
+		// Conversion helpers — keep allocation minimal by going through PNG streams.
+
+		internal static Bitmap ImageSharpToBitmap(Image<Rgba32> img)
+		{
+			using (var ms = new MemoryStream())
+			{
+				img.Save(ms, new PngEncoder());
+				ms.Position = 0;
+				return new Bitmap(ms);
+			}
+		}
+
+		internal static Image<Rgba32> BitmapToImageSharp(Bitmap bmp)
+		{
+			using (var ms = new MemoryStream())
+			{
+				bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+				ms.Position = 0;
+				return SixLabors.ImageSharp.Image.Load<Rgba32>(ms);
+			}
+		}
+
+		// Image<Rgba32> overloads — used by scraper code that has already been migrated to ImageSharp types.
+
+		internal static Image<Rgba32> ConvertToGrayscale(Image<Rgba32> image)
+		{
+			using (var bmp = ImageSharpToBitmap(image))
+			using (var result = ConvertToGrayscale(bmp))
+				return BitmapToImageSharp(result);
+		}
+
+		internal static void SetContrast(double contrast, ref Image<Rgba32> image)
+		{
+			var bmp = ImageSharpToBitmap(image);
+			try
+			{
+				SetContrast(contrast, ref bmp);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally { bmp.Dispose(); }
+		}
+
+		internal static void SetGamma(double red, double green, double blue, ref Image<Rgba32> image)
+		{
+			Bitmap original = ImageSharpToBitmap(image);
+			Bitmap bmp = original;
+			try
+			{
+				SetGamma(red, green, blue, ref bmp);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally
+			{
+				if (!ReferenceEquals(original, bmp)) original.Dispose();
+				bmp.Dispose();
+			}
+		}
+
+		internal static void SetInvert(ref Image<Rgba32> image)
+		{
+			var bmp = ImageSharpToBitmap(image);
+			try
+			{
+				SetInvert(ref bmp);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally { bmp.Dispose(); }
+		}
+
+		internal static void SetThreshold(int threshold, ref Image<Rgba32> image)
+		{
+			var bmp = ImageSharpToBitmap(image);
+			try
+			{
+				SetThreshold(threshold, ref bmp);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally { bmp.Dispose(); }
+		}
+
+		internal static void SetBrightness(int brightness, ref Image<Rgba32> image)
+		{
+			var bmp = ImageSharpToBitmap(image);
+			try
+			{
+				SetBrightness(brightness, ref bmp);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally { bmp.Dispose(); }
+		}
+
+		internal static void FilterColors(ref Image<Rgba32> image, IntRange red, IntRange green, IntRange blue)
+		{
+			var bmp = ImageSharpToBitmap(image);
+			try
+			{
+				FilterColors(ref bmp, red, green, blue);
+				image = BitmapToImageSharp(bmp);
+			}
+			finally { bmp.Dispose(); }
+		}
+
+		internal static Rgba32 GetAverageColor(Image<Rgba32> image)
+		{
+			using (var bmp = ImageSharpToBitmap(image))
+			{
+				var c = GetAverageColor(bmp);
+				return new Rgba32(c.R, c.G, c.B, c.A);
+			}
+		}
+
+		internal static Rgba32 ClosestColor(List<Rgba32> colors, Rgba32 target)
+		{
+			var gdiColors = colors.Select(c => DrawingColor.FromArgb(c.A, c.R, c.G, c.B)).ToList();
+			var gdiTarget = DrawingColor.FromArgb(target.A, target.R, target.G, target.B);
+			var result = ClosestColor(gdiColors, gdiTarget);
+			return new Rgba32(result.R, result.G, result.B, result.A);
+		}
+
+		internal static bool CompareColors(Rgba32 a, Rgba32 b) =>
+			CompareColors(DrawingColor.FromArgb(a.A, a.R, a.G, a.B), DrawingColor.FromArgb(b.A, b.R, b.G, b.B));
+
+		internal static Image<Rgba32> CopyBitmap(Image<Rgba32> source, SixLabors.ImageSharp.Rectangle region)
+		{
+			using (var bmp = ImageSharpToBitmap(source))
+			using (var cropped = CopyBitmap(bmp, new DrawingRectangle(region.X, region.Y, region.Width, region.Height)))
+				return BitmapToImageSharp(cropped);
+		}
+
+		internal static Image<Rgba32> ResizeImage(Image<Rgba32> image, int width, int height)
+		{
+			using (var bmp = ImageSharpToBitmap(image))
+			using (var result = ResizeImage(bmp, width, height))
+				return BitmapToImageSharp(result);
+		}
+
+		internal static Image<Rgba32> ScaleImage(Image<Rgba32> image, double factor)
+		{
+			using (var bmp = ImageSharpToBitmap(image))
+			using (var result = ScaleImage(bmp, factor))
+				return BitmapToImageSharp(result);
+		}
+
+		internal static Image<Rgba32> KirschEdgeDetect(Image<Rgba32> source)
+		{
+			using (var bmp = ImageSharpToBitmap(source))
+			using (var result = KirschEdgeDetect(bmp))
+				return BitmapToImageSharp(result);
+		}
+
+		internal static Image<Rgba32> PreProcessImage(Image<Rgba32> image)
+		{
+			using (var bmp = ImageSharpToBitmap(image))
+			using (var result = PreProcessImage(bmp))
+				return BitmapToImageSharp(result);
+		}
+
+		internal static bool CompareBitmapsFast(Image<Rgba32> img1, Image<Rgba32> img2)
+		{
+			using (var b1 = ImageSharpToBitmap(img1))
+			using (var b2 = ImageSharpToBitmap(img2))
+				return CompareBitmapsFast(b1, b2);
+		}
+
+		#endregion ImageSharp Bridge
 
 		internal static string ConvertToGood(this string text)
 		{

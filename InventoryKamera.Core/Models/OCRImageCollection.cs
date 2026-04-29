@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace InventoryKamera
 {
 	public class OCRImageCollection
 	{
-		public List<Bitmap> Bitmaps { get; set; }
+		public List<Image<Rgba32>> Bitmaps { get; set; }
 		public string Type { get; set; }
 		public int Id { get; private set; }
 
-		public OCRImageCollection(List<Bitmap> _bm, string _type, int _id)
+		public OCRImageCollection(List<Image<Rgba32>> _bm, string _type, int _id)
 		{
 			Bitmaps = _bm;
 			Type = _type;

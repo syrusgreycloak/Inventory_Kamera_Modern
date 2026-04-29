@@ -6,6 +6,10 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using DrawingSize = System.Drawing.Size;
+using ISSize     = SixLabors.ImageSharp.Size;
 
 namespace InventoryKamera
 {
@@ -204,7 +208,7 @@ namespace InventoryKamera
 		{
 			var xReference = 1280.0;
 			var yReference = 720.0;
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 			{
 				yReference = 800.0;
 			}
@@ -215,12 +219,12 @@ namespace InventoryKamera
 				Right:  (int)(460 / xReference * _screenCapture.GetWidth()),
 				Bottom: (int)(60  / yReference * _screenCapture.GetHeight()));
 
-			Bitmap nameBitmap = _screenCapture.CaptureRegion(region);
+			Image<Rgba32> nameBitmap = _screenCapture.CaptureRegion(region);
 
 			//Image Operations
 			nameBitmap = _imageProcessor.SetGamma(nameBitmap, 0.2, 0.2, 0.2);
 			nameBitmap = _imageProcessor.SetInvert(nameBitmap);
-			Bitmap n = _imageProcessor.SetGrayscale(nameBitmap);
+			Image<Rgba32> n = _imageProcessor.SetGrayscale(nameBitmap);
 
 			_userInterface.SetNavigation_Image(nameBitmap);
 
@@ -250,7 +254,7 @@ namespace InventoryKamera
 
 			var xRef = 1280.0;
 			var yRef = 720.0;
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 			{
 				yRef = 800.0;
 			}
@@ -259,7 +263,7 @@ namespace InventoryKamera
 			// Uses same left coordinate as Level region, positioned higher and ~66% wider
 			// Name sits just above the star row, which is ~20-30px above Level (Top: 135)
 			// Tightened to 85-120 to capture descenders without hitting star tops
-			Rectangle nameRegion = new RECT(
+			RECT nameRegion = new RECT(
 				Left:   (int)( 960  / xRef * _screenCapture.GetWidth() ),
 				Top:    (int)( 85   / yRef * _screenCapture.GetHeight() ),
 				Right:  (int)( 1234 / xRef * _screenCapture.GetWidth() ),
@@ -268,9 +272,9 @@ namespace InventoryKamera
 			do
 			{
 				_inputSimulator.SystemWait(ScanDelay.Fast);
-				using (Bitmap bm = _screenCapture.CaptureRegion(nameRegion))
+				using (Image<Rgba32> bm = _screenCapture.CaptureRegion(nameRegion))
 				{
-					Bitmap n = _imageProcessor.SetGrayscale(bm);
+					Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 					// Increase contrast to make white text stand out from lighter backgrounds (fog effects)
 					var contrasted = _imageProcessor.SetContrast(n, 60);
 					n.Dispose();
@@ -386,15 +390,15 @@ namespace InventoryKamera
 		{
 			// Use original left panel region that captures "element / name" format
 			// This region was working reliably for element detection
-			Rectangle elementRegion = new RECT(
+			RECT elementRegion = new RECT(
 				Left:   (int)( 85  / 1280.0 * _screenCapture.GetWidth() ),
 				Top:    (int)( 10  / 720.0 * _screenCapture.GetHeight() ),
 				Right:  (int)( 305 / 1280.0 * _screenCapture.GetWidth() ),
 				Bottom: (int)( 55  / 720.0 * _screenCapture.GetHeight() ));
 
-			using (Bitmap bm = _screenCapture.CaptureRegion(elementRegion))
+			using (Image<Rgba32> bm = _screenCapture.CaptureRegion(elementRegion))
 			{
-				Bitmap n = _imageProcessor.SetGrayscale(bm);
+				Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 				var thresholded = _imageProcessor.SetThreshold(n, 110);
 				n.Dispose();
 				n = thresholded;
@@ -442,12 +446,12 @@ namespace InventoryKamera
 
             var xRef = 1280.0;
 			var yRef = 720.0;
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 			{
 				yRef = 800.0;
 			}
 
-			Rectangle region =  new RECT(
+			RECT region =  new RECT(
 				Left:   (int)( 960  / xRef * _screenCapture.GetWidth() ),
 				Top:    (int)( 135  / yRef * _screenCapture.GetHeight() ),
 				Right:  (int)( 1125 / xRef * _screenCapture.GetWidth() ),
@@ -455,12 +459,12 @@ namespace InventoryKamera
 
 			do
 			{
-				Bitmap bm = _screenCapture.CaptureRegion(region);
+				Image<Rgba32> bm = _screenCapture.CaptureRegion(region);
 
 				var resized = _imageProcessor.ResizeImage(bm, bm.Width * 2, bm.Height * 2);
 				bm.Dispose();
 				bm = resized;
-				Bitmap n = _imageProcessor.SetGrayscale(bm);
+				Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 				var inverted = _imageProcessor.SetInvert(n);
 				n.Dispose();
 				n = inverted;
@@ -505,12 +509,12 @@ namespace InventoryKamera
 			double yReference = 720.0;
 			int constellation;
 
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 			{
 				yReference = 800.0;
 			}
 
-			Rectangle constActivate =  new RECT(
+			RECT constActivate =  new RECT(
 				Left:   (int)( 70 / 1280.0 * _screenCapture.GetWidth() ),
 				Top:    (int)( 665 / 720.0 * _screenCapture.GetHeight() ),
 				Right:  (int)( 100 / 1280.0 * _screenCapture.GetWidth() ),
@@ -521,7 +525,7 @@ namespace InventoryKamera
 				// Select Constellation
 				int yOffset = (int)( ( 180 + ( constellation * 75 ) ) / yReference * _screenCapture.GetHeight() );
 
-				if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+				if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 				{
 					yOffset = (int)( ( 225 + ( constellation * 75 ) ) / yReference * _screenCapture.GetHeight() );
 				}
@@ -540,11 +544,11 @@ namespace InventoryKamera
 				}
 
 				// Grab Color
-				using (Bitmap region = _screenCapture.CaptureRegion(constActivate))
+				using (Image<Rgba32> region = _screenCapture.CaptureRegion(constActivate))
 				{
 					// Check a small region next to the text "Activate"
 					// for a mostly white backround
-					Color statistics = _imageProcessor.GetAverageColor(region);
+					Rgba32 statistics = _imageProcessor.GetAverageColor(region);
 					Logger.Debug("Constellation {0} color check - R: {1:F1}, G: {2:F1}, B: {3:F1}",
 						constellation + 1, statistics.R, statistics.G, statistics.B);
 
@@ -583,13 +587,13 @@ namespace InventoryKamera
 			var xRef = 1280.0;
 			var yRef = 720.0;
 
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5)) yRef = 800.0;
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5)) yRef = 800.0;
 
-			Rectangle region =  new Rectangle(
-				x:		(int)((_screenCapture.IsNormal ? 0.0003 : 0) * _screenCapture.GetWidth() ),
-				y:		(int)((_screenCapture.IsNormal ? 0.1278 : 0) * _screenCapture.GetHeight() ),
-				width:	(int)((_screenCapture.IsNormal ? 0.2913 : 0) * _screenCapture.GetWidth() ),
-				height:	(int)((_screenCapture.IsNormal ? 0.0711 : 0) * _screenCapture.GetHeight() ));
+			int rx = (int)((_screenCapture.IsNormal ? 0.0003 : 0) * _screenCapture.GetWidth());
+			int ry = (int)((_screenCapture.IsNormal ? 0.1278 : 0) * _screenCapture.GetHeight());
+			int rw = (int)((_screenCapture.IsNormal ? 0.2913 : 0) * _screenCapture.GetWidth());
+			int rh = (int)((_screenCapture.IsNormal ? 0.0711 : 0) * _screenCapture.GetHeight());
+			RECT region = new RECT(Left: rx, Top: ry, Right: rx + rw, Bottom: ry + rh);
 
 			for (int i = 0; i < 3; i++)
 			{
@@ -616,11 +620,11 @@ namespace InventoryKamera
 
                 while (talents[talent] < 1 || talents[talent] > 15)
 				{
-					Bitmap talentLevel = _screenCapture.CaptureRegion(region);
+					Image<Rgba32> talentLevel = _screenCapture.CaptureRegion(region);
 
 					talentLevel = _imageProcessor.ResizeImage(talentLevel, talentLevel.Width * 2, talentLevel.Height * 2);
 
-					Bitmap n = _imageProcessor.SetGrayscale(talentLevel);
+					Image<Rgba32> n = _imageProcessor.SetGrayscale(talentLevel);
 					n = _imageProcessor.SetContrast(n, 60);
 					n = _imageProcessor.SetInvert(n);
 

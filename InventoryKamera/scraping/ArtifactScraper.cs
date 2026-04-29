@@ -7,6 +7,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static InventoryKamera.Artifact;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using ISRect        = SixLabors.ImageSharp.Rectangle;
+using DrawingColor  = System.Drawing.Color;
+using DrawingSize   = System.Drawing.Size;
 
 namespace InventoryKamera
 {
@@ -98,7 +103,7 @@ namespace InventoryKamera
 				// items are scrolled to, offset the index of rectangle to start clicking from
 				for (int i = cardsRemaining < fullPage ? ( rows - ( totalRows - rowsQueued ) ) * cols : 0; i < rectangles.Count; i++)
 				{
-					Rectangle item = rectangles[i];
+					ISRect item = rectangles[i];
 					_inputSimulator.SetCursor(item.Center().X, item.Center().Y);
 					_inputSimulator.Click();
 					_inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
@@ -176,7 +181,7 @@ namespace InventoryKamera
 			Logger.Debug("  Capturing item card...");
 			var card = GetItemCard();
 			Logger.Debug("  Item card captured successfully");
-            Bitmap name, gearSlot, mainStat, subStats, level, equipped, locked;
+            Image<Rgba32> name, gearSlot, mainStat, subStats, level, equipped, locked;
 
 			Logger.Debug("  Extracting name bitmap...");
 			name = GetItemNameBitmap(card);
@@ -205,7 +210,7 @@ namespace InventoryKamera
 			//Navigation.DisplayBitmap(level);
 
 			// Separate to all pieces of artifact and add to pics
-			List<Bitmap> artifactImages = new List<Bitmap>
+			List<Image<Rgba32>> artifactImages = new List<Image<Rgba32>>
 			{
 				name, //0
 				gearSlot,
@@ -213,7 +218,7 @@ namespace InventoryKamera
 				level,
 				subStats,
 				equipped, //5
-				locked, 
+				locked,
 				card
 			};
 
@@ -234,48 +239,49 @@ namespace InventoryKamera
 			Logger.Debug("  Artifact #{0} enqueued successfully", id);
         }
 
-        private Bitmap GetSubstatsBitmap(Bitmap card)
+        private Image<Rgba32> GetSubstatsBitmap(Image<Rgba32> card)
         {
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
 			var r = _scanProfile.ActiveProfile.Artifacts.Substats;
 
-            return _imageProcessor.Crop(card, new Rectangle(
+            return _imageProcessor.Crop(card, new ISRect(
 				x:(int)(card.Width * r.X),
 				y:(int)(card.Height * (r.Y + yShift)),
 				width:(int)(card.Width * r.W),
 				height:(int)(card.Height * r.H)));
         }
 
-		private bool IsSanctified(Bitmap card)
+		private bool IsSanctified(Image<Rgba32> card)
 		{
 			// Check for purple sanctifying indicator bar
 			// The purple color varies in brightness, so check if it's in the purple range
-			var sanctifyBitmap = GetSanctifyBitmap(card);
-			Color pixelColor = sanctifyBitmap.GetPixel(sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2);
+			using (var sanctifyBitmap = GetSanctifyBitmap(card))
+			{
+				Rgba32 pixelColor = sanctifyBitmap[sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2];
 
-			// Purple range: Blue should be highest, Red should be moderate, Green lowest
-			// Check if this is a purple-ish color (Blue > Red > Green pattern)
-			bool isPurple = pixelColor.B > pixelColor.R && pixelColor.R >= pixelColor.G &&
-			                pixelColor.B > 150; // Blue channel must be reasonably high
+				// Purple range: Blue should be highest, Red should be moderate, Green lowest
+				// Check if this is a purple-ish color (Blue > Red > Green pattern)
+				bool isPurple = pixelColor.B > pixelColor.R && pixelColor.R >= pixelColor.G &&
+				                pixelColor.B > 150; // Blue channel must be reasonably high
 
-			Logger.Debug("    IsSanctified check: got RGB({0},{1},{2}), isPurple={3}",
-				pixelColor.R, pixelColor.G, pixelColor.B, isPurple);
-			sanctifyBitmap.Dispose();
-			return isPurple;
+				Logger.Debug("    IsSanctified check: got RGB({0},{1},{2}), isPurple={3}",
+					pixelColor.R, pixelColor.G, pixelColor.B, isPurple);
+				return isPurple;
+			}
 		}
 
-		private Bitmap GetSanctifyBitmap(Bitmap card)
+		private Image<Rgba32> GetSanctifyBitmap(Image<Rgba32> card)
 		{
-			return _imageProcessor.Crop(card, new Rectangle(
+			return _imageProcessor.Crop(card, new ISRect(
 				x: (int)(card.Width * 0.40),
 				y: (int)(card.Height * (_screenCapture.IsNormal ? 0.3333 : 0.2941)),
 				width: (int)(card.Width * 0.20),
 				height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0526 : 0.0470))));
 		}
 
-		private Bitmap GetArtifactLockedBitmap(Bitmap card)
+		private Image<Rgba32> GetArtifactLockedBitmap(Image<Rgba32> card)
 		{
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
@@ -283,48 +289,48 @@ namespace InventoryKamera
 			var r = _scanProfile.ActiveProfile.Artifacts.Lock;
 
 			return _imageProcessor.Crop(card,
-				new Rectangle(
+				new ISRect(
 					x: (int)(card.Width * r.X),
 					y: (int)(card.Height * (r.Y + yShift)),
 					width: (int)(card.Width * r.W),
 					height: (int)(card.Height * r.H)));
 		}
 
-        private Bitmap GetMainStatBitmap(Bitmap card)
+        private Image<Rgba32> GetMainStatBitmap(Image<Rgba32> card)
         {
 			var r = _scanProfile.ActiveProfile.Artifacts.MainStat;
-			return _imageProcessor.Crop(card, new Rectangle(
+			return _imageProcessor.Crop(card, new ISRect(
 				x: (int)(card.Width * r.X),
 				y: (int)(card.Height * r.Y),
 				width: (int)(card.Width * r.W),
 				height: (int)(card.Height * r.H)));
         }
 
-        private Bitmap GetLevelBitmap(Bitmap card)
+        private Image<Rgba32> GetLevelBitmap(Image<Rgba32> card)
         {
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0465;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
 			var r = _scanProfile.ActiveProfile.Artifacts.Level;
 
-            return _imageProcessor.Crop(card, new Rectangle(
+            return _imageProcessor.Crop(card, new ISRect(
                 x: (int)(card.Width * r.X),
                 y: (int)(card.Height * (r.Y + yShift)),
                 width: (int)(card.Width * r.W),
                 height: (int)(card.Height * r.H)));
         }
 
-        private Bitmap GetGearSlotBitmap(Bitmap card)
+        private Image<Rgba32> GetGearSlotBitmap(Image<Rgba32> card)
         {
 			var r = _scanProfile.ActiveProfile.Artifacts.GearSlot;
-            return _imageProcessor.Crop(card, new Rectangle(
+            return _imageProcessor.Crop(card, new ISRect(
                 x: (int)(card.Width * r.X),
                 y: (int)(card.Height * r.Y),
                 width: (int)(card.Width * r.W),
                 height: (int)(card.Height * r.H)));
         }
 
-        public async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
+        public async Task<Artifact> CatalogueFromBitmapsAsync(List<Image<Rgba32>> bm, int id)
 		{
 			Logger.Debug("CatalogueFromBitmapsAsync starting for artifact #{0}", id);
 			// Init Variables
@@ -345,13 +351,13 @@ namespace InventoryKamera
 				rarity = GetRarity(bm[a_name]);
 
 				// Check for equipped color
-				Color equippedColor = Color.FromArgb(255, 255, 231, 187);
-				Color equippedStatus = bm[a_equippedCharacter].GetPixel(5, 5);
+				Rgba32 equippedColor = new Rgba32(255, 231, 187, 255);
+				Rgba32 equippedStatus = bm[a_equippedCharacter][5, 5];
 				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
 
 				// Check for lock color
-				Color lockedColor = Color.FromArgb(255, 70, 80, 100); // Dark area around red lock
-				Color lockStatus = bm[a_lock].GetPixel(10, 10);
+				Rgba32 lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
+				Rgba32 lockStatus = bm[a_lock][10, 10];
 				_lock = GenshinProcesor.CompareColors(lockedColor, lockStatus);
 
 				// Improved Scanning using multi threading
@@ -383,34 +389,34 @@ namespace InventoryKamera
 			return new Artifact(setName, rarity, level, gearSlot, mainStat, subStats, equippedCharacter, id, _lock);
 		}
 
-		private static int GetRarity(Bitmap bm)
+		private static int GetRarity(Image<Rgba32> bm)
 		{
 			var averageColor = GenshinProcesor.GetAverageColor(bm);
 
-			Color fiveStar = Color.FromArgb(255, 188, 105, 50);
-			Color fourStar = Color.FromArgb(255, 161, 86, 224);
-			Color threeStar = Color.FromArgb(255, 81, 127, 203);
-			Color twoStar = Color.FromArgb(255, 42, 143, 114);
-			Color oneStar = Color.FromArgb(255, 114, 119, 138);
+			Rgba32 fiveStar  = new Rgba32(188, 105, 50, 255);
+			Rgba32 fourStar  = new Rgba32(161, 86, 224, 255);
+			Rgba32 threeStar = new Rgba32(81, 127, 203, 255);
+			Rgba32 twoStar   = new Rgba32(42, 143, 114, 255);
+			Rgba32 oneStar   = new Rgba32(114, 119, 138, 255);
+			Rgba32 black     = new Rgba32(0, 0, 0, 255);
 
-			var colors = new List<Color> { Color.Black, oneStar, twoStar, threeStar, fourStar, fiveStar };
+			var colors = new List<Rgba32> { black, oneStar, twoStar, threeStar, fourStar, fiveStar };
 
 			var c = GenshinProcesor.ClosestColor(colors, averageColor);
 
 			return colors.IndexOf(c);
 		}
 
-		public bool IsEnhancementMaterial(Bitmap card)
+		public bool IsEnhancementMaterial(Image<Rgba32> card)
 		{
-			RECT reference = Navigation.GetAspectRatio() == new Size(16, 9) ?
-				new RECT(new Rectangle(862, 80, 327, 560)) : (RECT)new Rectangle(862, 80, 328, 640);
-			Bitmap nameBitmap = card.Clone(new RECT(
-				Left: 0,
-				Top: 0,
-				Right: card.Width,
-				Bottom: (int)( 38.0 / reference.Height * card.Height )), card.PixelFormat);
-			string material = ScanEnhancementMaterialName(nameBitmap);
-			return !string.IsNullOrWhiteSpace(material) && GenshinProcesor.enhancementMaterials.Contains(material.ToLower());
+			RECT reference = Navigation.GetAspectRatio() == new DrawingSize(16, 9) ?
+				new RECT(new System.Drawing.Rectangle(862, 80, 327, 560)) : (RECT)new System.Drawing.Rectangle(862, 80, 328, 640);
+			var nameRegion = new ISRect(0, 0, card.Width, (int)(38.0 / reference.Height * card.Height));
+			using (var nameBitmap = GenshinProcesor.ImageSharpToBitmap(GenshinProcesor.CopyBitmap(card, nameRegion)))
+			{
+				string material = ScanEnhancementMaterialName(nameBitmap);
+				return !string.IsNullOrWhiteSpace(material) && GenshinProcesor.enhancementMaterials.Contains(material.ToLower());
+			}
 		}
 
 		private static string ScanEnhancementMaterialName(Bitmap bm)
@@ -429,21 +435,24 @@ namespace InventoryKamera
 
 		#region Task Methods
 
-		private static string ScanArtifactGearSlot(Bitmap bm)
+		private static string ScanArtifactGearSlot(Image<Rgba32> img)
 		{
-			// Process Img
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetContrast(80.0, ref n);
-			GenshinProcesor.SetInvert(ref n);
+			using (var bm = GenshinProcesor.ImageSharpToBitmap(img))
+			{
+				// Process Img
+				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+				GenshinProcesor.SetContrast(80.0, ref n);
+				GenshinProcesor.SetInvert(ref n);
 
-			string gearSlot = GenshinProcesor.AnalyzeText(n).Trim().ToLower();
-			gearSlot = Regex.Replace(gearSlot, @"[\W_]", string.Empty);
-			gearSlot = GenshinProcesor.FindClosestGearSlot(gearSlot);
-			n.Dispose();
-			return gearSlot;
+				string gearSlot = GenshinProcesor.AnalyzeText(n).Trim().ToLower();
+				gearSlot = Regex.Replace(gearSlot, @"[\W_]", string.Empty);
+				gearSlot = GenshinProcesor.FindClosestGearSlot(gearSlot);
+				n.Dispose();
+				return gearSlot;
+			}
 		}
 
-		private static string ScanArtifactMainStat(Bitmap bm, string gearSlot)
+		private static string ScanArtifactMainStat(Image<Rgba32> img, string gearSlot)
 		{
 			switch (gearSlot)
 			{
@@ -457,52 +466,57 @@ namespace InventoryKamera
 
 				// Otherwise it's either sands, goblet or circlet.
 				default:
-					Bitmap copy = (Bitmap)bm.Clone();
-					GenshinProcesor.SetContrast(100.0, ref copy);
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(copy);
-					
-					GenshinProcesor.SetThreshold(135, ref n);
-					GenshinProcesor.SetInvert(ref n);
-
-					// Get Main Stat
-					string mainStat = GenshinProcesor.AnalyzeText(n).ToLower().Trim();
-					
-
-					// Remove anything not a-z as well as removes spaces/underscores
-					mainStat = Regex.Replace(mainStat, @"[\W_0-9]", string.Empty);
-
-					mainStat = GenshinProcesor.FindClosestStat(mainStat, 80);
-
-					if (mainStat == "def" || mainStat == "atk" || mainStat == "hp")
+					using (var bm = GenshinProcesor.ImageSharpToBitmap(img))
 					{
-						mainStat += "_";
+						Bitmap copy = (Bitmap)bm.Clone();
+						GenshinProcesor.SetContrast(100.0, ref copy);
+						Bitmap n = GenshinProcesor.ConvertToGrayscale(copy);
+
+						GenshinProcesor.SetThreshold(135, ref n);
+						GenshinProcesor.SetInvert(ref n);
+
+						// Get Main Stat
+						string mainStat = GenshinProcesor.AnalyzeText(n).ToLower().Trim();
+
+						// Remove anything not a-z as well as removes spaces/underscores
+						mainStat = Regex.Replace(mainStat, @"[\W_0-9]", string.Empty);
+
+						mainStat = GenshinProcesor.FindClosestStat(mainStat, 80);
+
+						if (mainStat == "def" || mainStat == "atk" || mainStat == "hp")
+						{
+							mainStat += "_";
+						}
+						n.Dispose();
+						copy.Dispose();
+						return mainStat;
 					}
-					n.Dispose();
-					copy.Dispose();
-					return mainStat;
 			}
 		}
 
-		private static int ScanArtifactLevel(Bitmap bm)
+		private static int ScanArtifactLevel(Image<Rgba32> img)
 		{
-			// Process Img
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetContrast(80.0, ref n);
-			GenshinProcesor.SetInvert(ref n);
+			using (var bm = GenshinProcesor.ImageSharpToBitmap(img))
+			{
+				// Process Img
+				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+				GenshinProcesor.SetContrast(80.0, ref n);
+				GenshinProcesor.SetInvert(ref n);
 
-			// numbersOnly = true => seems to interpret the '+' as a '4'
-			string text = GenshinProcesor.AnalyzeText(n, TesseractOCR.Enums.PageSegMode.SingleWord).Trim().ToLower();
-			n.Dispose();
+				// numbersOnly = true => seems to interpret the '+' as a '4'
+				string text = GenshinProcesor.AnalyzeText(n, TesseractOCR.Enums.PageSegMode.SingleWord).Trim().ToLower();
+				n.Dispose();
 
-			// Get rid of all non digits
-			text = Regex.Replace(text, @"[\D]", string.Empty);
+				// Get rid of all non digits
+				text = Regex.Replace(text, @"[\D]", string.Empty);
 
-			return int.TryParse(text, out int level) ? level : -1;
+				return int.TryParse(text, out int level) ? level : -1;
+			}
 		}
 
-		private static List<SubStat> ScanArtifactSubStats(Bitmap artifactImage)
+		private static List<SubStat> ScanArtifactSubStats(Image<Rgba32> artifactImage)
         {
-            Bitmap bm = (Bitmap)artifactImage.Clone();
+            Bitmap bm = GenshinProcesor.ImageSharpToBitmap(artifactImage);
 			List<string> lines = new List<string>();
 			List<SubStat> substats = new List<SubStat>();
 			string text;
@@ -567,53 +581,60 @@ namespace InventoryKamera
             return substats;
         }
 
-        private static string ScanArtifactEquippedCharacter(Bitmap bm)
+        private static string ScanArtifactEquippedCharacter(Image<Rgba32> img)
 		{
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-			GenshinProcesor.SetContrast(60.0, ref n);
-
-			string equippedCharacter = GenshinProcesor.AnalyzeText(n).ToLower();
-			n.Dispose();
-
-			if (equippedCharacter != "")
+			using (var bm = GenshinProcesor.ImageSharpToBitmap(img))
 			{
-				if (equippedCharacter.Contains("equipped") && equippedCharacter.Contains(":"))
-				{
-					equippedCharacter = Regex.Replace(equippedCharacter.Split(':')[1], @"[\W]", string.Empty);
-					equippedCharacter = GenshinProcesor.FindClosestCharacterName(equippedCharacter);
+				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+				GenshinProcesor.SetContrast(60.0, ref n);
 
-					return equippedCharacter;
+				string equippedCharacter = GenshinProcesor.AnalyzeText(n).ToLower();
+				n.Dispose();
+
+				if (equippedCharacter != "")
+				{
+					if (equippedCharacter.Contains("equipped") && equippedCharacter.Contains(":"))
+					{
+						equippedCharacter = Regex.Replace(equippedCharacter.Split(':')[1], @"[\W]", string.Empty);
+						equippedCharacter = GenshinProcesor.FindClosestCharacterName(equippedCharacter);
+
+						return equippedCharacter;
+					}
 				}
+				// artifact has no equipped character
+				return null;
 			}
-			// artifact has no equipped character
-			return null;
 		}
 
-		private static string ScanArtifactSet(Bitmap itemName)
+		private static string ScanArtifactSet(Image<Rgba32> img)
         {
-            GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref itemName);
-            Bitmap grayscale = GenshinProcesor.ConvertToGrayscale(itemName);
-            itemName.Dispose();
-            GenshinProcesor.SetInvert(ref grayscale);
-
-            // Analyze
-            using (Bitmap padded = new Bitmap((int)(grayscale.Width + grayscale.Width * .1), grayscale.Height + (int)(grayscale.Height * .5)))
+            using (var itemName = GenshinProcesor.ImageSharpToBitmap(img))
             {
-                using (Graphics g = Graphics.FromImage(padded))
+                Bitmap mutableName = (Bitmap)itemName.Clone();
+                GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref mutableName);
+                Bitmap grayscale = GenshinProcesor.ConvertToGrayscale(mutableName);
+                mutableName.Dispose();
+                GenshinProcesor.SetInvert(ref grayscale);
+
+                // Analyze
+                using (Bitmap padded = new Bitmap((int)(grayscale.Width + grayscale.Width * .1), grayscale.Height + (int)(grayscale.Height * .5)))
                 {
-                    g.Clear(Color.White);
-                    g.DrawImage(grayscale, (padded.Width - grayscale.Width) / 2, (padded.Height - grayscale.Height) / 2);
+                    using (Graphics g = Graphics.FromImage(padded))
+                    {
+                        g.Clear(DrawingColor.White);
+                        g.DrawImage(grayscale, (padded.Width - grayscale.Width) / 2, (padded.Height - grayscale.Height) / 2);
 
-                    var scannedText = GenshinProcesor.AnalyzeText(grayscale, TesseractOCR.Enums.PageSegMode.Auto).ToLower().Replace("\n", " ");
-					Logger.Debug("Raw OCR text for artifact set name: '{0}'", scannedText);
-                    string text = Regex.Replace(scannedText, @"[\W]", string.Empty);
-					Logger.Debug("Cleaned text for artifact set lookup: '{0}'", text);
-                    text = GenshinProcesor.FindClosestArtifactSetFromArtifactName(text);
-					Logger.Debug("Artifact set match result: '{0}'", text ?? "(null)");
+                        var scannedText = GenshinProcesor.AnalyzeText(grayscale, TesseractOCR.Enums.PageSegMode.Auto).ToLower().Replace("\n", " ");
+                        Logger.Debug("Raw OCR text for artifact set name: '{0}'", scannedText);
+                        string text = Regex.Replace(scannedText, @"[\W]", string.Empty);
+                        Logger.Debug("Cleaned text for artifact set lookup: '{0}'", text);
+                        text = GenshinProcesor.FindClosestArtifactSetFromArtifactName(text);
+                        Logger.Debug("Artifact set match result: '{0}'", text ?? "(null)");
 
-					grayscale.Dispose();
+                        grayscale.Dispose();
 
-					return text;
+                        return text;
+                    }
                 }
             }
         }

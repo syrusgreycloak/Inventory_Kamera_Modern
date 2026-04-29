@@ -1,12 +1,15 @@
-﻿using InventoryKamera.Configuration;
+using InventoryKamera.Configuration;
 using NLog;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using ISRect = SixLabors.ImageSharp.Rectangle;
+using ISSize = SixLabors.ImageSharp.Size;
 
 namespace InventoryKamera
 {
@@ -59,7 +62,7 @@ namespace InventoryKamera
                 // items are scrolled to, offset the index of rectangle to start clicking from
                 for (int i = cardsRemaining < fullPage ? (rows - (totalRows - rowsQueued)) * cols : 0; i < rectangles.Count; i++)
                 {
-                    Rectangle item = rectangles[i];
+                    ISRect item = rectangles[i];
                     _inputSimulator.SetCursor(item.Center().X, item.Center().Y + offset);
                     _inputSimulator.Click();
                     _inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
@@ -83,7 +86,7 @@ namespace InventoryKamera
                 // only scroll a few rows
                 if (totalRows - rowsQueued <= rows)
                 {
-                    if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+                    if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
                     {
                         offset = 35; // Lazy fix
                     }
@@ -173,21 +176,15 @@ namespace InventoryKamera
         {
 			var card = GetItemCard();
 
-            Bitmap name, level, refinement, equipped, locked;
+            Image<Rgba32> name, level, refinement, equipped, locked;
             name = GetItemNameBitmap(card);
             locked = GetLockedBitmap(card);
             equipped = GetEquippedBitmap(card);
             level = GetLevelBitmap(card);
             refinement = GetRefinementBitmap(card);
 
-            //Navigation.DisplayBitmap(name);
-            //Navigation.DisplayBitmap(locked);
-            //Navigation.DisplayBitmap(equipped);
-            //Navigation.DisplayBitmap(level);
-            //Navigation.DisplayBitmap(refinement);
-
             // Separate to all pieces of card
-            List<Bitmap> weaponImages = new List<Bitmap>
+            List<Image<Rgba32>> weaponImages = new List<Image<Rgba32>>
             {
                 name, //0
                 level,
@@ -213,29 +210,29 @@ namespace InventoryKamera
             InventoryKamera.workerQueue.Enqueue(new OCRImageCollection(weaponImages, "weapon", id));
         }
 
-        Bitmap GetLevelBitmap(Bitmap card)
+        Image<Rgba32> GetLevelBitmap(Image<Rgba32> card)
         {
             var r = _scanProfile.ActiveProfile.Weapons.Level;
             return _imageProcessor.Crop(card,
-                new Rectangle(
+                new ISRect(
                     x: (int)(card.Width * r.X),
                     y: (int)(card.Height * r.Y),
                     width: (int)(card.Width * r.W),
                     height: (int)(card.Height * r.H)));
         }
 
-        Bitmap GetRefinementBitmap(Bitmap card)
+        Image<Rgba32> GetRefinementBitmap(Image<Rgba32> card)
         {
             var r = _scanProfile.ActiveProfile.Weapons.Refinement;
             return _imageProcessor.Crop(card,
-                new Rectangle(
+                new ISRect(
                     x: (int)(card.Width * r.X),
                     y: (int)(card.Height * r.Y),
                     width: (int)(card.Width * r.W),
                     height: (int)(card.Height * r.H)));
         }
 
-        public async Task<Weapon> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
+        public async Task<Weapon> CatalogueFromBitmapsAsync(List<Image<Rgba32>> bm, int id)
 		{
 			// Init Variables
 			string name = null;
@@ -255,13 +252,13 @@ namespace InventoryKamera
 				rarity = GetQuality(bm[w_name]);
 
 				// Check for equipped color
-				Color equippedColor = Color.FromArgb(255, 255, 231, 187);
-				Color equippedStatus = bm[w_equippedCharacter].GetPixel(5, 5);
+				var equippedColor = new Rgba32(255, 231, 187, 255);
+				Rgba32 equippedStatus = bm[w_equippedCharacter][5, 5];
 				bool b_equipped = _imageProcessor.CompareColors(equippedColor, equippedStatus);
 
 				// Check for lock color
-				Color lockedColor = Color.FromArgb(255, 70, 80, 100); // Dark area around red lock
-				Color lockStatus = bm[w_lock].GetPixel(5, 5);
+				var lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
+				Rgba32 lockStatus = bm[w_lock][5, 5];
 				locked = _imageProcessor.CompareColors(lockedColor, lockStatus);
 
 				List<Task> tasks = new List<Task>();
@@ -298,13 +295,13 @@ namespace InventoryKamera
 			return weapon;
 		}
 
-        public bool IsEnhancementMaterial(Bitmap nameBitmap)
+        public bool IsEnhancementMaterial(Image<Rgba32> nameBitmap)
 		{
 			string material = ScanEnchancementOreName(nameBitmap);
 			return !string.IsNullOrWhiteSpace(material) && _gameDataService.EnhancementMaterials.Contains(material.ToLower());
 		}
 
-		public string ScanEnchancementOreName(Bitmap bm)
+		public string ScanEnchancementOreName(Image<Rgba32> bm)
 		{
 			// Analyze
 			string name = _gameDataService.FindClosestMaterialName(ScanItemName(bm), minConfidence: 95);
@@ -319,9 +316,9 @@ namespace InventoryKamera
             return _gameDataService.FindClosestWeapon(name);
         }
 
-        public int ScanLevel(Bitmap bm, ref bool ascended)
+        public int ScanLevel(Image<Rgba32> bm, ref bool ascended)
 		{
-			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 			n = _imageProcessor.SetInvert(n);
 
 			string text = _ocrEngine.AnalyzeText(n).Trim();
@@ -345,11 +342,11 @@ namespace InventoryKamera
 			return -1;
 		}
 
-		public int ScanRefinement(Bitmap image)
+		public int ScanRefinement(Image<Rgba32> image)
 		{
 			// Removed scaling loop - process image once at original size
 			// Scaling was distorting digit "2" specifically, causing 100% OCR failure on R2 weapons
-			Bitmap n = _imageProcessor.SetGrayscale(image);
+			Image<Rgba32> n = _imageProcessor.SetGrayscale(image);
 			n = _imageProcessor.SetInvert(n);
 
 			string text = _ocrEngine.AnalyzeText(n).Trim();
@@ -380,9 +377,9 @@ namespace InventoryKamera
 			return -1;
 		}
 
-		public string ScanEquippedCharacter(Bitmap bm)
+		public string ScanEquippedCharacter(Image<Rgba32> bm)
 		{
-			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 			n = _imageProcessor.SetContrast(n, 60.0);
 
 			string extractedString = _ocrEngine.AnalyzeText(n);

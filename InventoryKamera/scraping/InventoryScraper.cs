@@ -1,4 +1,4 @@
-﻿using InventoryKamera.Configuration;
+using InventoryKamera.Configuration;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,14 @@ using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using DrawingColor = System.Drawing.Color;
+using DrawingRect  = System.Drawing.Rectangle;
+using DrawingSize  = System.Drawing.Size;
+using ISRect       = SixLabors.ImageSharp.Rectangle;
+using ISSize       = SixLabors.ImageSharp.Size;
 
 namespace InventoryKamera
 {
@@ -58,7 +66,7 @@ namespace InventoryKamera
 
         protected readonly List<InventoryPage> materialPages;
 
-        private List<Rectangle> prevRect;
+        private List<ISRect> prevRect;
         private int prevColumn = 0;
         private int prevRow = 0;
 
@@ -97,23 +105,18 @@ namespace InventoryKamera
         /// Gets the item card on the right side of the in-game screen
         /// </summary>
         /// <returns>An image of the in-game item card</returns>
-        internal Bitmap GetItemCard()
+        internal Image<Rgba32> GetItemCard()
         {
-            Rectangle cardRectangle = new Rectangle();
-
             using (var window = _screenCapture.CaptureWindow())
             {
-
-                cardRectangle.X = (int)(window.Width * 0.6807);
-                cardRectangle.Y = (int)(window.Height * (_screenCapture.IsNormal ? 0.1102 : 0.0989));
-
-                cardRectangle.Width = (int)(window.Width * 0.2573);
-                cardRectangle.Height = (int)(window.Height * (_screenCapture.IsNormal ? 0.7787 : 0.8022));
-
+                var cardRectangle = new ISRect(
+                    x: (int)(window.Width * 0.6807),
+                    y: (int)(window.Height * (_screenCapture.IsNormal ? 0.1102 : 0.0989)),
+                    width: (int)(window.Width * 0.2573),
+                    height: (int)(window.Height * (_screenCapture.IsNormal ? 0.7787 : 0.8022)));
 
                 return _imageProcessor.Crop(window, cardRectangle);
             }
-
         }
 
         /// <summary>
@@ -121,10 +124,10 @@ namespace InventoryKamera
         /// </summary>
         /// <param name="nameplate">The item nameplate to parse</param>
         /// <returns>String parsed from nameplate</returns>
-        internal string ScanItemName(Bitmap nameplate)
+        internal string ScanItemName(Image<Rgba32> nameplate)
         {
             nameplate = _imageProcessor.SetGamma(nameplate, 0.2, 0.2, 0.2);
-            Bitmap n = _imageProcessor.SetGrayscale(nameplate);
+            Image<Rgba32> n = _imageProcessor.SetGrayscale(nameplate);
             n = _imageProcessor.SetInvert(n);
 
             // Analyze
@@ -139,7 +142,7 @@ namespace InventoryKamera
         /// Parses the number of items from for the current inventory page.
         /// </summary>
         /// <remarks>Note: This is primarily for the Weapons, Artifacts, and Furnishing inventories since they have
-        /// specific inventory item counts and capacities. 
+        /// specific inventory item counts and capacities.
         /// All other inventory pages have a "shared" inventory item counts and capacities.</remarks>
         /// <param name="inventoryPage">The current inventory page</param>
         /// <returns>The number of unique items for the current inventory</returns>
@@ -147,17 +150,17 @@ namespace InventoryKamera
         internal int ScanItemCount()
         {
             //Find weapon count
-            Rectangle region = new Rectangle(
-                x: (int)(1030 / 1280.0 * _screenCapture.GetWidth()),
-                y: (int)(20 / 720.0 * _screenCapture.GetHeight()),
-                width: (int)(175 / 1280.0 * _screenCapture.GetWidth()),
-                height: (int)(25 / 720.0 * _screenCapture.GetHeight()));
+            var region = new RECT(
+                Left:   (int)(1030 / 1280.0 * _screenCapture.GetWidth()),
+                Top:    (int)(20 / 720.0 * _screenCapture.GetHeight()),
+                Right:  (int)((1030 + 175) / 1280.0 * _screenCapture.GetWidth()),
+                Bottom: (int)((20 + 25) / 720.0 * _screenCapture.GetHeight()));
 
-            using (Bitmap countBitmap = _screenCapture.CaptureRegion(region))
+            using (Image<Rgba32> countBitmap = _screenCapture.CaptureRegion(region))
             {
                 _userInterface.SetNavigation_Image(countBitmap);
 
-                Bitmap n = _imageProcessor.SetGrayscale(countBitmap);
+                Image<Rgba32> n = _imageProcessor.SetGrayscale(countBitmap);
                 n = _imageProcessor.SetContrast(n, 60.0);
                 n = _imageProcessor.SetInvert(n);
 
@@ -170,7 +173,8 @@ namespace InventoryKamera
                 if (string.IsNullOrWhiteSpace(text) || Properties.Settings.Default.LogScreenshots)
                 {
                     SaveInventoryBitmap(countBitmap, "ItemCount.png");
-                    SaveInventoryBitmap(_screenCapture.CaptureWindow(), $"InventoryWindow_{_screenCapture.GetWidth()}x{_screenCapture.GetHeight()}.png");
+                    using (var wnd = _screenCapture.CaptureWindow())
+                        SaveInventoryBitmap(wnd, $"InventoryWindow_{_screenCapture.GetWidth()}x{_screenCapture.GetHeight()}.png");
                     if (string.IsNullOrWhiteSpace(text)) throw new FormatException($"Unable to locate {inventoryPage} item count.");
                 }
 
@@ -212,23 +216,23 @@ namespace InventoryKamera
         /// <returns>The inventory page's current sorting method</returns>
         internal string CurrentSortingMethod()
         {
-            Rectangle region;
+            RECT region;
             switch (inventoryPage)
             {
                 case InventoryPage.Weapons:
-                    region = new Rectangle(
-                        x: (int)(100.0 / 1280.0 * _screenCapture.GetWidth()),
-                        y: (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
-                        width: (int)(175.0 / 1280.0 * _screenCapture.GetWidth()),
-                        height: (int)(40.0 / 720.0 * _screenCapture.GetHeight()));
+                    region = new RECT(
+                        Left:   (int)(100.0 / 1280.0 * _screenCapture.GetWidth()),
+                        Top:    (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
+                        Right:  (int)((100.0 + 175.0) / 1280.0 * _screenCapture.GetWidth()),
+                        Bottom: (int)((660.0 + 40.0) / 720.0 * _screenCapture.GetHeight()));
                     break;
                 case InventoryPage.Artifacts:
                     // TODO: Update this
-                    region = new Rectangle(
-                        x: (int)(140.0 / 1280.0 * _screenCapture.GetWidth()),
-                        y: (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
-                        width: (int)(175.0 / 1280.0 * _screenCapture.GetWidth()),
-                        height: (int)(40.0 / 720.0 * _screenCapture.GetHeight()));
+                    region = new RECT(
+                        Left:   (int)(140.0 / 1280.0 * _screenCapture.GetWidth()),
+                        Top:    (int)(660.0 / 720.0 * _screenCapture.GetHeight()),
+                        Right:  (int)((140.0 + 175.0) / 1280.0 * _screenCapture.GetWidth()),
+                        Bottom: (int)((660.0 + 40.0) / 720.0 * _screenCapture.GetHeight()));
                     break;
                 default:
                     throw new NotImplementedException($"{inventoryPage} cannot be sorted");
@@ -242,18 +246,18 @@ namespace InventoryKamera
             }
         }
 
-        internal (List<Rectangle> rectangles, int cols, int rows) ProcessScreenshot(Bitmap screenshot, double weight = 0)
+        internal (List<ISRect> rectangles, int cols, int rows) ProcessScreenshot(Image<Rgba32> screenshot, double weight = 0)
         {
             // Size of an item card is the same in 16:10 and 16:9. Also accounts for character icon and resolution size.
             double base_aspect_width = 1280.0;
             double base_aspect_height = 720.0;
-            var icon = new Rectangle(
+            var icon = new ISRect(
                 x: 0,
                 y: 0,
                 width: (int)(screenshot.Width * 0.0651),
                 height: (int)(screenshot.Height * (_screenCapture.IsNormal ? 0.1417: 0.1289)));
 
-            if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+            if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
             {
                 base_aspect_height = 800.0;
             }
@@ -265,19 +269,19 @@ namespace InventoryKamera
             int iconMaxWidth = icon.Width + ((int)(icon.Width * 0.15));
             {
                 // Image pre-processing — work on a separate clone so the caller's bitmap stays valid for retries
-                Bitmap processedForBlobs;
+                Image<Rgba32> processedForBlobs;
                 using (var kirschEdges = _imageProcessor.KirschEdgeDetect(screenshot))
                 using (var grayscale = _imageProcessor.SetGrayscale(kirschEdges))
                 {
-                    processedForBlobs = (Bitmap)grayscale.Clone();
+                    processedForBlobs = grayscale.Clone();
                     processedForBlobs = _imageProcessor.SetThreshold(processedForBlobs, 75);
                 }
                 // Note: Processing won't always detect all item rectangles on screen. Since the
                 // background isn't a solid color it's a bit trickier to filter out.
 
                 // Don't save overlapping blobs
-                List<Rectangle> rectangles = new List<Rectangle>();
-                List<Rectangle> blobRects;
+                List<ISRect> rectangles = new List<ISRect>();
+                List<ISRect> blobRects;
                 using (processedForBlobs)
                     blobRects = FindBlobs(processedForBlobs,
                         (int)(iconMinWidth * (1 - weight)),
@@ -286,7 +290,7 @@ namespace InventoryKamera
                         (int)(iconMaxHeight * (1 + weight)));
 
                 if (blobRects.Count == 0)
-                    return (new List<Rectangle>(), 0, 0);
+                    return (new List<ISRect>(), 0, 0);
 
                 int minWidth = blobRects[0].Width;
                 int minHeight = blobRects[0].Height;
@@ -295,9 +299,9 @@ namespace InventoryKamera
                     bool add = true;
                     foreach (var item in rectangles)
                     {
-                        Rectangle r1 = rect;
-                        Rectangle r2 = item;
-                        Rectangle intersect = Rectangle.Intersect(r1, r2);
+                        ISRect r1 = rect;
+                        ISRect r2 = item;
+                        ISRect intersect = ISRect.Intersect(r1, r2);
                         if (intersect.Width > r1.Width * .1)
                         {
                             add = false;
@@ -364,7 +368,7 @@ namespace InventoryKamera
                         int x = (int)(col - (minWidth * .5));
                         int y = (int)(row - (minHeight * .5));
 
-                        rectangles.Add(new Rectangle(x, y, minWidth, minHeight));
+                        rectangles.Add(new ISRect(x, y, minWidth, minHeight));
                     }
                 }
 
@@ -374,9 +378,9 @@ namespace InventoryKamera
                 {
                     for (int j = i + 1; j < rectangles.Count; j++)
                     {
-                        Rectangle r1 = rectangles[i];
-                        Rectangle r2 = rectangles[j];
-                        Rectangle intersect = Rectangle.Intersect(r1, r2);
+                        ISRect r1 = rectangles[i];
+                        ISRect r2 = rectangles[j];
+                        ISRect intersect = ISRect.Intersect(r1, r2);
                         if (intersect.Width > r1.Width * .2)
                         {
                             rectangles.RemoveAt(j);
@@ -388,7 +392,7 @@ namespace InventoryKamera
                 rectangles = rectangles.OrderBy(r => r.Top).ThenBy(r => r.Left).ToList();
 
                 var avgWidth = rectangles.Average(r => r.Width);
-                var avgHeight = rectangles.Average (r => r.Height);
+                var avgHeight = rectangles.Average(r => r.Height);
 
                 rectangles.ForEach(r =>
                 {
@@ -400,29 +404,25 @@ namespace InventoryKamera
             }
         }
 
-        private static List<Rectangle> FindBlobs(Bitmap binaryBitmap, int minWidth, int maxWidth, int minHeight, int maxHeight)
+        private static List<ISRect> FindBlobs(Image<Rgba32> binaryImage, int minWidth, int maxWidth, int minHeight, int maxHeight)
         {
-            int width = binaryBitmap.Width;
-            int height = binaryBitmap.Height;
+            int width = binaryImage.Width;
+            int height = binaryImage.Height;
             bool[,] visited = new bool[width, height];
-            var results = new List<Rectangle>();
+            var results = new List<ISRect>();
 
-            BitmapData bmpData = binaryBitmap.LockBits(
-                new Rectangle(0, 0, width, height),
-                ImageLockMode.ReadOnly, binaryBitmap.PixelFormat);
-            int bytesPerPixel = Image.GetPixelFormatSize(binaryBitmap.PixelFormat) / 8;
-            int stride = bmpData.Stride;
-            byte[] pixels = new byte[stride * height];
-            Marshal.Copy(bmpData.Scan0, pixels, 0, pixels.Length);
-            binaryBitmap.UnlockBits(bmpData);
+            // Extract pixel data via ImageSharp
+            byte[] pixels = new byte[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[y * width + x] = binaryImage[x, y].R; // grayscale: R == G == B
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
                     if (visited[x, y]) continue;
-                    int pos = y * stride + x * bytesPerPixel;
-                    bool isWhite = pixels[pos] > 128;
+                    bool isWhite = pixels[y * width + x] > 128;
                     if (!isWhite) continue;
 
                     var queue = new Queue<(int px, int py)>();
@@ -442,8 +442,7 @@ namespace InventoryKamera
                         {
                             int nx = cx + dxs[d], ny = cy + dys[d];
                             if (nx < 0 || nx >= width || ny < 0 || ny >= height || visited[nx, ny]) continue;
-                            int npos = ny * stride + nx * bytesPerPixel;
-                            if (pixels[npos] > 128)
+                            if (pixels[ny * width + nx] > 128)
                             {
                                 visited[nx, ny] = true;
                                 queue.Enqueue((nx, ny));
@@ -454,45 +453,53 @@ namespace InventoryKamera
                     int blobW = maxX - minX + 1;
                     int blobH = maxY - minY + 1;
                     if (blobW >= minWidth && blobW <= maxWidth && blobH >= minHeight && blobH <= maxHeight)
-                        results.Add(new Rectangle(minX, minY, blobW, blobH));
+                        results.Add(new ISRect(minX, minY, blobW, blobH));
                 }
             }
 
             return results;
         }
 
-        internal (List<Rectangle> rectangles, int cols, int rows) GetPageOfItems(int pageNum, bool acceptLess = false)
+        internal (List<ISRect> rectangles, int cols, int rows) GetPageOfItems(int pageNum, bool acceptLess = false)
         {
             // Screenshot of inventory
-            using (Bitmap screenshot = _screenCapture.CaptureWindow())
+            using (Image<Rgba32> screenshot = _screenCapture.CaptureWindow())
             {
-                Bitmap processedScreenshot = new Bitmap(screenshot);
-                using (Graphics g = Graphics.FromImage(processedScreenshot))
-                using (var brush = new SolidBrush(Color.Black))
+                // Use GDI+ to mask out irrelevant regions (UI chrome) before blob detection
+                Image<Rgba32> processedScreenshot;
+                using (var bmp = GenshinProcesor.ImageSharpToBitmap(screenshot))
                 {
-                    // Fill Top region
-                    switch (inventoryPage)
+                    using (var processed = new Bitmap(bmp))
+                    using (Graphics g = Graphics.FromImage(processed))
+                    using (var brush = new SolidBrush(DrawingColor.Black))
                     {
-                        case InventoryPage.Artifacts:
-                            g.FillRectangle(brush, 0, 0, processedScreenshot.Width, (int)(processedScreenshot.Height * 0.143));
-                            break;
-                        default:
-                            g.FillRectangle(brush, 0, 0, processedScreenshot.Width, (int)(processedScreenshot.Height * 0.09));
-                            break;
+                        // Fill Top region
+                        switch (inventoryPage)
+                        {
+                            case InventoryPage.Artifacts:
+                                g.FillRectangle(brush, 0, 0, processed.Width, (int)(processed.Height * 0.143));
+                                break;
+                            default:
+                                g.FillRectangle(brush, 0, 0, processed.Width, (int)(processed.Height * 0.09));
+                                break;
+                        }
+
+                        // Fill Left region
+                        g.FillRectangle(brush, 0, 0, (int)(processed.Width * 0.05), processed.Height);
+
+                        // Fill Right region
+                        g.FillRectangle(brush, (int)(processed.Width * 0.7), 0, processed.Width, processed.Height);
+
+                        // Fill Bottom Region
+                        g.FillRectangle(brush, 0, (int)(processed.Height * 0.9), processed.Width, processed.Height);
+
+                        processedScreenshot = GenshinProcesor.BitmapToImageSharp(processed);
                     }
-
-                    // Fill Left region
-                    g.FillRectangle(brush, 0, 0, (int)(processedScreenshot.Width * 0.05), processedScreenshot.Height);
-
-                    // Fill Right region
-                    g.FillRectangle(brush, (int)(processedScreenshot.Width * 0.7), 0, processedScreenshot.Width, processedScreenshot.Height);
-
-                    // Fill Bottom Region
-                    g.FillRectangle(brush, 0, (int)(processedScreenshot.Height * 0.9), processedScreenshot.Width, processedScreenshot.Height);
                 }
+
                 try
                 {
-                    List<Rectangle> rectangles;
+                    List<ISRect> rectangles;
                     int cols, rows, itemCount, counter = 0;
                     double weight = 0;
                     int itemPerPage = inventoryPage == InventoryPage.Artifacts ? 32 : 40;
@@ -505,16 +512,13 @@ namespace InventoryKamera
                             Logger.Warn("Unable to locate full page of weapons with weight {0}", weight);
                             Logger.Warn("Detected {0} rows and {1} columns of items", rows, cols);
 
-                            // Generate rectangles
-                            using (Bitmap copy = (Bitmap)screenshot.Clone())
+                            // Generate debug image with annotated rectangles
+                            using (var copyBmp = GenshinProcesor.ImageSharpToBitmap(screenshot))
                             {
-                                SaveInventoryBitmap(copy, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows}.png");
-                                using (Graphics g = Graphics.FromImage(copy))
-                                    rectangles.ForEach(r => g.DrawRectangle(new Pen(Color.Green, 2), r));
-                                SaveInventoryBitmap(copy, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows} - weight {weight}.png");
-#if DEBUG
-                                //Navigation.DisplayBitmap(copy, $"weight = {weight}");
-#endif
+                                SaveInventoryBitmapGdi(copyBmp, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows}.png");
+                                using (Graphics g = Graphics.FromImage(copyBmp))
+                                    rectangles.ForEach(r => g.DrawRectangle(new Pen(DrawingColor.Green, 2), r.X, r.Y, r.Width, r.Height));
+                                SaveInventoryBitmapGdi(copyBmp, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows} - weight {weight}.png");
                             }
                         }
                         else break;
@@ -531,10 +535,15 @@ namespace InventoryKamera
                     if (Properties.Settings.Default.LogScreenshots)
                     {
                         SaveInventoryBitmap(screenshot, $"{inventoryPage}Inventory.png");
-                        using (Graphics g = Graphics.FromImage(screenshot))
-                            rectangles?.ForEach(r => g.DrawRectangle(new Pen(Color.Green, 2), r));
-
-                        SaveInventoryBitmap(screenshot, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows} - weight {weight}.png");
+                        if (rectangles != null)
+                        {
+                            using (var annotateBmp = GenshinProcesor.ImageSharpToBitmap(screenshot))
+                            {
+                                using (Graphics g = Graphics.FromImage(annotateBmp))
+                                    rectangles.ForEach(r => g.DrawRectangle(new Pen(DrawingColor.Green, 2), r.X, r.Y, r.Width, r.Height));
+                                SaveInventoryBitmapGdi(annotateBmp, $"{inventoryPage}Inventory{pageNum}_{cols}x{rows} - weight {weight}.png");
+                            }
+                        }
                     }
                     processedScreenshot.Dispose();
 
@@ -543,7 +552,7 @@ namespace InventoryKamera
                         Logger.Warn("Could not find {0} items in inventory. Re-using previous item page.", itemPerPage);
 
                         return prevRect == null ?
-                            throw new ArgumentNullException("Could not find first page of items!") 
+                            throw new ArgumentNullException("Could not find first page of items!")
                             :
                             (prevRect, prevColumn, prevRow);
                     }
@@ -569,17 +578,18 @@ namespace InventoryKamera
         /// </summary>
         /// <param name="nameplate">The an item card's nameplate</param>
         /// <returns>An integer representing quality from 0 - 5 (invalid - 5 star)</returns>
-        internal static int GetQuality(Bitmap nameplate)
+        internal static int GetQuality(Image<Rgba32> nameplate)
         {
             var averageColor = GenshinProcesor.GetAverageColor(nameplate);
 
-            Color fiveStar = Color.FromArgb(255, 188, 105, 50);
-            Color fourStar = Color.FromArgb(255, 161, 86, 224);
-            Color threeStar = Color.FromArgb(255, 81, 127, 203);
-            Color twoStar = Color.FromArgb(255, 42, 143, 114);
-            Color oneStar = Color.FromArgb(255, 114, 119, 138);
+            var fiveStar  = new Rgba32(188, 105,  50, 255);
+            var fourStar  = new Rgba32(161,  86, 224, 255);
+            var threeStar = new Rgba32( 81, 127, 203, 255);
+            var twoStar   = new Rgba32( 42, 143, 114, 255);
+            var oneStar   = new Rgba32(114, 119, 138, 255);
+            var black     = new Rgba32(  0,   0,   0, 255);
 
-            var colors = new List<Color> { Color.Black, oneStar, twoStar, threeStar, fourStar, fiveStar };
+            var colors = new List<Rgba32> { black, oneStar, twoStar, threeStar, fourStar, fiveStar };
 
             var c = GenshinProcesor.ClosestColor(colors, averageColor);
 
@@ -587,14 +597,14 @@ namespace InventoryKamera
         }
 
         /// <summary>
-        /// Extracts a bitmap copy of an item card's nameplate
+        /// Extracts an image copy of an item card's nameplate
         /// </summary>
-        /// <param name="card">Bitmap of the item card</param>
-        /// <returns>A bitmap copy of the item card's nameplate</returns>
-        internal static Bitmap GetItemNameBitmap(Bitmap card)
+        /// <param name="card">Image of the item card</param>
+        /// <returns>A copy of the item card's nameplate</returns>
+        internal static Image<Rgba32> GetItemNameBitmap(Image<Rgba32> card)
         {
             return GenshinProcesor.CopyBitmap(card,
-                new Rectangle(
+                new ISRect(
                     x: 0,
                     y: 0,
                     width: card.Width,
@@ -602,14 +612,14 @@ namespace InventoryKamera
         }
 
         /// <summary>
-        /// Extracts a bitmap copy of an item card's lock status icon
+        /// Extracts an image copy of an item card's lock status icon
         /// </summary>
-        /// <param name="card">Bitmap of the item card</param>
-        /// <returns>A bitmap copy of the item card's lock status icon</returns>
-        internal static Bitmap GetLockedBitmap(Bitmap card)
+        /// <param name="card">Image of the item card</param>
+        /// <returns>A copy of the item card's lock status icon</returns>
+        internal static Image<Rgba32> GetLockedBitmap(Image<Rgba32> card)
         {
             return GenshinProcesor.CopyBitmap(card,
-                new Rectangle(
+                new ISRect(
                     x: (int)(card.Width * 0.75),
                     y: (int)(card.Height * (Navigation.IsNormal ? 0.353 : 0.309)),
                     width: (int)(card.Width * 0.0955),
@@ -617,22 +627,22 @@ namespace InventoryKamera
         }
 
         /// <summary>
-        /// Extracts a bitmap copy of an item card's equipped character status
+        /// Extracts an image copy of an item card's equipped character status
         /// </summary>
-        /// <param name="card">Bitmap of the item card</param>
+        /// <param name="card">Image of the item card</param>
         /// <remarks>Note: This method is only useful for equippable items (artifacts and weapons)</remarks>
-        /// <returns>A bitmap copy of the item card's equipped character status.</returns>
-        internal static Bitmap GetEquippedBitmap(Bitmap card)
+        /// <returns>A copy of the item card's equipped character status.</returns>
+        internal static Image<Rgba32> GetEquippedBitmap(Image<Rgba32> card)
         {
             return GenshinProcesor.CopyBitmap(card,
-                new Rectangle(
+                new ISRect(
                     x: (int)(card.Width * 0.15),
                     y: (int)(double)(card.Height * (double)(Navigation.IsNormal ? 0.938 : 0.943)),
                     width: card.Width,
                     height: card.Height));
         }
 
-        internal void SaveInventoryBitmap(Bitmap image, string filename)
+        internal void SaveInventoryBitmap(Image<Rgba32> image, string filename)
         {
             var path = "./logging/";
 
@@ -640,7 +650,18 @@ namespace InventoryKamera
                 path += "Materials/";
             else path += inventoryPage.ToString() + "/";
 
-            image.Save(path + filename);
+            image.SaveAsPng(path + filename);
+        }
+
+        internal void SaveInventoryBitmapGdi(Bitmap bmp, string filename)
+        {
+            var path = "./logging/";
+
+            if (materialPages.Contains(inventoryPage))
+                path += "Materials/";
+            else path += inventoryPage.ToString() + "/";
+
+            bmp.Save(path + filename);
         }
 
     }

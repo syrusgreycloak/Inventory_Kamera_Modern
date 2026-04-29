@@ -1,4 +1,5 @@
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace InventoryKamera.Infrastructure
 {
@@ -8,17 +9,17 @@ namespace InventoryKamera.Infrastructure
     /// </summary>
     internal class NullUserInterface : IUserInterface
     {
-        public void SetGear(Bitmap bm, Weapon weapon) { }
-        public void SetGear(Bitmap bm, Artifact artifact) { }
-        public void SetGearPictureBox(Bitmap bm) { }
+        public void SetGear(Image<Rgba32> bm, Weapon weapon) { }
+        public void SetGear(Image<Rgba32> bm, Artifact artifact) { }
+        public void SetGearPictureBox(Image<Rgba32> bm) { }
         public void SetGearTextBox(string text) { }
 
-        public void SetCharacter_NameAndElement(Bitmap bm, string name, string element) { }
-        public void SetCharacter_Level(Bitmap bm, int level, int maxLevel) { }
+        public void SetCharacter_NameAndElement(Image<Rgba32> bm, string name, string element) { }
+        public void SetCharacter_Level(Image<Rgba32> bm, int level, int maxLevel) { }
         public void SetCharacter_Constellation(int level) { }
-        public void SetCharacter_Talent(Bitmap bm, string text, int i) { }
+        public void SetCharacter_Talent(Image<Rgba32> bm, string text, int i) { }
 
-        public void SetMora(Bitmap mora, int count) { }
+        public void SetMora(Image<Rgba32> mora, int count) { }
 
         public void SetWeapon_Max(int value) { }
         public void SetArtifact_Max(int value) { }
@@ -30,7 +31,7 @@ namespace InventoryKamera.Infrastructure
         public void AddError(string error) { }
         public void SetMainCharacterName(string name) { }
 
-        public void SetNavigation_Image(Bitmap bm) { }
+        public void SetNavigation_Image(Image<Rgba32> bm) { }
 
         public void ResetGearDisplay() { }
         public void ResetCharacterDisplay() { }

@@ -4,6 +4,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using ISRect      = SixLabors.ImageSharp.Rectangle;
+using DrawingSize = System.Drawing.Size;
+using ISSize     = SixLabors.ImageSharp.Size;
 
 namespace InventoryKamera
 {
@@ -45,7 +50,7 @@ namespace InventoryKamera
 			Material material = new Material(null, 0);
 			Material previousMaterial = new Material(null, -1);
 
-			List<Rectangle> rectangles;
+			List<ISRect> rectangles;
 			int page = 1;
 
 			// Keep scanning while not repeating any items names
@@ -78,7 +83,7 @@ namespace InventoryKamera
 					// Save nameplate bitmap when name lookup failed, so we can inspect what was captured.
 					if (string.IsNullOrEmpty(material.name))
 					{
-						SaveInventoryBitmap(nameplate, $"unknown_nameplate_{DateTime.Now:HHmmss_fff}.png");
+						SaveInventoryBitmapGdi(nameplate, $"unknown_nameplate_{DateTime.Now:HHmmss_fff}.png");
 					}
 
 					// Check if new material has been found
@@ -96,11 +101,11 @@ namespace InventoryKamera
 							if (material.count == 0)
 							{
 								_userInterface.AddError($"Failed to parse quantity for {material.name}");
-								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
+								SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 							}
 							if (Properties.Settings.Default.LogScreenshots || material.count == 0)
                             {
-								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
+								SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
                             }
 							Logger.Debug("Final: {0} : {1}", material.name, material.count);
 							inventory.Materials.Add(material);
@@ -167,7 +172,7 @@ namespace InventoryKamera
 			for (int i = rectangles.Count - 1; i >= 0; i--) // Click through but backwards to short-circuit after new materials
 			{
 				// Select Material
-				Rectangle rectangle = rectangles[i];
+				ISRect rectangle = rectangles[i];
 				_inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
 				_inputSimulator.Click();
 				_inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
@@ -188,11 +193,11 @@ namespace InventoryKamera
 						if (material.count == 0)
 						{
 							_userInterface.AddError($"Failed to parse quantity for {material.name}");
-							SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
+							SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 						}
 						else if (Properties.Settings.Default.LogScreenshots)
 						{
-							SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
+							SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 						}
 						Logger.Debug("Final (LastPage): {0} : {1}", material.name, material.count);
 						inventory.Materials.Add(material);
@@ -214,16 +219,17 @@ namespace InventoryKamera
 
 		private int ScanMora()
 		{
-			var region = new Rectangle(
-				x: (int)(125 / 1280.0 * _screenCapture.GetWidth()),
-				y: (int)(665 / 720.0 * _screenCapture.GetHeight()),
-				width: (int)(300 / 1280.0 * _screenCapture.GetWidth()),
-				height: (int)(30 / 720.0 * _screenCapture.GetHeight()));
+			int x = (int)(125 / 1280.0 * _screenCapture.GetWidth());
+			int y = (int)(665 / 720.0 * _screenCapture.GetHeight());
+			int w = (int)(300 / 1280.0 * _screenCapture.GetWidth());
+			int h = (int)(30 / 720.0 * _screenCapture.GetHeight());
 
-			if (_screenCapture.GetAspectRatio() == new Size(8, 5))
+			if (_screenCapture.GetAspectRatio() == new ISSize(8, 5))
 			{
-				region.Y = (int)( 740 / 800.0 * _screenCapture.GetHeight() );
+				y = (int)( 740 / 800.0 * _screenCapture.GetHeight() );
 			}
+
+			var region = new RECT(Left: x, Top: y, Right: x + w, Bottom: y + h);
 
 			using (var screenshot = _screenCapture.CaptureRegion(region))
 			{
@@ -246,8 +252,9 @@ namespace InventoryKamera
 			}
 		}
 
-		public static string ParseMoraFromScreenshot(Bitmap screenshot)
+		public static string ParseMoraFromScreenshot(Image<Rgba32> screenshotImg)
 		{
+			using (Bitmap screenshot = GenshinProcesor.ImageSharpToBitmap(screenshotImg))
 			using (var gray = GenshinProcesor.ConvertToGrayscale(screenshot))
 			{
 				var invert = (Bitmap)gray.Clone();
@@ -272,26 +279,25 @@ namespace InventoryKamera
 		{
 			// Grab item name on right
 			var refWidth = 1280.0;
-			var refHeight = _screenCapture.GetAspectRatio() == new Size(16,9) ? 720.0 : 800.0;
+			var refHeight = _screenCapture.GetAspectRatio() == new ISSize(16,9) ? 720.0 : 800.0;
 
 			var width = _screenCapture.GetWidth();
 			var height = _screenCapture.GetHeight();
 
-			var reference = new Rectangle(872, 80, 327, 37);
-
 			// Nameplate is in the same place in 16:9 and 16:10
-			var region= new RECT(
-				Left:   (int)( reference.Left   / refWidth  * width),
-				Top:    (int)( reference.Top    / refHeight * height),
-				Right:  (int)( reference.Right  / refWidth  * width),
-				Bottom: (int)( reference.Bottom / refHeight * height));
+			var region = new RECT(
+				Left:   (int)( 872 / refWidth  * width),
+				Top:    (int)( 80  / refHeight * height),
+				Right:  (int)( (872 + 327) / refWidth  * width),
+				Bottom: (int)( (80 + 37)   / refHeight * height));
 
-			Bitmap bm = _screenCapture.CaptureRegion(region);
-			nameplate = (Bitmap)bm.Clone();
+			Image<Rgba32> bm = _screenCapture.CaptureRegion(region);
+			// Keep a GDI+ clone for callers that need Bitmap (UserInterface.SetMaterial etc.)
+			nameplate = GenshinProcesor.ImageSharpToBitmap(bm);
 
 			// Alter Image
 			bm = _imageProcessor.SetGamma(bm, 0.2, 0.2, 0.2);
-			Bitmap n = _imageProcessor.SetGrayscale(bm);
+			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 			n = _imageProcessor.SetInvert(n);
 
 			string rawText = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.Auto);
@@ -319,7 +325,7 @@ namespace InventoryKamera
 			return match;
 		}
 
-		public static int ScanMaterialCount(Rectangle rectangle, out Bitmap quantity)
+		public static int ScanMaterialCount(ISRect rectangle, out Bitmap quantity)
 		{
 			Dictionary<int, int> counts = new Dictionary<int, int>();
 			// Anchor from the bottom of the rectangle using a fixed screen-height proportion.

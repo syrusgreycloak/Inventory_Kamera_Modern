@@ -1,6 +1,11 @@
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Windows.Forms;
 using InventoryKamera;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace InventoryKamera.UI
 {
@@ -15,21 +20,21 @@ namespace InventoryKamera.UI
 
         // Gear (weapons and artifacts)
 
-        public void SetGear(Bitmap bm, Weapon weapon)
+        public void SetGear(Image<Rgba32> bm, Weapon weapon)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGear(clone, weapon); clone.Dispose(); }));
         }
 
-        public void SetGear(Bitmap bm, Artifact artifact)
+        public void SetGear(Image<Rgba32> bm, Artifact artifact)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGear(clone, artifact); clone.Dispose(); }));
         }
 
-        public void SetGearPictureBox(Bitmap bm)
+        public void SetGearPictureBox(Image<Rgba32> bm)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetGearPictureBox(clone); clone.Dispose(); }));
         }
 
@@ -40,15 +45,15 @@ namespace InventoryKamera.UI
 
         // Character
 
-        public void SetCharacter_NameAndElement(Bitmap bm, string name, string element)
+        public void SetCharacter_NameAndElement(Image<Rgba32> bm, string name, string element)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_NameAndElement(clone, name, element); clone.Dispose(); }));
         }
 
-        public void SetCharacter_Level(Bitmap bm, int level, int maxLevel)
+        public void SetCharacter_Level(Image<Rgba32> bm, int level, int maxLevel)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_Level(clone, level, maxLevel); clone.Dispose(); }));
         }
 
@@ -57,17 +62,17 @@ namespace InventoryKamera.UI
             _form.BeginInvoke((MethodInvoker)(() => UserInterface.SetCharacter_Constellation(level)));
         }
 
-        public void SetCharacter_Talent(Bitmap bm, string text, int i)
+        public void SetCharacter_Talent(Image<Rgba32> bm, string text, int i)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetCharacter_Talent(clone, text, i); clone.Dispose(); }));
         }
 
         // Materials / Mora
 
-        public void SetMora(Bitmap mora, int count)
+        public void SetMora(Image<Rgba32> mora, int count)
         {
-            var clone = (Bitmap)mora.Clone();
+            var clone = ImageSharpToBitmap(mora);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetMora(clone, count); clone.Dispose(); }));
         }
 
@@ -117,9 +122,9 @@ namespace InventoryKamera.UI
 
         // Navigation image
 
-        public void SetNavigation_Image(Bitmap bm)
+        public void SetNavigation_Image(Image<Rgba32> bm)
         {
-            var clone = (Bitmap)bm.Clone();
+            var clone = ImageSharpToBitmap(bm);
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetNavigation_Image(clone); clone.Dispose(); }));
         }
 
@@ -148,6 +153,19 @@ namespace InventoryKamera.UI
         public void ResetAll()
         {
             _form.BeginInvoke((MethodInvoker)(() => UserInterface.ResetAll()));
+        }
+
+        /// <summary>
+        /// Converts an ImageSharp <see cref="Image{Rgba32}"/> to a GDI+ <see cref="Bitmap"/> for display in PictureBox controls.
+        /// </summary>
+        internal static Bitmap ImageSharpToBitmap(Image<Rgba32> image)
+        {
+            using (var ms = new MemoryStream())
+            {
+                image.Save(ms, new PngEncoder());
+                ms.Position = 0;
+                return new Bitmap(ms);
+            }
         }
     }
 }

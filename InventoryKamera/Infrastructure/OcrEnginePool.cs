@@ -1,7 +1,9 @@
-using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Collections.Concurrent;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using TesseractOCR;
 using TesseractOCR.Enums;
 
@@ -40,7 +42,7 @@ namespace InventoryKamera.Infrastructure
             }
         }
 
-        public string AnalyzeText(Bitmap bitmap, PageSegmentationMode mode = PageSegmentationMode.SingleLine, bool numbersOnly = false)
+        public string AnalyzeText(Image<Rgba32> bitmap, PageSegmentationMode mode = PageSegmentationMode.SingleLine, bool numbersOnly = false)
         {
             var tessMode = (PageSegMode)(int)mode;
             Engine engine;
@@ -53,7 +55,7 @@ namespace InventoryKamera.Infrastructure
                 byte[] pngBytes;
                 using (var ms = new MemoryStream())
                 {
-                    bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    bitmap.Save(ms, new PngEncoder());
                     pngBytes = ms.ToArray();
                 }
 
