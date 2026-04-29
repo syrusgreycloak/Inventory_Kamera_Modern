@@ -48,6 +48,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\InventoryKamera.Core\InventoryKamera.Core.csproj" />
+    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
