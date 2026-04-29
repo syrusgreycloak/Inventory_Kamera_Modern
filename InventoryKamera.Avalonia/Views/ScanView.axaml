@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="InventoryKamera.Avalonia.Views.ScanView">
+    <Grid>
+        <TextBlock Text="Scan view goes here"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="20" />
+    </Grid>
+</UserControl>

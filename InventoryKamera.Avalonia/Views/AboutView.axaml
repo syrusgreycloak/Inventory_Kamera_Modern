@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="InventoryKamera.Avalonia.Views.AboutView">
+    <Grid>
+        <TextBlock Text="About view goes here"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="20" />
+    </Grid>
+</UserControl>

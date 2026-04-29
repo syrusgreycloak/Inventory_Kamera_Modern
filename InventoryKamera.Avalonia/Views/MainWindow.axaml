@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:InventoryKamera.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:InventoryKamera.Avalonia.Views"
+        x:Class="InventoryKamera.Avalonia.Views.MainWindow"
+        Title="Inventory Kamera"
+        Width="900" Height="600"
+        MinWidth="700" MinHeight="480">
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type vm:ScanViewModel}">
+            <views:ScanView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ExportViewModel}">
+            <views:ExportView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AboutViewModel}">
+            <views:AboutView />
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <TabControl>
+        <TabItem Header="Scan" Content="{Binding ScanVm}" />
+        <TabItem Header="Settings" Content="{Binding SettingsVm}" />
+        <TabItem Header="Export" Content="{Binding ExportVm}" />
+        <TabItem Header="About" Content="{Binding AboutVm}" />
+    </TabControl>
+</Window>

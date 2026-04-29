@@ -1,0 +1,29 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <Color x:Key="PrimaryBg">#1e2328</Color>
+    <Color x:Key="SecondaryBg">#2d3139</Color>
+    <Color x:Key="Accent">#4A90E2</Color>
+    <Color x:Key="TextPrimary">#ECE5D8</Color>
+    <Color x:Key="TextSecondary">#A69F92</Color>
+    <Color x:Key="Success">#5AB55E</Color>
+    <Color x:Key="Warning">#F9B959</Color>
+    <Color x:Key="Error">#E74C3C</Color>
+    <SolidColorBrush x:Key="PrimaryBgBrush" Color="{StaticResource PrimaryBg}" />
+    <SolidColorBrush x:Key="SecondaryBgBrush" Color="{StaticResource SecondaryBg}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Warning}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Error}" />
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource PrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="TabItem">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+</Styles>
