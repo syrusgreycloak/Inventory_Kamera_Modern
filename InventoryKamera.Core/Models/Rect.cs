@@ -1,15 +1,11 @@
 using SixLabors.ImageSharp;
 using System.Runtime.InteropServices;
-using DrawingPoint     = System.Drawing.Point;
-using DrawingRectangle = System.Drawing.Rectangle;
-using DrawingSize      = System.Drawing.Size;
 
 namespace InventoryKamera
 {
     internal static class RectangleExtensions
     {
         internal static Point Center(this Rectangle r) => new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
-        internal static DrawingPoint Center(this DrawingRectangle r) => new DrawingPoint(r.X + r.Width / 2, r.Y + r.Height / 2);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -35,15 +31,17 @@ namespace InventoryKamera
         public int Bottom { get => _Bottom; set => _Bottom = value; }
         public int Height { get => _Bottom - _Top; set => _Bottom = value + _Top; }
         public int Width { get => _Right - _Left; set => _Right = value + _Left; }
-        // Location and Size return System.Drawing types for GDI+ compatibility (Navigation.cs etc.)
-        public DrawingPoint Location { get => new DrawingPoint(Left, Top); set { _Left = value.X; _Top = value.Y; } }
-        public DrawingSize Size { get => new DrawingSize(Width, Height); set { _Right = value.Width + _Left; _Bottom = value.Height + _Top; } }
 
-        // Implicit conversions for both SixLabors.ImageSharp.Rectangle and System.Drawing.Rectangle
+        /// <summary>Returns the top-left corner as an ImageSharp Point.</summary>
+        public Point Location { get => new Point(Left, Top); set { _Left = value.X; _Top = value.Y; } }
+        /// <summary>Returns the dimensions as an ImageSharp Size.</summary>
+        public Size Size { get => new Size(Width, Height); set { _Right = value.Width + _Left; _Bottom = value.Height + _Top; } }
+
+        // Conversions to/from SixLabors.ImageSharp.Rectangle only — no System.Drawing coupling in Core.
+        // System.Drawing interop lives in InventoryKamera/Infrastructure/Compat/RectGdiExtensions.cs.
         public static implicit operator Rectangle(RECT r) => new Rectangle(r.Left, r.Top, r.Width, r.Height);
         public static implicit operator RECT(Rectangle r) => new RECT(r.Left, r.Top, r.Right, r.Bottom);
-        public static implicit operator DrawingRectangle(RECT r) => new DrawingRectangle(r.Left, r.Top, r.Width, r.Height);
-        public static implicit operator RECT(DrawingRectangle r) => new RECT(r.Left, r.Top, r.Right, r.Bottom);
+
         public static bool operator ==(RECT r1, RECT r2) => r1.Equals(r2);
         public static bool operator !=(RECT r1, RECT r2) => !r1.Equals(r2);
         public override string ToString() => "{Left: " + _Left + "; Top: " + _Top + "; Right: " + _Right + "; Bottom: " + _Bottom + "}";
@@ -55,7 +53,6 @@ namespace InventoryKamera
             {
                 case RECT rect: return Equals(rect);
                 case Rectangle rectangle: return Equals(new RECT(rectangle));
-                case DrawingRectangle drect: return Equals(new RECT(drect));
             }
             return false;
         }

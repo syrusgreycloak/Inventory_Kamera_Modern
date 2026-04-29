@@ -8,6 +8,7 @@ using System.Threading;
 using System.Windows.Forms;
 using WindowsInput;
 using WindowsInput.Native;
+using InventoryKamera.Infrastructure.Compat;
 
 namespace InventoryKamera
 {
@@ -91,7 +92,7 @@ namespace InventoryKamera
 					Top: (int)( 695 / 720.0 * bmp.Height ),
 					Right: bmp.Width,
 					Bottom: bmp.Height);
-				gfxBmp.FillRectangle(new SolidBrush(Color.Black), uidRegion);
+				gfxBmp.FillRectangle(new SolidBrush(Color.Black), uidRegion.ToDrawingRectangle());
 			}
 			return bmp;
 		}
@@ -108,7 +109,7 @@ namespace InventoryKamera
 
 		public static Bitmap CaptureRegion(int x, int y, int width, int height, PixelFormat format = PixelFormat.Format24bppRgb)
 		{
-			return CaptureRegion(new Rectangle(x, y, width, height), format);
+			return CaptureRegion(new RECT(x, y, x + width, y + height), format);
 		}
 
 		#endregion Window Capturing
@@ -272,7 +273,7 @@ namespace InventoryKamera
 
 		public static Size GetSize()
 		{
-			return WindowSize.Size;
+			return WindowSize.GetDrawingSize();
 		}
 
 		public static Size GetAspectRatio()

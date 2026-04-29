@@ -222,7 +222,9 @@ namespace InventoryKamera
 			Image<Rgba32> nameBitmap = _screenCapture.CaptureRegion(region);
 
 			//Image Operations
+			var oldNameBitmap = nameBitmap;
 			nameBitmap = _imageProcessor.SetGamma(nameBitmap, 0.2, 0.2, 0.2);
+			if (!ReferenceEquals(oldNameBitmap, nameBitmap)) oldNameBitmap.Dispose();
 			nameBitmap = _imageProcessor.SetInvert(nameBitmap);
 			Image<Rgba32> n = _imageProcessor.SetGrayscale(nameBitmap);
 
@@ -625,7 +627,9 @@ namespace InventoryKamera
 					talentLevel = _imageProcessor.ResizeImage(talentLevel, talentLevel.Width * 2, talentLevel.Height * 2);
 
 					Image<Rgba32> n = _imageProcessor.SetGrayscale(talentLevel);
+					var oldN = n;
 					n = _imageProcessor.SetContrast(n, 60);
+					if (!ReferenceEquals(oldN, n)) oldN.Dispose();
 					n = _imageProcessor.SetInvert(n);
 
 					var text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleBlock).Trim().Split('\n').ToList();

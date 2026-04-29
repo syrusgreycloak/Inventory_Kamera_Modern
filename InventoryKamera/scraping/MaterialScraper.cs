@@ -111,7 +111,7 @@ namespace InventoryKamera
 							inventory.Materials.Add(material);
 							_userInterface.ResetCharacterDisplay();
 							UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
-
+							// TODO: dispose quantity (pre-existing leak — see line 207)
 							previousMaterial.name = material.name;
 						}
 					}
@@ -296,7 +296,9 @@ namespace InventoryKamera
 			nameplate = GenshinProcesor.ImageSharpToBitmap(bm);
 
 			// Alter Image
+			var oldBm = bm;
 			bm = _imageProcessor.SetGamma(bm, 0.2, 0.2, 0.2);
+			if (!ReferenceEquals(oldBm, bm)) oldBm.Dispose();
 			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
 			n = _imageProcessor.SetInvert(n);
 

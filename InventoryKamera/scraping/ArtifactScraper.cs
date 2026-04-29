@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using static InventoryKamera.Artifact;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using InventoryKamera.Infrastructure.Compat;
 using ISRect        = SixLabors.ImageSharp.Rectangle;
 using DrawingColor  = System.Drawing.Color;
 using DrawingSize   = System.Drawing.Size;
@@ -410,7 +411,7 @@ namespace InventoryKamera
 		public bool IsEnhancementMaterial(Image<Rgba32> card)
 		{
 			RECT reference = Navigation.GetAspectRatio() == new DrawingSize(16, 9) ?
-				new RECT(new System.Drawing.Rectangle(862, 80, 327, 560)) : (RECT)new System.Drawing.Rectangle(862, 80, 328, 640);
+				new System.Drawing.Rectangle(862, 80, 327, 560).ToRECT() : new System.Drawing.Rectangle(862, 80, 328, 640).ToRECT();
 			var nameRegion = new ISRect(0, 0, card.Width, (int)(38.0 / reference.Height * card.Height));
 			using (var nameBitmap = GenshinProcesor.ImageSharpToBitmap(GenshinProcesor.CopyBitmap(card, nameRegion)))
 			{
@@ -421,7 +422,9 @@ namespace InventoryKamera
 
 		private static string ScanEnhancementMaterialName(Bitmap bm)
 		{
+			var oldBm = bm;
 			GenshinProcesor.SetGamma(0.2, 0.2, 0.2, ref bm);
+			if (!ReferenceEquals(oldBm, bm)) oldBm.Dispose();
 			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
 			GenshinProcesor.SetInvert(ref n);
 
@@ -520,7 +523,10 @@ namespace InventoryKamera
 			List<string> lines = new List<string>();
 			List<SubStat> substats = new List<SubStat>();
 			string text;
+            var oldBm = bm;
             GenshinProcesor.SetBrightness(-30, ref bm);
+            if (!ReferenceEquals(oldBm, bm)) oldBm.Dispose();
+            // SetContrast mutates in-place (LockBits) — no ref swap, no dispose guard needed.
             GenshinProcesor.SetContrast(85, ref bm);
 			using (var n = GenshinProcesor.ConvertToGrayscale(bm))
 			{

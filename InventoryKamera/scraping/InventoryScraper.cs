@@ -126,7 +126,9 @@ namespace InventoryKamera
         /// <returns>String parsed from nameplate</returns>
         internal string ScanItemName(Image<Rgba32> nameplate)
         {
+            var oldNameplate = nameplate;
             nameplate = _imageProcessor.SetGamma(nameplate, 0.2, 0.2, 0.2);
+            if (!ReferenceEquals(oldNameplate, nameplate)) oldNameplate.Dispose();
             Image<Rgba32> n = _imageProcessor.SetGrayscale(nameplate);
             n = _imageProcessor.SetInvert(n);
 
@@ -161,7 +163,9 @@ namespace InventoryKamera
                 _userInterface.SetNavigation_Image(countBitmap);
 
                 Image<Rgba32> n = _imageProcessor.SetGrayscale(countBitmap);
+                var oldN = n;
                 n = _imageProcessor.SetContrast(n, 60.0);
+                if (!ReferenceEquals(oldN, n)) oldN.Dispose();
                 n = _imageProcessor.SetInvert(n);
 
                 string text = _ocrEngine.AnalyzeText(n).Trim();

@@ -17,10 +17,10 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using TesseractOCR.Enums;
 using OcrPool = InventoryKamera.Infrastructure.OcrEnginePool;
+using InventoryKamera.Infrastructure.Compat;
 using DrawingColor     = System.Drawing.Color;
 using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize      = System.Drawing.Size;
-using ISRect           = SixLabors.ImageSharp.Rectangle;
 
 namespace InventoryKamera
 {
@@ -214,7 +214,7 @@ namespace InventoryKamera
 
 			if (Navigation.GetAspectRatio() == new DrawingSize(16, 9))
 			{
-				reference = new RECT(new DrawingRectangle(862, 80, 327, 560));
+				reference = new DrawingRectangle(862, 80, 327, 560).ToRECT();
 
 				int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 				int top = (int)Math.Round(reference.Top / 720.0 * height, MidpointRounding.AwayFromZero);
@@ -225,7 +225,7 @@ namespace InventoryKamera
 			}
 			else // if (Navigation.GetAspectRatio() == new DrawingSize(8, 5))
 			{
-				reference = new RECT(new DrawingRectangle(862, 80, 327, 640));
+				reference = new DrawingRectangle(862, 80, 327, 640).ToRECT();
 
 				int left = (int)Math.Round(reference.Left / 1280.0 * width, MidpointRounding.AwayFromZero);
 				int top = (int)Math.Round(reference.Top / 800.0 * height, MidpointRounding.AwayFromZero);

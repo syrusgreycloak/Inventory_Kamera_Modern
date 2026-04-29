@@ -380,7 +380,9 @@ namespace InventoryKamera
 		public string ScanEquippedCharacter(Image<Rgba32> bm)
 		{
 			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
+			var oldN = n;
 			n = _imageProcessor.SetContrast(n, 60.0);
+			if (!ReferenceEquals(oldN, n)) oldN.Dispose();
 
 			string extractedString = _ocrEngine.AnalyzeText(n);
 			n.Dispose();
