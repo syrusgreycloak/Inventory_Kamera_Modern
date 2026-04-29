@@ -1,4 +1,6 @@
 ﻿using InventoryKamera.ui;
+using InventoryKamera.Infrastructure.Scraping; // GenshinProcesor
+using InventoryKamera.Infrastructure.Windows; // Navigation
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Newtonsoft.Json;
 using NHotkey;

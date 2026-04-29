@@ -1,4 +1,6 @@
 using InventoryKamera.Configuration;
+using InventoryKamera.Infrastructure.Scraping; // GenshinProcesor
+using InventoryKamera.Infrastructure.Windows; // Navigation
 using NLog;
 using System;
 using System.Collections.Generic;

@@ -1,4 +1,5 @@
 ﻿using InventoryKamera.Configuration;
+using InventoryKamera.Infrastructure.Windows; // Navigation
 using InventoryKamera.Infrastructure;
 using InventoryKamera.UI;
 using Newtonsoft.Json;

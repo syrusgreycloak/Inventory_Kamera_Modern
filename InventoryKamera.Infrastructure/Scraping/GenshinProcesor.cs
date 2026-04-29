@@ -18,17 +18,18 @@ using SixLabors.ImageSharp.PixelFormats;
 using TesseractOCR.Enums;
 using OcrPool = InventoryKamera.Infrastructure.OcrEnginePool;
 using InventoryKamera.Infrastructure.Compat;
+using InventoryKamera.Infrastructure.Windows; // Navigation
 using DrawingColor     = System.Drawing.Color;
 using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize      = System.Drawing.Size;
 
-namespace InventoryKamera
+namespace InventoryKamera.Infrastructure.Scraping
 {
     public static class GenshinProcesor
 	{
 		private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		internal static Dictionary<string, string> Stats = new Dictionary<string, string>
+		public static Dictionary<string, string> Stats = new Dictionary<string, string>
 		{
 			["hp"] = "hp",
 			["hp%"] = "hp_",
@@ -44,7 +45,7 @@ namespace InventoryKamera
 			["physicaldmgbonus"] = "physical_dmg_",
 		};
 
-		internal static readonly List<string> gearSlots = new List<string>
+		public static readonly List<string> gearSlots = new List<string>
 		{
 			"flower",
 			"plume",
@@ -64,7 +65,7 @@ namespace InventoryKamera
 			"geo",
 		};
 
-		internal static readonly HashSet<string> enhancementMaterials = new HashSet<string>
+		public static readonly HashSet<string> enhancementMaterials = new HashSet<string>
 		{
 			"enhancementore",
 			"fineenhancementore",
@@ -73,7 +74,7 @@ namespace InventoryKamera
 			"sanctifyingessence",
 		};
 
-		internal static readonly List<string> customNames = new List<string>
+		public static readonly List<string> customNames = new List<string>
 		{
 			"Traveler",
 			"Wanderer",
@@ -81,11 +82,11 @@ namespace InventoryKamera
 			"Manequin2"
 		};
 
-		internal static OcrPool _ocrPool;
+		private static readonly OcrPool _ocrPool;
 
-		internal static Dictionary<string, string> Weapons, DevItems, Materials, Elements;
+		public static Dictionary<string, string> Weapons, DevItems, Materials, Elements;
 
-		internal static Dictionary<string, JObject> Characters, Artifacts;
+		public static Dictionary<string, JObject> Characters, Artifacts;
 
 		private static GameDataService _gameData;
 
@@ -114,7 +115,7 @@ namespace InventoryKamera
             Logger.Info("Scraper initialized");
         }
 
-		internal static void ReloadData()
+		public static void ReloadData()
         {
             GameData.ReloadData();
             Characters = _gameData.Characters;
@@ -125,7 +126,7 @@ namespace InventoryKamera
             Stats = _gameData.Stats;
 		}
 
-		internal static void UpdateCharacterName(string target, string name) =>
+		public static void UpdateCharacterName(string target, string name) =>
             GameData.UpdateCharacterName(target, name);
 
 		// TODO Task 9: replace with characterScraper.ScanMainCharacterName() — CharacterScraper is now an instance class
@@ -145,17 +146,17 @@ namespace InventoryKamera
 
 		#region OCR
 
-		internal static void RestartEngines() => _ocrPool.RestartEngines();
+		public static void RestartEngines() => _ocrPool.RestartEngines();
 
 		/// <summary> Use Tesseract OCR to find words on picture to string (ImageSharp overload). </summary>
-		internal static string AnalyzeText(Image<Rgba32> image, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
+		public static string AnalyzeText(Image<Rgba32> image, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
 		{
 			var coreMode = (PageSegmentationMode)(int)pageMode;
 			return _ocrPool.AnalyzeText(image, coreMode, numbersOnly);
 		}
 
 		/// <summary> Use Tesseract OCR to find words on picture to string (GDI+ overload — used by internal Bitmap-based scan methods). </summary>
-		internal static string AnalyzeText(Bitmap bitmap, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
+		public static string AnalyzeText(Bitmap bitmap, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)
 		{
 			var coreMode = (PageSegmentationMode)(int)pageMode;
 			using (var ms = new MemoryStream())
@@ -171,36 +172,36 @@ namespace InventoryKamera
 
 		#region Check valid parameters
 
-		internal static bool IsValidSetName(string s) => GameData.IsValidSetName(s);
-		internal static bool IsValidMaterial(string s) => GameData.IsValidMaterial(s);
-		internal static bool IsValidStat(string s) => GameData.IsValidStat(s);
-		internal static bool IsValidSlot(string s) => GameData.IsValidSlot(s);
-		internal static bool IsValidCharacter(string s) => GameData.IsValidCharacter(s);
-		internal static bool IsValidElement(string s) => GameData.IsValidElement(s);
-		internal static bool IsEnhancementMaterial(string s) => GameData.IsEnhancementMaterial(s);
-		internal static bool IsValidWeapon(string s) => GameData.IsValidWeapon(s);
+		public static bool IsValidSetName(string s) => GameData.IsValidSetName(s);
+		public static bool IsValidMaterial(string s) => GameData.IsValidMaterial(s);
+		public static bool IsValidStat(string s) => GameData.IsValidStat(s);
+		public static bool IsValidSlot(string s) => GameData.IsValidSlot(s);
+		public static bool IsValidCharacter(string s) => GameData.IsValidCharacter(s);
+		public static bool IsValidElement(string s) => GameData.IsValidElement(s);
+		public static bool IsEnhancementMaterial(string s) => GameData.IsEnhancementMaterial(s);
+		public static bool IsValidWeapon(string s) => GameData.IsValidWeapon(s);
 
 		#endregion Check valid parameters
 
 		#region Element Searching
 
-		internal static string FindClosestGearSlot(string input) => GameData.FindClosestGearSlot(input);
-		internal static string FindClosestStat(string stat, int minConfidence = 90) => GameData.FindClosestStat(stat, minConfidence);
-		internal static string FindElementByName(string name, int minConfidence = 90) => GameData.FindElementByName(name, minConfidence);
-		internal static string FindClosestWeapon(string name, int minConfidence = 90) => GameData.FindClosestWeapon(name, minConfidence);
-		internal static string FindClosestSetName(string name, int minConfidence = 90) => GameData.FindClosestSetName(name, minConfidence);
-		internal static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90) => GameData.FindClosestArtifactSetFromArtifactName(name, minConfidence);
-		internal static string FindClosestCharacterName(string name, int minConfidence = 90) => GameData.FindClosestCharacterName(name, minConfidence);
-		internal static string FindClosestDevelopmentName(string name, int minConfidence = 90) => GameData.FindClosestDevelopmentName(name, minConfidence);
-		internal static string FindClosestMaterialName(string name, int minConfidence = 90) => GameData.FindClosestMaterialName(name, minConfidence);
-		internal static bool CharacterMatchesElement(string name, string element) => GameData.CharacterMatchesElement(name, element);
-		internal static List<string> GetCharactersElements(string name) => GameData.GetCharactersElements(name);
-		internal static string GetElementForCharacter(string name) => GameData.GetElementForCharacter(name);
+		public static string FindClosestGearSlot(string input) => GameData.FindClosestGearSlot(input);
+		public static string FindClosestStat(string stat, int minConfidence = 90) => GameData.FindClosestStat(stat, minConfidence);
+		public static string FindElementByName(string name, int minConfidence = 90) => GameData.FindElementByName(name, minConfidence);
+		public static string FindClosestWeapon(string name, int minConfidence = 90) => GameData.FindClosestWeapon(name, minConfidence);
+		public static string FindClosestSetName(string name, int minConfidence = 90) => GameData.FindClosestSetName(name, minConfidence);
+		public static string FindClosestArtifactSetFromArtifactName(string name, int minConfidence = 90) => GameData.FindClosestArtifactSetFromArtifactName(name, minConfidence);
+		public static string FindClosestCharacterName(string name, int minConfidence = 90) => GameData.FindClosestCharacterName(name, minConfidence);
+		public static string FindClosestDevelopmentName(string name, int minConfidence = 90) => GameData.FindClosestDevelopmentName(name, minConfidence);
+		public static string FindClosestMaterialName(string name, int minConfidence = 90) => GameData.FindClosestMaterialName(name, minConfidence);
+		public static bool CharacterMatchesElement(string name, string element) => GameData.CharacterMatchesElement(name, element);
+		public static List<string> GetCharactersElements(string name) => GameData.GetCharactersElements(name);
+		public static string GetElementForCharacter(string name) => GameData.GetElementForCharacter(name);
 
         #endregion Element Searching
 
 
-        internal static void FindDelay(List<DrawingRectangle> rectangles)
+        public static void FindDelay(List<DrawingRectangle> rectangles)
 		{
 			Navigation.SetDelay(180);
 			int delayOffset = 20;
@@ -330,7 +331,7 @@ namespace InventoryKamera
 
         #region Image Operations
 
-        internal static Bitmap ResizeImage(System.Drawing.Image image, int width, int height)
+        public static Bitmap ResizeImage(System.Drawing.Image image, int width, int height)
 		{
 			var destRect = new DrawingRectangle(0, 0, width, height);
 			var destImage = new Bitmap(width, height);
@@ -355,7 +356,7 @@ namespace InventoryKamera
 			return destImage;
 		}
 
-		internal static Bitmap ResizeImage(Bitmap image, DrawingSize tSize)
+		public static Bitmap ResizeImage(Bitmap image, DrawingSize tSize)
 		{
 			int targetWidth = (int)Math.Round((double)image.Width * (tSize.Height / tSize.Width));
 			int targetHeight = (int)Math.Round((double)image.Height * (tSize.Height / tSize.Width));
@@ -367,12 +368,12 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static Bitmap ScaleImage(System.Drawing.Image image, double factor)
+		public static Bitmap ScaleImage(System.Drawing.Image image, double factor)
 		{
 			return ResizeImage(image, (int)( image.Width * factor ), (int)( image.Height * factor ));
 		}
 
-		internal static bool CompareColors(DrawingColor a, DrawingColor b)
+		public static bool CompareColors(DrawingColor a, DrawingColor b)
 		{
 			int[] diff = new int[3];
 			diff[0] = Math.Abs(a.R - b.R);
@@ -382,7 +383,7 @@ namespace InventoryKamera
 			return diff[0] < 10 && diff[1] < 10 && diff[2] < 10;
 		}
 
-		internal static DrawingColor ClosestColor(List<DrawingColor> colors, DrawingColor color)
+		public static DrawingColor ClosestColor(List<DrawingColor> colors, DrawingColor color)
 		{
 			var diff = colors.Select(x => new { Value = x, Diff = GetColorDifference(x, color) }).ToList();
 
@@ -394,7 +395,7 @@ namespace InventoryKamera
             return diff.Find(x=> x.Diff == diff.Min(y=>y.Diff)).Value;
 		}
 
-		internal static DrawingColor GetAverageColor(Bitmap bitmap)
+		public static DrawingColor GetAverageColor(Bitmap bitmap)
 		{
 			long r = 0, g = 0, b = 0;
 			int count = 0;
@@ -427,7 +428,7 @@ namespace InventoryKamera
 			return r*r + g*g + b*b;
 		}
 
-        internal static Bitmap ConvertToGrayscale(Bitmap bitmap)
+        public static Bitmap ConvertToGrayscale(Bitmap bitmap)
 		{
 			Bitmap grayscale = new Bitmap(bitmap.Width, bitmap.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 			using (Graphics g = Graphics.FromImage(grayscale))
@@ -450,7 +451,7 @@ namespace InventoryKamera
 			return grayscale;
 		}
 
-		internal static void SetContrast(double contrast, ref Bitmap bitmap)
+		public static void SetContrast(double contrast, ref Bitmap bitmap)
 		{
 			int c = (int)contrast;
 			double factor = (259.0 * (c + 255)) / (255.0 * (259 - c));
@@ -482,7 +483,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static void SetGamma(double red, double green, double blue, ref Bitmap bitmap)
+		public static void SetGamma(double red, double green, double blue, ref Bitmap bitmap)
 		{
 			Bitmap temp = bitmap;
 			Bitmap bmap = (Bitmap)temp.Clone();
@@ -513,7 +514,7 @@ namespace InventoryKamera
 			return gammaArray;
 		}
 
-		internal static void SetInvert(ref Bitmap bitmap)
+		public static void SetInvert(ref Bitmap bitmap)
 		{
 			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadWrite, bitmap.PixelFormat);
@@ -539,7 +540,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static void SetColor(string colorFilterType, ref Bitmap bitmap)
+		public static void SetColor(string colorFilterType, ref Bitmap bitmap)
 		{
 			Bitmap temp = bitmap;
 			Bitmap bmap = (Bitmap)temp.Clone();
@@ -586,7 +587,7 @@ namespace InventoryKamera
 			bitmap = (Bitmap)bmap.Clone();
 		}
 
-		internal static void SetBrightness(int brightness, ref Bitmap bitmap)
+		public static void SetBrightness(int brightness, ref Bitmap bitmap)
 		{
 			if (brightness < -255) brightness = -255;
 			if (brightness > 255) brightness = 255;
@@ -618,7 +619,7 @@ namespace InventoryKamera
 			bitmap = (Bitmap)bmap.Clone();
 		}
 
-		internal static void SetThreshold(int threshold, ref Bitmap bitmap)
+		public static void SetThreshold(int threshold, ref Bitmap bitmap)
 		{
 			BitmapData data = bitmap.LockBits(new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height),
 				ImageLockMode.ReadWrite, bitmap.PixelFormat);
@@ -646,7 +647,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static void FilterColors(ref Bitmap bm, IntRange red, IntRange green, IntRange blue)
+		public static void FilterColors(ref Bitmap bm, IntRange red, IntRange green, IntRange blue)
 		{
 			BitmapData data = bm.LockBits(new DrawingRectangle(0, 0, bm.Width, bm.Height),
 				ImageLockMode.ReadWrite, bm.PixelFormat);
@@ -682,7 +683,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static bool CompareBitmapsFast(Bitmap bmp1, Bitmap bmp2)
+		public static bool CompareBitmapsFast(Bitmap bmp1, Bitmap bmp2)
 		{
 			if (bmp1 == null || bmp2 == null)
 				return false;
@@ -718,7 +719,7 @@ namespace InventoryKamera
 			return result;
 		}
 
-		internal static Bitmap PreProcessImage(Bitmap image)
+		public static Bitmap PreProcessImage(Bitmap image)
 		{
 			using (var edges = KirschEdgeDetect(image))
 			using (var grayscale = ConvertToGrayscale(edges))
@@ -729,7 +730,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static Bitmap KirschEdgeDetect(Bitmap source)
+		public static Bitmap KirschEdgeDetect(Bitmap source)
 		{
 			int[][][] kernels = new int[][][]
 			{
@@ -795,7 +796,7 @@ namespace InventoryKamera
 			return result;
 		}
 
-		internal static Bitmap CopyBitmap(Bitmap source, DrawingRectangle region)
+		public static Bitmap CopyBitmap(Bitmap source, DrawingRectangle region)
 		{
 			ClipToSource(source, ref region);
             return source.Clone(region, source.PixelFormat);
@@ -813,7 +814,7 @@ namespace InventoryKamera
 
 		// Conversion helpers — keep allocation minimal by going through PNG streams.
 
-		internal static Bitmap ImageSharpToBitmap(Image<Rgba32> img)
+		public static Bitmap ImageSharpToBitmap(Image<Rgba32> img)
 		{
 			using (var ms = new MemoryStream())
 			{
@@ -823,7 +824,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static Image<Rgba32> BitmapToImageSharp(Bitmap bmp)
+		public static Image<Rgba32> BitmapToImageSharp(Bitmap bmp)
 		{
 			using (var ms = new MemoryStream())
 			{
@@ -835,14 +836,14 @@ namespace InventoryKamera
 
 		// Image<Rgba32> overloads — used by scraper code that has already been migrated to ImageSharp types.
 
-		internal static Image<Rgba32> ConvertToGrayscale(Image<Rgba32> image)
+		public static Image<Rgba32> ConvertToGrayscale(Image<Rgba32> image)
 		{
 			using (var bmp = ImageSharpToBitmap(image))
 			using (var result = ConvertToGrayscale(bmp))
 				return BitmapToImageSharp(result);
 		}
 
-		internal static void SetContrast(double contrast, ref Image<Rgba32> image)
+		public static void SetContrast(double contrast, ref Image<Rgba32> image)
 		{
 			var bmp = ImageSharpToBitmap(image);
 			try
@@ -853,7 +854,7 @@ namespace InventoryKamera
 			finally { bmp.Dispose(); }
 		}
 
-		internal static void SetGamma(double red, double green, double blue, ref Image<Rgba32> image)
+		public static void SetGamma(double red, double green, double blue, ref Image<Rgba32> image)
 		{
 			Bitmap original = ImageSharpToBitmap(image);
 			Bitmap bmp = original;
@@ -869,7 +870,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static void SetInvert(ref Image<Rgba32> image)
+		public static void SetInvert(ref Image<Rgba32> image)
 		{
 			var bmp = ImageSharpToBitmap(image);
 			try
@@ -880,7 +881,7 @@ namespace InventoryKamera
 			finally { bmp.Dispose(); }
 		}
 
-		internal static void SetThreshold(int threshold, ref Image<Rgba32> image)
+		public static void SetThreshold(int threshold, ref Image<Rgba32> image)
 		{
 			var bmp = ImageSharpToBitmap(image);
 			try
@@ -891,7 +892,7 @@ namespace InventoryKamera
 			finally { bmp.Dispose(); }
 		}
 
-		internal static void SetBrightness(int brightness, ref Image<Rgba32> image)
+		public static void SetBrightness(int brightness, ref Image<Rgba32> image)
 		{
 			var bmp = ImageSharpToBitmap(image);
 			try
@@ -902,7 +903,7 @@ namespace InventoryKamera
 			finally { bmp.Dispose(); }
 		}
 
-		internal static void FilterColors(ref Image<Rgba32> image, IntRange red, IntRange green, IntRange blue)
+		public static void FilterColors(ref Image<Rgba32> image, IntRange red, IntRange green, IntRange blue)
 		{
 			var bmp = ImageSharpToBitmap(image);
 			try
@@ -913,7 +914,7 @@ namespace InventoryKamera
 			finally { bmp.Dispose(); }
 		}
 
-		internal static Rgba32 GetAverageColor(Image<Rgba32> image)
+		public static Rgba32 GetAverageColor(Image<Rgba32> image)
 		{
 			using (var bmp = ImageSharpToBitmap(image))
 			{
@@ -922,7 +923,7 @@ namespace InventoryKamera
 			}
 		}
 
-		internal static Rgba32 ClosestColor(List<Rgba32> colors, Rgba32 target)
+		public static Rgba32 ClosestColor(List<Rgba32> colors, Rgba32 target)
 		{
 			var gdiColors = colors.Select(c => DrawingColor.FromArgb(c.A, c.R, c.G, c.B)).ToList();
 			var gdiTarget = DrawingColor.FromArgb(target.A, target.R, target.G, target.B);
@@ -930,45 +931,45 @@ namespace InventoryKamera
 			return new Rgba32(result.R, result.G, result.B, result.A);
 		}
 
-		internal static bool CompareColors(Rgba32 a, Rgba32 b) =>
+		public static bool CompareColors(Rgba32 a, Rgba32 b) =>
 			CompareColors(DrawingColor.FromArgb(a.A, a.R, a.G, a.B), DrawingColor.FromArgb(b.A, b.R, b.G, b.B));
 
-		internal static Image<Rgba32> CopyBitmap(Image<Rgba32> source, SixLabors.ImageSharp.Rectangle region)
+		public static Image<Rgba32> CopyBitmap(Image<Rgba32> source, SixLabors.ImageSharp.Rectangle region)
 		{
 			using (var bmp = ImageSharpToBitmap(source))
 			using (var cropped = CopyBitmap(bmp, new DrawingRectangle(region.X, region.Y, region.Width, region.Height)))
 				return BitmapToImageSharp(cropped);
 		}
 
-		internal static Image<Rgba32> ResizeImage(Image<Rgba32> image, int width, int height)
+		public static Image<Rgba32> ResizeImage(Image<Rgba32> image, int width, int height)
 		{
 			using (var bmp = ImageSharpToBitmap(image))
 			using (var result = ResizeImage(bmp, width, height))
 				return BitmapToImageSharp(result);
 		}
 
-		internal static Image<Rgba32> ScaleImage(Image<Rgba32> image, double factor)
+		public static Image<Rgba32> ScaleImage(Image<Rgba32> image, double factor)
 		{
 			using (var bmp = ImageSharpToBitmap(image))
 			using (var result = ScaleImage(bmp, factor))
 				return BitmapToImageSharp(result);
 		}
 
-		internal static Image<Rgba32> KirschEdgeDetect(Image<Rgba32> source)
+		public static Image<Rgba32> KirschEdgeDetect(Image<Rgba32> source)
 		{
 			using (var bmp = ImageSharpToBitmap(source))
 			using (var result = KirschEdgeDetect(bmp))
 				return BitmapToImageSharp(result);
 		}
 
-		internal static Image<Rgba32> PreProcessImage(Image<Rgba32> image)
+		public static Image<Rgba32> PreProcessImage(Image<Rgba32> image)
 		{
 			using (var bmp = ImageSharpToBitmap(image))
 			using (var result = PreProcessImage(bmp))
 				return BitmapToImageSharp(result);
 		}
 
-		internal static bool CompareBitmapsFast(Image<Rgba32> img1, Image<Rgba32> img2)
+		public static bool CompareBitmapsFast(Image<Rgba32> img1, Image<Rgba32> img2)
 		{
 			using (var b1 = ImageSharpToBitmap(img1))
 			using (var b2 = ImageSharpToBitmap(img2))
@@ -977,7 +978,7 @@ namespace InventoryKamera
 
 		#endregion ImageSharp Bridge
 
-		internal static string ConvertToGood(this string text)
+		public static string ConvertToGood(this string text)
 		{
             text = text.ToLower();
             var pascal = CultureInfo.GetCultureInfo("en-US").TextInfo.ToTitleCase(text);

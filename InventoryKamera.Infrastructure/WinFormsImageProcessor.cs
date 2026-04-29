@@ -1,6 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+
+using InventoryKamera;
+using InventoryKamera.Infrastructure.Scraping; // GenshinProcesor
 
 namespace InventoryKamera.Infrastructure
 {
@@ -8,7 +11,7 @@ namespace InventoryKamera.Infrastructure
     /// ImageSharp-typed public API that delegates to the GDI+ GenshinProcesor helpers via the
     /// ImageSharp bridge methods in GenshinProcesor. All conversion is encapsulated there.
     /// </summary>
-    internal class WinFormsImageProcessor : IImageProcessor
+    public class WinFormsImageProcessor : IImageProcessor
     {
         public Image<Rgba32> Crop(Image<Rgba32> source, Rectangle region) =>
             GenshinProcesor.CopyBitmap(source, region);

@@ -50,6 +50,7 @@ namespace InventoryKamera.Avalonia
                 var core = new GameDataService(db);
                 return new InventoryKamera.Infrastructure.InfraGameDataService(core);
             });
+            services.AddSingleton<IUserInterface, InventoryKamera.Infrastructure.NullUserInterface>();
 #endif
 
             // Register view models (cross-platform — no Infrastructure dependency)

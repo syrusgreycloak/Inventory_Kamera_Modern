@@ -3,10 +3,12 @@ using System.Drawing.Imaging;
 using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using InventoryKamera; // RECT
+using InventoryKamera.Infrastructure.Windows; // Navigation
 
 namespace InventoryKamera.Infrastructure
 {
-    internal class WindowsScreenCapture : IScreenCapture
+    public class WindowsScreenCapture : IScreenCapture
     {
         public Image<Rgba32> CaptureWindow() => BitmapToImageSharp(Navigation.CaptureWindow());
         public Image<Rgba32> CaptureRegion(int x, int y, int width, int height) => BitmapToImageSharp(Navigation.CaptureRegion(x, y, width, height));

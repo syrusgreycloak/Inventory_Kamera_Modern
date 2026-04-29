@@ -1,6 +1,9 @@
+﻿using InventoryKamera; // ScanDelay
+using InventoryKamera.Infrastructure.Windows; // Navigation
+
 namespace InventoryKamera.Infrastructure
 {
-    internal class WindowsInputSimulator : IInputSimulator
+    public class WindowsInputSimulator : IInputSimulator
     {
         public void Click() => Navigation.Click();
         public void Click(int x, int y) => Navigation.Click(x, y);

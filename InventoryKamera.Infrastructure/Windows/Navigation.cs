@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -10,13 +11,13 @@ using WindowsInput;
 using WindowsInput.Native;
 using InventoryKamera.Infrastructure.Compat;
 
-namespace InventoryKamera
+namespace InventoryKamera.Infrastructure.Windows
 {
     public static class Navigation
 	{
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		internal static InputSimulator sim = new InputSimulator();
+		public static InputSimulator sim = new InputSimulator();
 		private static RECT WindowSize;
 		private static RECT WindowPosition;
 		private static Size AspectRatio;
@@ -29,15 +30,25 @@ namespace InventoryKamera
 		public static VirtualKeyCode inventoryKey = VirtualKeyCode.VK_B;
 		public static VirtualKeyCode slotOneKey = VirtualKeyCode.VK_1;
 
+		/// <summary>
+		/// Default Genshin Impact process names. Kept here so Infrastructure has no dependency
+		/// on Properties.Settings from the WinForms project. The call site may override via
+		/// <see cref="Initialize(IEnumerable{string})"/>.
+		/// </summary>
+		private static readonly string[] DefaultExecutables = { "GenshinImpact", "YuanShen" };
+
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool GetClientRect(IntPtr hWnd, ref RECT Rect);
 
 		[DllImport("user32.dll", SetLastError = true)]
 		private static extern bool ClientToScreen(IntPtr hWnd, ref RECT Rect);
 
-		public static void Initialize()
+		/// <summary>Initialises Navigation using the default process names (GenshinImpact / YuanShen).</summary>
+		public static void Initialize() => Initialize(DefaultExecutables);
+
+		/// <summary>Initialises Navigation using the provided process names.</summary>
+		public static void Initialize(IEnumerable<string> executables)
 		{
-			var executables = Properties.Settings.Default.Executables;
 			foreach (var processName in executables)
 			{
 				Logger.Debug("Checking for {0}.exe", processName);
