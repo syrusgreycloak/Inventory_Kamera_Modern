@@ -1,3 +1,4 @@
+using InventoryKamera.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,8 +14,8 @@ namespace InventoryKamera
 	{
 		private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		public ArtifactScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+		public ArtifactScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator, IScanProfileService scanProfile)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator, scanProfile)
         {
             inventoryPage = InventoryPage.Artifacts;
         }
@@ -238,12 +239,13 @@ namespace InventoryKamera
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
+			var r = _scanProfile.ActiveProfile.Artifacts.Substats;
 
             return _imageProcessor.Crop(card, new Rectangle(
-				x:(int)(card.Width * 0.0911),
-				y:(int)(card.Height * ((_screenCapture.IsNormal ? 0.4216 : 0.3682) + yShift)),
-				width:(int)(card.Width * 0.8097),
-				height:(int)(card.Height * (_screenCapture.IsNormal ? 0.1841 : 0.1573))));
+				x:(int)(card.Width * r.X),
+				y:(int)(card.Height * (r.Y + yShift)),
+				width:(int)(card.Width * r.W),
+				height:(int)(card.Height * r.H)));
         }
 
 		private bool IsSanctified(Bitmap card)
@@ -278,22 +280,24 @@ namespace InventoryKamera
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0471;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
+			var r = _scanProfile.ActiveProfile.Artifacts.Lock;
 
 			return _imageProcessor.Crop(card,
 				new Rectangle(
-					x: (int)(card.Width * 0.75),
-					y: (int)(card.Height * ((_screenCapture.IsNormal ? 0.353 : 0.309) + yShift)),
-					width: (int)(card.Width * 0.0955),
-					height: (int)(card.Height * (_screenCapture.IsNormal ? 0.055 : 0.0495))));
+					x: (int)(card.Width * r.X),
+					y: (int)(card.Height * (r.Y + yShift)),
+					width: (int)(card.Width * r.W),
+					height: (int)(card.Height * r.H)));
 		}
 
         private Bitmap GetMainStatBitmap(Bitmap card)
         {
+			var r = _scanProfile.ActiveProfile.Artifacts.MainStat;
 			return _imageProcessor.Crop(card, new Rectangle(
-				x: (int)(card.Width * 0.0405),
-				y: (int)(card.Height * (_screenCapture.IsNormal ? 0.1722 : 0.1477)),
-				width: (int)(card.Width * 0.4555),
-				height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0416 : 0.0416))));
+				x: (int)(card.Width * r.X),
+				y: (int)(card.Height * r.Y),
+				width: (int)(card.Width * r.W),
+				height: (int)(card.Height * r.H)));
         }
 
         private Bitmap GetLevelBitmap(Bitmap card)
@@ -301,21 +305,23 @@ namespace InventoryKamera
 			bool isSanctified = IsSanctified(card);
 			double sanctifiedShift = _screenCapture.IsNormal ? 0.0520 : 0.0465;
 			double yShift = isSanctified ? sanctifiedShift : 0.0;
+			var r = _scanProfile.ActiveProfile.Artifacts.Level;
 
             return _imageProcessor.Crop(card, new Rectangle(
-                x: (int)(card.Width * 0.0506),
-                y: (int)(card.Height * ((_screenCapture.IsNormal ? 0.3634 : 0.3197) + yShift)),
-                width: (int)(card.Width * 0.1417),
-                height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0416 : 0.0347))));
+                x: (int)(card.Width * r.X),
+                y: (int)(card.Height * (r.Y + yShift)),
+                width: (int)(card.Width * r.W),
+                height: (int)(card.Height * r.H)));
         }
 
         private Bitmap GetGearSlotBitmap(Bitmap card)
         {
+			var r = _scanProfile.ActiveProfile.Artifacts.GearSlot;
             return _imageProcessor.Crop(card, new Rectangle(
-                x: (int)(card.Width * 0.0405),
-                y: (int)(card.Height * (_screenCapture.IsNormal ? 0.07720 : 0.0663)),
-                width: (int)(card.Width * 0.4757),
-                height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0475 : 0.0809))));
+                x: (int)(card.Width * r.X),
+                y: (int)(card.Height * r.Y),
+                width: (int)(card.Width * r.W),
+                height: (int)(card.Height * r.H)));
         }
 
         public async Task<Artifact> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)
@@ -485,7 +491,7 @@ namespace InventoryKamera
 			GenshinProcesor.SetInvert(ref n);
 
 			// numbersOnly = true => seems to interpret the '+' as a '4'
-			string text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleWord).Trim().ToLower();
+			string text = GenshinProcesor.AnalyzeText(n, TesseractOCR.Enums.PageSegMode.SingleWord).Trim().ToLower();
 			n.Dispose();
 
 			// Get rid of all non digits
@@ -504,7 +510,7 @@ namespace InventoryKamera
             GenshinProcesor.SetContrast(85, ref bm);
 			using (var n = GenshinProcesor.ConvertToGrayscale(bm))
 			{
-				text = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower();
+				text = GenshinProcesor.AnalyzeText(n, TesseractOCR.Enums.PageSegMode.Auto).ToLower();
 			}
 
             lines = new List<string>(text.Split('\n'));
@@ -598,7 +604,7 @@ namespace InventoryKamera
                     g.Clear(Color.White);
                     g.DrawImage(grayscale, (padded.Width - grayscale.Width) / 2, (padded.Height - grayscale.Height) / 2);
 
-                    var scannedText = GenshinProcesor.AnalyzeText(grayscale, Tesseract.PageSegMode.Auto).ToLower().Replace("\n", " ");
+                    var scannedText = GenshinProcesor.AnalyzeText(grayscale, TesseractOCR.Enums.PageSegMode.Auto).ToLower().Replace("\n", " ");
 					Logger.Debug("Raw OCR text for artifact set name: '{0}'", scannedText);
                     string text = Regex.Replace(scannedText, @"[\W]", string.Empty);
 					Logger.Debug("Cleaned text for artifact set lookup: '{0}'", text);

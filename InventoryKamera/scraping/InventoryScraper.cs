@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using InventoryKamera.Configuration;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -67,8 +68,9 @@ namespace InventoryKamera
         protected IUserInterface _userInterface;
         protected IGameDataService _gameDataService;
         protected IInputSimulator _inputSimulator;
+        protected IScanProfileService _scanProfile;
 
-        protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
+        protected InventoryScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator, IScanProfileService scanProfile)
             : this()
         {
             _screenCapture = screenCapture;
@@ -77,6 +79,7 @@ namespace InventoryKamera
             _userInterface = userInterface;
             _gameDataService = gameDataService;
             _inputSimulator = inputSimulator;
+            _scanProfile = scanProfile;
         }
 
         public InventoryScraper()
@@ -125,7 +128,7 @@ namespace InventoryKamera
             n = _imageProcessor.SetInvert(n);
 
             // Analyze
-            string text = Regex.Replace(_ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleBlock).ToLower(), @"[\W]", string.Empty);
+            string text = Regex.Replace(_ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleBlock).ToLower(), @"[\W]", string.Empty);
 
             n.Dispose();
 

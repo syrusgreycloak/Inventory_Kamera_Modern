@@ -1,26 +1,29 @@
-# Inventory Kamera - A Genshin Data Scanner
+# Inventory Kamera Modern - A Genshin Data Scanner
 
 Fan-made Genshin Impact tool that scans characters, weapons, artifacts, materials and character development items in your inventory using the OCR technique.
 
 This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you to use it with compatible online Genshin Impact tools. These tools include artifact optimizing tools including [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), [SEELIE.me](https://seelie.me/) and [Aspirine's Genshin Impact Calculator](https://genshin.aspirine.su/).
 
-## Download
-[LATEST DOWNLOAD HERE](https://github.com/Andrewthe13th/Inventory_Kamera/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
+## About this project
 
-## DISCORD
-https://discord.gg/zh56aVWe3U
+**Inventory Kamera Modern** is a modernized rewrite of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera). The original project is no longer actively maintained; this fork carries it forward with the following changes:
 
+- **Migrated to .NET 8** (from .NET Framework 4.7.2). Modern runtime, modern tooling, modern dependencies.
+- **Platform-agnostic Core library** extracted from the WinForms project so the business logic can be reused across UIs.
+- **Updated OCR pipeline** to `TesseractOCR 5.5.2`, with material quantity OCR accuracy improved from ~50% to effectively 100%.
+- **Externalized scan region coordinates** into `inventorylists/ScanProfile.json` so users can adjust them without recompiling.
 
+The current UI is still Windows Forms. The next major step is a cross-platform **Avalonia** UI that will allow the app to run on Windows, macOS, and Linux from the same codebase. Windows Forms will continue to ship until Avalonia reaches feature parity, then it will be retired.
 
 ## Table of Contents
 > **Note**
 >
 > Please **read the following instructions carefully** and setup before using the scanner.
 - Getting Started
-  - [Installing Inventory Kamera](#installing-inventory-kamera)
+  - [Installing Inventory Kamera Modern](#installing-inventory-kamera-modern)
   - [Setting up Genshin Impact](#setting-up-genshin-impact)
-  - [Settings and configurations](#how-to-configure-inventory-kamera)
-  - [Running Inventory Kamera](#how-to-run-inventory-kamera)
+  - [Settings and configurations](#how-to-configure-inventory-kamera-modern)
+  - [Running Inventory Kamera Modern](#how-to-run-inventory-kamera-modern)
 - Scanner
   - [Updating the database](#updating-for-new-game-versions)
 - Repository
@@ -30,16 +33,22 @@ https://discord.gg/zh56aVWe3U
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
   - [License](#license)
 
-## Installing Inventory Kamera
+## Installing Inventory Kamera Modern
 
-Before installing Inventory Kamera, please have **the following things installed on your device**:
+Before installing Inventory Kamera Modern, please have **the following things installed on your device**:
 
 - [GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/) launcher
 - [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x86 or x64)](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022), _**A computer restart may be required after installing this package for the first time**_
+- [.NET 8 Runtime (Windows Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) — required to run the application
 
-[Download the latest version of Inventory Kamera here](https://github.com/Andrewthe13th/Inventory_Kamera/releases/latest) and unzip its files into a folder of your choosing, then launch the extracted .exe file. It will likely prompt you for Security and/or User Access. This access is required to interact with the game.
+Inventory Kamera Modern does not currently publish prebuilt binaries. To run it, build from source:
 
-To upgrade from a previous version, download a newer release and unzip its files into the current Inventory Kamera location (allow it to replace old files when prompted) or a new folder of your choosing.
+1. Clone this repository.
+2. Open `InventoryKamera.sln` in JetBrains Rider or Visual Studio 2022.
+3. Build the `InventoryKamera` project in `Debug` or `Release` configuration.
+4. Launch `InventoryKamera.exe` from the build output directory (e.g. `InventoryKamera/bin/Debug/net8.0-windows/`).
+
+The application may prompt you for Security and/or User Access on first launch. This access is required to interact with the game.
 
 ## Setting up Genshin Impact
 
@@ -52,44 +61,44 @@ To upgrade from a previous version, download a newer release and unzip its files
      - Don't know if a resolution is 16:9 or 16:10? [Find out here](https://andrew.hedges.name/experiments/aspect_ratio/).
         > **Warning**
         >
-        > If you have an ultrawide screen, please see [this thread](https://github.com/Andrewthe13th/Inventory_Kamera/issues/40)
+        > Ultrawide screens are not supported.
         > Additionally, HDR is not currently supported. If you experience scanning issues, please make sure this is disabled in Windows Settings
    - Under `Controls`, set _Control Type_ to Keyboard.
-     - If you rebound keys (inventory (default: B), character screen (default: C), or selecting character 1 (default: 1)) revert your binding to default or set up the new key binding in Inventory Kamera.
+     - If you rebound keys (inventory (default: B), character screen (default: C), or selecting character 1 (default: 1)) revert your binding to default or set up the new key binding in Inventory Kamera Modern.
 
-## How to configure Inventory Kamera
+## How to configure Inventory Kamera Modern
 
 Before starting the scanner, you can (optionally) edit the following options:
 
 - Select which categories (weapons, artifacts, characters, items) you want to scan.
 - Configure minimum weapon and artifact rarity to be scanned.
-- Set the scanner delays to slow Inventory Kamera's scanning speed if you experience problems with scanning.
+- Set the scanner delays to slow Inventory Kamera Modern's scanning speed if you experience problems with scanning.
 - Set the file export destination in the File Directory.
-- Inventory Kamera uses the default keybinds to open the inventory (B) and character screens (C). These settings may be customized within Inventory Kamera's options.
+- Inventory Kamera Modern uses the default keybinds to open the inventory (B) and character screens (C). These settings may be customized within Inventory Kamera Modern's options.
 
-## How to run Inventory Kamera
+## How to run Inventory Kamera Modern
 
-1. Start the Inventory Kamera scan by **leaving the game with the Paimon Menu open** and clicking 'Scan'.
+1. Start the Inventory Kamera Modern scan by **leaving the game with the Paimon Menu open** and clicking 'Scan'.
 > **Warning**
 >
 > While scanning, **do not use your mouse or keyboard**. The scanner uses keyboard and mouse input to automate scanning.
 >
 > If you want to terminate the scan early, you can press `ENTER` button at any time. This will cancel the scan, and the application will not automatically output any scanned results. You may press the 'Export Scanned Data' button to force the export of the most recently collected data (whether it's complete or incomplete).
 
-2. Wait for Inventory Kamera to complete its scan for the `Scan Items` selections.
+2. Wait for Inventory Kamera Modern to complete its scan for the `Scan Items` selections.
 
-3. Press the `Open Export Folder` button to open a File Explorer window. This is where Inventory Kamera exports its scanned data.
+3. Press the `Open Export Folder` button to open a File Explorer window. This is where Inventory Kamera Modern exports its scanned data.
 
 
 
 
 ## Updating for new game versions
 
-Inventory Kamera uses lists of valid items and characters to assist with text recognition. These lists are kept locally in the `inventorylists` folder. These lists should be updated every time a new version of the game is released, and it can be done either automatically or manually.
+Inventory Kamera Modern uses lists of valid items and characters to assist with text recognition. These lists are kept locally in the `inventorylists` folder. These lists should be updated every time a new version of the game is released, and it can be done either automatically or manually.
 
 ### Updating automatically
 
-A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
+A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera Modern syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
 
 If the update window does not show up when the applications starts, you can select `Update Lookup Tables` under `Options` to run the automatic updater. You may optionally force the updater to run if it does not detect a new Genshin Impact version. 
 
@@ -97,7 +106,7 @@ If the update window does not show up when the applications starts, you can sele
 
 > **Warning**
 > 
-> This option should only be necessary if Inventory Kamera's `Update Lookup Tables` reports an error or the generated ouputs are invalid.
+> This option should only be necessary if Inventory Kamera Modern's `Update Lookup Tables` reports an error or the generated ouputs are invalid.
 
 The materials and weapons lists are kept in a simple key:value JSON-readable format. 'value' is the name of an item in [PascalCase](<https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats>) and 'key' is whatever 'value' is but in lowercase. 
 
@@ -205,35 +214,23 @@ Consider using [a JSON text validator](https://jsonlint.com/) after following th
 
 ## Reporting an issue
 
-If you run into a problem with our scanner (e.g. a bug, app crash, invalid export format), please [create an issue here](https://github.com/Andrewthe13th/Inventory_Kamera/issues/new/choose) and try to fill it out as much as possible. It, along with the evidence, will greatly speed up the bug-fixing process. 
-
-Alternatively, the [Inventory Kamera Discord](https://discord.gg/zh56aVWe3U) is open for more real-time discussion and support help.
+If you run into a problem with the scanner (e.g. a bug, app crash, invalid export format), please open an issue on this project's GitHub repository and try to fill it out as much as possible. Screenshots, video recordings, and the contents of the `logging` folder are extremely helpful for debugging — attach a zipped copy if relevant. You may check the 'Log All Screenshots' box to force screenshot capture in most areas that may concern the developer.
 
 > **Note**
 >
-> Before submitting an issue, **please [check for similar issues](https://github.com/Andrewthe13th/Inventory_Kamera/issues?q=is%3Aissue), especially the ones that are still open.**
->
-> Start by leaving a reaction emoji to that issue (more reactions means more dev attention!). Please try to limit comments to new or helpful information (i.e. not "Same issue here" comments). You can choose to _subscribe_ to that issue by clicking 'Subscribe' in the Notifications section to get notifications on thread developments.
-
-### Creating a new issue
-
-We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may check the 'Log All Screenshots' box to force this behavior in most areas that may concern the devs.
+> Before submitting an issue, **please check for similar existing issues, especially the ones still open.**
 
 ## Requesting a new feature
 
-If you would like to request a new feature, please visit the [discussion forum](https://github.com/Andrewthe13th/Inventory_Kamera/discussions) before opening a new feature request using [Inventory Kamera feature request form](https://github.com/Andrewthe13th/Inventory_Kamera/discussions/new?category=ideas-or-feature-requests).
-
-Alternatively, the [Inventory Kamera Discord](https://discord.gg/zh56aVWe3U) is has a feature request channel.
+If you would like to request a new feature, please open a discussion or feature-request issue on this project's GitHub repository.
 
 ## Asking a question
 
-General questions? Start by looking for similar questions in the [Inventory Kamera discussion forum](https://github.com/Andrewthe13th/Inventory_Kamera/discussions) OR the [Inventory Kamera Discord](https://discord.gg/zh56aVWe3U).
-
-If you have a question that doesn't have a thread, create a new [general](https://github.com/Andrewthe13th/Inventory_Kamera/discussions/new?category=general) or [Q&A](https://github.com/Andrewthe13th/Inventory_Kamera/discussions/new?category=q-a) thread.
+For general questions, open a discussion thread on this project's GitHub repository.
 
 ## Frequently Asked Questions (FAQ)
 
-#### Can Inventory Kamera get me banned?
+#### Can Inventory Kamera Modern get me banned?
 
 According to [HoYoverse's response to Script, Plug-In, and Third-Party Software](https://genshin.hoyoverse.com/en/news/detail/5763), we believe, no.
 
@@ -242,13 +239,9 @@ The scanner does not provide any exploits or game progression. It only takes scr
 In addition, we have not received any warnings about the application development.
 However, that does not mean it will stay that way forever! We are at the mercy of HoYoverse.
 
-#### What Languages does Inventory Kamera support?
+#### What Languages does Inventory Kamera Modern support?
 
-Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Langugae" option must be set to Engish. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
-
-#### I need help! Where can I go?
-
-Help may be found in the [Inventory Kamera discussion forum](https://github.com/Andrewthe13th/Inventory_Kamera/discussions) or in the [Inventory Kamera Discord](https://discord.gg/zh56aVWe3U).
+Inventory Kamera Modern only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Language" option must be set to English. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
 
 ## License
 

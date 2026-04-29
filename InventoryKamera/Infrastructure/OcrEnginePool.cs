@@ -2,7 +2,8 @@ using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Collections.Concurrent;
-using Tesseract;
+using TesseractOCR;
+using TesseractOCR.Enums;
 
 namespace InventoryKamera.Infrastructure
 {
@@ -13,20 +14,20 @@ namespace InventoryKamera.Infrastructure
         private const int NumEngines = 8;
         private readonly string _tessdataPath;
         private readonly string _tessdataLanguage;
-        private ConcurrentBag<TesseractEngine> _engines;
+        private ConcurrentBag<Engine> _engines;
 
         public OcrEnginePool()
         {
             _tessdataPath = Path.Combine(System.AppContext.BaseDirectory, "tessdata");
-            _tessdataLanguage = "genshin_fast_09_04_21";
-            _engines = new ConcurrentBag<TesseractEngine>();
+            _tessdataLanguage = "genshin_best_eng";
+            _engines = new ConcurrentBag<Engine>();
             InitEngines();
         }
 
         private void InitEngines()
         {
             for (int i = 0; i < NumEngines; i++)
-                _engines.Add(new TesseractEngine(_tessdataPath, _tessdataLanguage, EngineMode.LstmOnly));
+                _engines.Add(new Engine(_tessdataPath, _tessdataLanguage, EngineMode.LstmOnly));
         }
 
         public void RestartEngines()
@@ -34,7 +35,7 @@ namespace InventoryKamera.Infrastructure
             lock (_engines)
             {
                 while (!_engines.IsEmpty)
-                    if (_engines.TryTake(out TesseractEngine e)) e.Dispose();
+                    if (_engines.TryTake(out Engine e)) e.Dispose();
                 InitEngines();
             }
         }
@@ -42,7 +43,7 @@ namespace InventoryKamera.Infrastructure
         public string AnalyzeText(Bitmap bitmap, PageSegmentationMode mode = PageSegmentationMode.SingleLine, bool numbersOnly = false)
         {
             var tessMode = (PageSegMode)(int)mode;
-            TesseractEngine engine;
+            Engine engine;
             while (!_engines.TryTake(out engine)) Thread.Sleep(10);
 
             try
@@ -56,17 +57,11 @@ namespace InventoryKamera.Infrastructure
                     pngBytes = ms.ToArray();
                 }
 
-                string text = "";
-                using (var pix = Pix.LoadFromMemory(pngBytes))
+                using (var pix = TesseractOCR.Pix.Image.LoadFromMemory(pngBytes))
                 using (var page = engine.Process(pix, tessMode))
-                using (var iter = page.GetIterator())
                 {
-                    iter.Begin();
-                    do { text += iter.GetText(PageIteratorLevel.TextLine); }
-                    while (iter.Next(PageIteratorLevel.TextLine));
+                    return page.Text;
                 }
-
-                return text;
             }
             finally
             {

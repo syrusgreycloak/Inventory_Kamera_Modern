@@ -22,5 +22,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>inventorylists\%(Filename)%(Extension)</Link>
     </None>
+    <None Include="..\InventoryKamera\inventorylists\ScanProfile.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>inventorylists\ScanProfile.json</Link>
+    </None>
   </ItemGroup>
 </Project>

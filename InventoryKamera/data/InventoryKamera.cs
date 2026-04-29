@@ -1,4 +1,5 @@
-﻿using InventoryKamera.Infrastructure;
+﻿using InventoryKamera.Configuration;
+using InventoryKamera.Infrastructure;
 using InventoryKamera.UI;
 using Newtonsoft.Json;
 using System;
@@ -38,6 +39,7 @@ namespace InventoryKamera
 		private readonly IUserInterface _userInterface;
 		private readonly IGameDataService _gameDataService;
 		private readonly IInputSimulator _inputSimulator;
+		private readonly IScanProfileService _scanProfile;
 
 		private volatile bool b_threadCancel;
 		public bool WasCancelled => b_threadCancel;
@@ -71,11 +73,19 @@ namespace InventoryKamera
 			var coreGameData = new GameDataService(db);
 			_gameDataService = new InfraGameDataService(coreGameData);
 
+			// Load scan profile based on detected aspect ratio (Navigation.Initialize must have run)
+			var profileManager = new ScanProfileManager();
+			var aspect = _screenCapture.GetAspectRatio();
+			double aspectRatio = aspect.Height > 0 ? (double)aspect.Width / aspect.Height : 16.0 / 9.0;
+			string profilePath = Path.Combine(AppContext.BaseDirectory, "inventorylists", "ScanProfile.json");
+			profileManager.Load(profilePath, aspectRatio);
+			_scanProfile = profileManager;
+
 			// Construct scrapers with injected services
-			weaponScraper = new WeaponScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
-			artifactScraper = new ArtifactScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
-			materialScraper = new MaterialScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
-			_characterScraper = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator);
+			weaponScraper = new WeaponScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			artifactScraper = new ArtifactScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			materialScraper = new MaterialScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			_characterScraper = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
 
 			b_threadCancel = false;
 

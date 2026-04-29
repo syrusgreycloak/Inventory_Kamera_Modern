@@ -11,7 +11,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Tesseract;
+using TesseractOCR.Enums;
 using OcrPool = InventoryKamera.Infrastructure.OcrEnginePool;
 
 namespace InventoryKamera
