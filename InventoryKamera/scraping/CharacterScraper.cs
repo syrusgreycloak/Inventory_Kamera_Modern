@@ -1,3 +1,4 @@
+using InventoryKamera.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,8 +13,8 @@ namespace InventoryKamera
 	{
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-		public CharacterScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
-			: base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+		public CharacterScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator, IScanProfileService scanProfile)
+			: base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator, scanProfile)
 		{
 		}
 
@@ -285,7 +286,7 @@ namespace InventoryKamera
 					var resized = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
 					n.Dispose();
 					n = resized;
-					string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+					string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleLine).ToLower().Trim();
 
 					Logger.Debug("Name OCR from right panel: '{0}'", text);
 
@@ -404,8 +405,8 @@ namespace InventoryKamera
 				var resizedN = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
 				n.Dispose();
 				n = resizedN;
-				string block = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.Auto).ToLower().Trim();
-				string line = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+				string block = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.Auto).ToLower().Trim();
+				string line = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleLine).ToLower().Trim();
 
 				// Use line if it has a slash, otherwise use block
 				string nameAndElement = line.Contains("/") ? line : block;
@@ -623,7 +624,7 @@ namespace InventoryKamera
 					n = _imageProcessor.SetContrast(n, 60);
 					n = _imageProcessor.SetInvert(n);
 
-					var text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.SingleBlock).Trim().Split('\n').ToList();
+					var text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleBlock).Trim().Split('\n').ToList();
 					Logger.Debug("Talent '{0}' OCR raw text: '{1}'", talent, string.Join(" | ", text));
 
 					if (int.TryParse(Regex.Replace(text.Last(), @"\D", string.Empty), out int level))

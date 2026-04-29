@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using InventoryKamera.Configuration;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,8 +14,8 @@ namespace InventoryKamera
     {
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-		public WeaponScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+		public WeaponScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator, IScanProfileService scanProfile)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator, scanProfile)
         {
             inventoryPage = InventoryPage.Weapons;
         }
@@ -214,22 +215,24 @@ namespace InventoryKamera
 
         Bitmap GetLevelBitmap(Bitmap card)
         {
+            var r = _scanProfile.ActiveProfile.Weapons.Level;
             return _imageProcessor.Crop(card,
                 new Rectangle(
-                    x: (int)(card.Width * 0.060),
-                    y: (int)(card.Height * (_screenCapture.IsNormal ? 0.367 : 0.320)),
-                    width: (int)(card.Width * 0.262),
-                    height: (int)(card.Height * (_screenCapture.IsNormal ? 0.035 : 0.033))));
+                    x: (int)(card.Width * r.X),
+                    y: (int)(card.Height * r.Y),
+                    width: (int)(card.Width * r.W),
+                    height: (int)(card.Height * r.H)));
         }
 
         Bitmap GetRefinementBitmap(Bitmap card)
         {
+            var r = _scanProfile.ActiveProfile.Weapons.Refinement;
             return _imageProcessor.Crop(card,
                 new Rectangle(
-                    x: (int)(card.Width * (_screenCapture.IsNormal ? 0.061 : 0.060)),
-                    y: (int)(card.Height * (_screenCapture.IsNormal ? 0.421 : 0.368)),
-                    width: (int)(card.Width * (_screenCapture.IsNormal ? 0.065 : 0.066)),
-                    height: (int)(card.Height * (_screenCapture.IsNormal ? 0.033 : 0.030))));
+                    x: (int)(card.Width * r.X),
+                    y: (int)(card.Height * r.Y),
+                    width: (int)(card.Width * r.W),
+                    height: (int)(card.Height * r.H)));
         }
 
         public async Task<Weapon> CatalogueFromBitmapsAsync(List<Bitmap> bm, int id)

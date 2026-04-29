@@ -1,4 +1,5 @@
-﻿using System;
+﻿using InventoryKamera.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -11,8 +12,8 @@ namespace InventoryKamera
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
 
-		public MaterialScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator)
-            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator)
+		public MaterialScraper(IScreenCapture screenCapture, IOcrEngine ocrEngine, IImageProcessor imageProcessor, IUserInterface userInterface, IGameDataService gameDataService, IInputSimulator inputSimulator, IScanProfileService scanProfile)
+            : base(screenCapture, ocrEngine, imageProcessor, userInterface, gameDataService, inputSimulator, scanProfile)
         {
             inventoryPage = InventoryPage.CharacterDevelopmentItems;
         }
@@ -73,6 +74,12 @@ namespace InventoryKamera
 					material.count = 0;
 
 					Logger.Debug("Found {0}", material.name);
+
+					// Save nameplate bitmap when name lookup failed, so we can inspect what was captured.
+					if (string.IsNullOrEmpty(material.name))
+					{
+						SaveInventoryBitmap(nameplate, $"unknown_nameplate_{DateTime.Now:HHmmss_fff}.png");
+					}
 
 					// Check if new material has been found
 					if (inventory.Materials.Contains(material))
@@ -287,20 +294,29 @@ namespace InventoryKamera
 			Bitmap n = _imageProcessor.SetGrayscale(bm);
 			n = _imageProcessor.SetInvert(n);
 
-			string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)Tesseract.PageSegMode.Auto);
-			text = Regex.Replace(text, @"[\W\s]", string.Empty).ToLower();
+			string rawText = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.Auto);
+			if (string.IsNullOrWhiteSpace(rawText))
+			{
+				// Auto PSM occasionally returns nothing on short/single-word nameplates (e.g. "Jam").
+				// SingleLine is more permissive — retry before giving up.
+				rawText = _ocrEngine.AnalyzeText(n, PageSegmentationMode.SingleLine);
+			}
+			string text = Regex.Replace(rawText, @"[\W\s]", string.Empty).ToLower();
 
 			//UI
 			n.Dispose();
 			bm.Dispose();
 
+			string match = null;
 			if (inventoryPage == InventoryPage.CharacterDevelopmentItems)
-				return _gameDataService.FindClosestDevelopmentName(text);
+				match = _gameDataService.FindClosestDevelopmentName(text);
+			else if (inventoryPage == InventoryPage.Materials)
+				match = _gameDataService.FindClosestMaterialName(text);
 
-			if (inventoryPage == InventoryPage.Materials)
-				return _gameDataService.FindClosestMaterialName(text);
+			Logger.Debug("Name OCR: raw='{0}' cleaned='{1}' matched='{2}'",
+				rawText.Replace("\n", " ").Trim(), text, match ?? "(null)");
 
-			return null;
+			return match;
 		}
 
 		public static int ScanMaterialCount(Rectangle rectangle, out Bitmap quantity)
@@ -330,42 +346,40 @@ namespace InventoryKamera
                         Bitmap copy = (Bitmap)rescaled.Clone();
                         GenshinProcesor.FilterColors(ref copy, rRange, gRange, bRange);
 
-                        for (int i = 0; i < copy.Width; i++)
-                            for (int j = 0; j < copy.Height * 0.25; j++)
-                                copy.SetPixel(i, j, Color.White);
+                        // Top 25% whitewash removed: it erased digits when row drift placed them
+                        // at TopY 0-5 within the captured strip. Page-5 success without whitewash
+                        // confirmed the icon-edge noise it suppressed wasn't actually load-bearing.
 
                         Bitmap n = GenshinProcesor.ConvertToGrayscale(copy);
-                        
+
 						GenshinProcesor.SetInvert(ref n);
-                        GenshinProcesor.SetThreshold(50, ref n);
 
                         string original = GenshinProcesor.AnalyzeText(n).Trim();
 
 						n.Dispose();
 						copy.Dispose();
 
-                        if (int.TryParse(original, out int val)) return val;
-
-                        // Might be worth it to train some more numbers
+                        // Parse: clean integer first; otherwise strip junk chars and retry.
+                        bool cleanParse = int.TryParse(original, out int val);
                         var cleaned = original;
-
-                        cleaned = cleaned.Replace("M", "111");
-
-                        cleaned = Regex.Replace(cleaned, @"[^0-9]", string.Empty);
-
-                        int.TryParse(cleaned, out val);
+                        if (!cleanParse)
+                        {
+                            cleaned = cleaned.Replace("M", "111");
+                            cleaned = Regex.Replace(cleaned, @"[^0-9]", string.Empty);
+                            int.TryParse(cleaned, out val);
+                        }
 
                         Logger.Debug($"Scanned: {original} -> Regex: {cleaned} -> Parsed: {val}");
 
-                        if (counts.TryGetValue(val, out var counter))
-                        {
-                            if (counter >= 3 && val != 0) return val;
-                            counts[val]++;
-                        }
-                        else
-                        {
-                            counts.Add(val, 1);
-                        }
+                        // Vote: track every parse; short-circuit on confidence.
+                        counts[val] = counts.TryGetValue(val, out var existing) ? existing + 1 : 1;
+
+                        // Confidence rules — return early only when sure:
+                        // (a) two matching parses across scales, OR
+                        // (b) one clean multi-digit parse (single-digit values like "1" need a
+                        //     confirming scale because Tesseract often collapses "11" -> "1").
+                        if (val != 0 && (counts[val] >= 2 || (cleanParse && val >= 10)))
+                            return val;
                     }
                 }
 			}

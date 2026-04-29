@@ -33,7 +33,7 @@ namespace InventoryKamera.Configuration
         [JsonProperty("card")] public ScanRegion Card { get; set; }
         [JsonProperty("name")] public ScanRegion Name { get; set; }
         [JsonProperty("mainStat")] public ScanRegion MainStat { get; set; }
-        [JsonProperty("mainStatValue")] public ScanRegion MainStatValue { get; set; }
+        [JsonProperty("gearSlot")] public ScanRegion GearSlot { get; set; }
         [JsonProperty("level")] public ScanRegion Level { get; set; }
         [JsonProperty("substats")] public ScanRegion Substats { get; set; }
         [JsonProperty("equippedCharacter")] public ScanRegion EquippedCharacter { get; set; }

@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace InventoryKamera.Configuration
 {
-    public class ScanProfileManager
+    public class ScanProfileManager : IScanProfileService
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -12,6 +12,7 @@ namespace InventoryKamera.Configuration
         private AspectRatioProfile _activeProfile;
 
         public AspectRatioProfile ActiveProfile => _activeProfile;
+        public bool IsLoaded => _activeProfile != null;
 
         public void Load(string profilePath, double windowAspectRatio)
         {
