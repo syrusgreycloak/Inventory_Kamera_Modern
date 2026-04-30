@@ -39,6 +39,12 @@
     <None Include="..\InventoryKamera\inventorylists\**\*" Link="inventorylists\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Game-data JSON committed in reference_data/ (characters/weapons/artifacts/materials).
+         Linked into the same inventorylists/ output folder so DatabaseManager finds them.
+         These files can be refreshed at runtime via the About tab's "Update game data" command. -->
+    <None Include="..\reference_data\*.json" Link="inventorylists\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\InventoryKamera\tessdata\**\*" Link="tessdata\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

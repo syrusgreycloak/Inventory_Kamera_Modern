@@ -66,11 +66,32 @@ namespace InventoryKamera
 
         public void ReloadData()
         {
-            Characters = _db.LoadCharacters();
-            Artifacts = _db.LoadArtifacts();
-            Weapons = _db.LoadWeapons();
-            DevItems = _db.LoadDevItems();
-            Materials = _db.LoadMaterials();
+            // Tolerate missing data files on first launch — the About tab's
+            // "Update game data" command can populate them. Empty dictionaries
+            // make IsValid* checks safely return false until data is loaded.
+            Characters = TryLoad(_db.LoadCharacters, nameof(Characters)) ?? new Dictionary<string, JObject>();
+            Artifacts  = TryLoad(_db.LoadArtifacts,  nameof(Artifacts))  ?? new Dictionary<string, JObject>();
+            Weapons    = TryLoad(_db.LoadWeapons,    nameof(Weapons))    ?? new Dictionary<string, string>();
+            DevItems   = TryLoad(_db.LoadDevItems,   nameof(DevItems))   ?? new Dictionary<string, string>();
+            Materials  = TryLoad(_db.LoadMaterials,  nameof(Materials))  ?? new Dictionary<string, string>();
+        }
+
+        private static T TryLoad<T>(Func<T> loader, string name) where T : class
+        {
+            try
+            {
+                return loader();
+            }
+            catch (System.IO.FileNotFoundException ex)
+            {
+                Logger.Warn(ex, "{0} data file missing — run 'Update game data' from the About tab to populate it.", name);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to load {0} data — continuing with empty set.", name);
+                return null;
+            }
         }
 
         public void UpdateCharacterName(string target, string name)

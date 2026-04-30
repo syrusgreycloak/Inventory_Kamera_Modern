@@ -39,15 +39,44 @@ namespace InventoryKamera.Avalonia
         private static void ConfigureLogging()
         {
             var config = new NLog.Config.LoggingConfiguration();
+
+            // Layout shared by both file targets.
+            const string layout = "${date:format=yyyy-MM-dd HH\\:mm\\:ss.fff}|${level:uppercase=true}|${logger:shortName=True}|${message:withexception=true}";
+
+            // Debug log: every Debug+ message, archived on startup so each run starts fresh.
+            var debugFile = new NLog.Targets.FileTarget("debugfile")
+            {
+                Layout = layout,
+                FileName = "./logging/InventoryKamera.Avalonia.debug.log",
+                ArchiveFileName = "logging/archives/InventoryKamera.Avalonia.{####}.debug.log",
+                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.Date,
+                ArchiveDateFormat = "yyyyMMddHHmmss",
+                MaxArchiveFiles = 4,
+                ConcurrentWrites = true,
+                KeepFileOpen = true,
+                ArchiveOldFileOnStartup = true,
+                ArchiveFileKind = NLog.Targets.FilePathKind.Relative,
+            };
+
+            // Info+ log: same archive-on-startup behavior.
             var logFile = new NLog.Targets.FileTarget("logfile")
             {
-                Layout = "${date:format=yyyy-MM-dd HH\\:mm\\:ss.fff}|${level:uppercase=true}|${logger:shortName=True}|${message:withexception=true}",
+                Layout = layout,
                 FileName = "./logging/InventoryKamera.Avalonia.log",
-                KeepFileOpen = true,
+                ArchiveFileName = "logging/archives/InventoryKamera.Avalonia.{####}.log",
+                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.Date,
+                ArchiveDateFormat = "yyyyMMddHHmmss",
+                MaxArchiveFiles = 4,
                 ConcurrentWrites = true,
+                KeepFileOpen = true,
+                ArchiveOldFileOnStartup = true,
+                ArchiveFileKind = NLog.Targets.FilePathKind.Relative,
             };
-            var logConsole = new NLog.Targets.ConsoleTarget("logconsole");
+
+            var logConsole = new NLog.Targets.ConsoleTarget("logconsole") { Layout = layout };
+
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logConsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, debugFile);
             config.AddRule(LogLevel.Info, LogLevel.Fatal, logFile);
             LogManager.Configuration = config;
         }
