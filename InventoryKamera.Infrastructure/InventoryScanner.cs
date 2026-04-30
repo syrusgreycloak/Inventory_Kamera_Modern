@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace InventoryKamera
 {
-    public class InventoryKamera
+    public class InventoryScanner
 	{
 
 		private static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
@@ -60,7 +60,7 @@ namespace InventoryKamera
 		/// All services are provided by the DI container; no static service construction here.
 		/// Settings are snapshotted from <paramref name="settings"/> at construction time.
 		/// </summary>
-		public InventoryKamera(
+		public InventoryScanner(
 			IScreenCapture screenCapture,
 			IInputSimulator inputSimulator,
 			IOcrEngine ocrEngine,

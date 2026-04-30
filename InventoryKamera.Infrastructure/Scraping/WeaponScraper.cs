@@ -202,7 +202,7 @@ namespace InventoryKamera
             }
 
             // Send images to worker queue
-            InventoryKamera.workerQueue.Enqueue(new OCRImageCollection(weaponImages, "weapon", id));
+            InventoryScanner.workerQueue.Enqueue(new OCRImageCollection(weaponImages, "weapon", id));
         }
 
         Image<Rgba32> GetLevelBitmap(Image<Rgba32> card)

@@ -10,7 +10,7 @@ namespace InventoryKamera.Infrastructure
 {
     /// <summary>
     /// Windows-only implementation of <see cref="IScanRunner"/>.
-    /// Constructs and drives <see cref="InventoryKamera.InventoryKamera"/> using
+    /// Constructs and drives <see cref="InventoryKamera.InventoryScanner"/> using
     /// injected services so the Avalonia DI container can wire everything up.
     /// </summary>
     public class WindowsScanRunner : IScanRunner
@@ -26,7 +26,7 @@ namespace InventoryKamera.Infrastructure
         private readonly IScanProfileService _scanProfile;
 
         // Results from the last completed scan — null until a scan finishes.
-        private InventoryKamera _lastRun;
+        private InventoryScanner _lastRun;
 
         public bool HasData       => _lastRun != null && _lastRun.HasData;
         public List<Character> Characters => _lastRun?.Characters ?? new List<Character>();
@@ -58,7 +58,7 @@ namespace InventoryKamera.Infrastructure
             string profilePath = Path.Combine(AppContext.BaseDirectory, "inventorylists", "ScanProfile.json");
             _scanProfile.Load(profilePath, aspectRatio);
 
-            var ik = new InventoryKamera(
+            var ik = new InventoryScanner(
                 _screenCapture,
                 _inputSimulator,
                 _ocrEngine,

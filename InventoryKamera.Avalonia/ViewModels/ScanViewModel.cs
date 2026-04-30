@@ -18,6 +18,7 @@ namespace InventoryKamera.Avalonia.ViewModels
     public partial class ScanViewModel : ViewModelBase
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly object _logTargetLock = new object();
 
         // ----------------------------------------------------------------
         // Injected services
@@ -251,19 +252,22 @@ namespace InventoryKamera.Avalonia.ViewModels
 
         private void RegisterLogTarget()
         {
-            // Only register once per process to avoid duplicate entries if
-            // multiple ScanViewModel instances are created in tests.
-            const string targetName = "ScanViewModelConsole";
-            if (LogManager.Configuration == null)
-                return;
+            lock (_logTargetLock)
+            {
+                // Only register once per process to avoid duplicate entries if
+                // multiple ScanViewModel instances are created in tests.
+                const string targetName = "ScanViewModelConsole";
+                if (LogManager.Configuration == null)
+                    return;
 
-            if (LogManager.Configuration.FindTargetByName(targetName) != null)
-                return;
+                if (LogManager.Configuration.FindTargetByName(targetName) != null)
+                    return;
 
-            var target = new ObservableCollectionLogTarget(Console) { Name = targetName };
-            LogManager.Configuration.AddTarget(target);
-            LogManager.Configuration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, target);
-            LogManager.Configuration = LogManager.Configuration; // triggers reconfiguration of existing loggers
+                var target = new ObservableCollectionLogTarget(Console) { Name = targetName };
+                LogManager.Configuration.AddTarget(target);
+                LogManager.Configuration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, target);
+                LogManager.ReconfigExistingLoggers();
+            }
         }
     }
 }

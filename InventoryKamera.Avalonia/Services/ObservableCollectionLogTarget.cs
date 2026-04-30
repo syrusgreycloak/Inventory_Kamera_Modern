@@ -26,12 +26,7 @@ namespace InventoryKamera.Avalonia.Services
 
         protected override void Write(LogEventInfo logEvent)
         {
-            var entry = new ConsoleEntry
-            {
-                Timestamp = logEvent.TimeStamp,
-                Message   = RenderLogEvent(Layout, logEvent),
-                Level     = logEvent.Level
-            };
+            var entry = new ConsoleEntry(logEvent.TimeStamp, logEvent.Level, RenderLogEvent(Layout, logEvent));
 
             if (Dispatcher.UIThread.CheckAccess())
             {

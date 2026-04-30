@@ -233,7 +233,7 @@ namespace InventoryKamera
             }
             // Send images to Worker Queue
 			Logger.Debug("  Enqueueing artifact #{0} to worker queue...", id);
-            InventoryKamera.workerQueue.Enqueue(new OCRImageCollection(artifactImages, "artifact", id));
+            InventoryScanner.workerQueue.Enqueue(new OCRImageCollection(artifactImages, "artifact", id));
 			Logger.Debug("  Artifact #{0} enqueued successfully", id);
         }
 
