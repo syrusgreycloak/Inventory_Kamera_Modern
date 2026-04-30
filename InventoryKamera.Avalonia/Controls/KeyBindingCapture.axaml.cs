@@ -34,6 +34,10 @@ namespace InventoryKamera.Avalonia.Controls
         private static readonly SolidColorBrush TextPrimaryColour =
             new SolidColorBrush(Color.FromRgb(0xEC, 0xE5, 0xD8));
 
+        // Subtler border for the unfocused state — matches the Item Filters / Output text boxes.
+        private static readonly SolidColorBrush UnfocusedBorderColour =
+            new SolidColorBrush(Color.FromRgb(0x55, 0x59, 0x60));
+
         // ─────────────────────────────────────────────────────────────────────
         // Styled properties
         // ─────────────────────────────────────────────────────────────────────
@@ -104,7 +108,7 @@ namespace InventoryKamera.Avalonia.Controls
 
         private void OnCaptureLostFocus(object sender, RoutedEventArgs e)
         {
-            CaptureRoot.BorderBrush = Brushes.Transparent;
+            CaptureRoot.BorderBrush = UnfocusedBorderColour;
             RefreshLabel();
         }
 

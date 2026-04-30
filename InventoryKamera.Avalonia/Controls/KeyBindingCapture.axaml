@@ -8,9 +8,9 @@
           MinHeight="32"
           Padding="8,4"
           CornerRadius="4"
-          Background="{DynamicResource SecondaryBgBrush}"
+          Background="{DynamicResource PrimaryBgBrush}"
           BorderThickness="1.5"
-          BorderBrush="Transparent"
+          BorderBrush="{DynamicResource TextSecondaryBrush}"
           Cursor="Hand">
 
     <TextBlock x:Name="KeyLabel"
