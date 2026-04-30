@@ -90,6 +90,23 @@ namespace InventoryKamera.Avalonia.ViewModels
         private string _validationMessage;
 
         // ----------------------------------------------------------------
+        // Status bar (set by AvaloniaUserInterface)
+        // ----------------------------------------------------------------
+
+        [ObservableProperty]
+        private string _statusMessage;
+
+        [ObservableProperty]
+        private bool _statusIsOk = true;
+
+        // ----------------------------------------------------------------
+        // Traveler / main character name (set by AvaloniaUserInterface)
+        // ----------------------------------------------------------------
+
+        [ObservableProperty]
+        private string _mainCharacterName;
+
+        // ----------------------------------------------------------------
         // Scan state
         // ----------------------------------------------------------------
 

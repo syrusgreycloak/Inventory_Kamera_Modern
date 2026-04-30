@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using InventoryKamera;
+using InventoryKamera.Avalonia.Services;
 using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Avalonia.Views;
 using InventoryKamera.Configuration;
@@ -55,7 +56,7 @@ namespace InventoryKamera.Avalonia
                 var core = new GameDataService(db);
                 return new InfraGameDataService(core);
             });
-            services.AddSingleton<IUserInterface, NullUserInterface>();
+            services.AddSingleton<IUserInterface, AvaloniaUserInterface>();
             // ScanProfile: profile path and aspect ratio resolved at scan-start time.
             services.AddSingleton<IScanProfileService>(sp => new ScanProfileManager());
             // IScanRunner: orchestrates the full inventory scan using injected services.
