@@ -1,6 +1,8 @@
 using Avalonia;
+using InventoryKamera.Configuration;
 using NLog;
 using System;
+using System.IO;
 
 namespace InventoryKamera.Avalonia
 {
@@ -11,6 +13,11 @@ namespace InventoryKamera.Avalonia
         [STAThread]
         public static void Main(string[] args)
         {
+            // Ensure the settings directory exists before DI bootstrap so
+            // JsonSettingsService can write settings.json on first run.
+            var settingsDir = Path.GetDirectoryName(JsonSettingsService.DefaultPath());
+            if (settingsDir != null) Directory.CreateDirectory(settingsDir);
+
             ConfigureLogging();
             try
             {

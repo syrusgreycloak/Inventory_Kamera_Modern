@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Avalonia.Views;
+using InventoryKamera.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -52,6 +53,9 @@ namespace InventoryKamera.Avalonia
             });
             services.AddSingleton<IUserInterface, InventoryKamera.Infrastructure.NullUserInterface>();
 #endif
+
+            // Settings service is cross-platform — registered outside any #if WINDOWS block.
+            services.AddSingleton<ISettingsService>(sp => new JsonSettingsService(JsonSettingsService.DefaultPath));
 
             // Register view models (cross-platform — no Infrastructure dependency)
             services.AddTransient<MainViewModel>();
