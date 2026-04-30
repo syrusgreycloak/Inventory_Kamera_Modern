@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="InventoryKamera.Avalonia.Controls.KeyBindingCapture">
+
+  <Border x:Name="CaptureRoot"
+          Focusable="True"
+          MinWidth="100"
+          MinHeight="32"
+          Padding="8,4"
+          CornerRadius="4"
+          Background="{DynamicResource SecondaryBgBrush}"
+          BorderThickness="1.5"
+          BorderBrush="Transparent"
+          Cursor="Hand">
+
+    <TextBlock x:Name="KeyLabel"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               FontSize="13"
+               FontFamily="Consolas,Courier New,monospace" />
+
+  </Border>
+
+</UserControl>

@@ -66,6 +66,9 @@ namespace InventoryKamera.Avalonia
             // Settings service is cross-platform — registered outside any #if WINDOWS block.
             services.AddSingleton<ISettingsService>(sp => new JsonSettingsService(JsonSettingsService.DefaultPath));
 
+            // Folder picker — wraps Avalonia StorageProvider; cross-platform.
+            services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
+
 #if !WINDOWS
             // On non-Windows, register a no-op scan runner so DI resolves.
             // ScanViewModel will show a platform warning when Start is clicked (chunk 9).

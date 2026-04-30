@@ -1,10 +1,235 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="using:InventoryKamera.Avalonia.Controls"
              x:Class="InventoryKamera.Avalonia.Views.SettingsView">
-    <Grid>
-        <TextBlock Text="Settings view goes here"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="20" />
-    </Grid>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="16">
+
+    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="560">
+
+      <!-- ══════════════════════════════════════════════════
+           OUTPUT
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Output"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <TextBlock Text="Output folder"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0"
+                     Margin="0,0,8,0"
+                     Text="{Binding OutputPath, Mode=TwoWay}"
+                     Watermark="(select a folder…)"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+            <Button Grid.Column="1"
+                    Content="Browse…"
+                    Command="{Binding BrowseOutputPathCommand}" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           ITEM FILTERS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Item Filters"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Weapon rarity -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Min. weapon rarity"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding MinimumWeaponRarity, Mode=TwoWay}"
+                           Minimum="1"
+                           Maximum="5"
+                           Increment="1"
+                           FormatString="0"
+                           Background="{StaticResource PrimaryBgBrush}"
+                           BorderThickness="1" />
+          </Grid>
+
+          <!-- Weapon level -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Min. weapon level"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding MinimumWeaponLevel, Mode=TwoWay}"
+                           Minimum="1"
+                           Maximum="90"
+                           Increment="1"
+                           FormatString="0"
+                           Background="{StaticResource PrimaryBgBrush}"
+                           BorderThickness="1" />
+          </Grid>
+
+          <!-- Artifact rarity -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Min. artifact rarity"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding MinimumArtifactRarity, Mode=TwoWay}"
+                           Minimum="1"
+                           Maximum="5"
+                           Increment="1"
+                           FormatString="0"
+                           Background="{StaticResource PrimaryBgBrush}"
+                           BorderThickness="1" />
+          </Grid>
+
+          <!-- Artifact level -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Min. artifact level"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding MinimumArtifactLevel, Mode=TwoWay}"
+                           Minimum="0"
+                           Maximum="20"
+                           Increment="1"
+                           FormatString="0"
+                           Background="{StaticResource PrimaryBgBrush}"
+                           BorderThickness="1" />
+          </Grid>
+
+          <Separator />
+
+          <CheckBox Content="Update equipped weapons during scan"
+                    IsChecked="{Binding EquipWeapons, Mode=TwoWay}" />
+          <CheckBox Content="Update equipped artifacts during scan"
+                    IsChecked="{Binding EquipArtifacts, Mode=TwoWay}" />
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           HOTKEYS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Hotkeys"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <TextBlock Text="Click a key box, then press the desired key to rebind."
+                     FontSize="11"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Inventory key -->
+          <Grid ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0"
+                       Text="Inventory key"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <ctrl:KeyBindingCapture Grid.Column="1"
+                                    KeyValue="{Binding InventoryKey, Mode=TwoWay}"
+                                    HorizontalAlignment="Left" />
+          </Grid>
+
+          <!-- Character key -->
+          <Grid ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0"
+                       Text="Character key"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <ctrl:KeyBindingCapture Grid.Column="1"
+                                    KeyValue="{Binding CharacterKey, Mode=TwoWay}"
+                                    HorizontalAlignment="Left" />
+          </Grid>
+
+          <!-- Slot 1 key -->
+          <Grid ColumnDefinitions="160,*">
+            <TextBlock Grid.Column="0"
+                       Text="Slot 1 key"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <ctrl:KeyBindingCapture Grid.Column="1"
+                                    KeyValue="{Binding Slot1Key, Mode=TwoWay}"
+                                    HorizontalAlignment="Left" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           ADVANCED
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Advanced"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Scanner delay -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Scanner delay (ms)"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding ScannerDelay, Mode=TwoWay}"
+                           Minimum="0"
+                           Maximum="5000"
+                           Increment="50"
+                           FormatString="0"
+                           Background="{StaticResource PrimaryBgBrush}"
+                           BorderThickness="1" />
+          </Grid>
+
+          <!-- Traveler name -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Traveler custom name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding TravelerName, Mode=TwoWay}"
+                     Watermark="(leave blank to auto-detect)"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <!-- Last update check -->
+          <TextBlock FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}">
+            <Run Text="Last update check: " />
+            <Run Text="{Binding LastUpdateCheck, StringFormat='yyyy-MM-dd HH:mm'}" />
+          </TextBlock>
+
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+
 </UserControl>
