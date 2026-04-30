@@ -1,11 +1,15 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using InventoryKamera;
 using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Avalonia.Views;
 using InventoryKamera.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+#if WINDOWS
+using InventoryKamera.Infrastructure;
+#endif
 
 namespace InventoryKamera.Avalonia
 {
@@ -40,26 +44,36 @@ namespace InventoryKamera.Avalonia
             // WINDOWS is defined for the net8.0-windows TFM (see .csproj DefineConstants).
             // On the net8.0 TFM this block is compiled out; chunk 9 adds platform stubs.
 #if WINDOWS
-            services.AddSingleton<IScreenCapture, InventoryKamera.Infrastructure.WindowsScreenCapture>();
-            services.AddSingleton<IInputSimulator, InventoryKamera.Infrastructure.WindowsInputSimulator>();
-            services.AddSingleton<IOcrEngine, InventoryKamera.Infrastructure.OcrEnginePool>();
-            services.AddSingleton<IImageProcessor, InventoryKamera.Infrastructure.WinFormsImageProcessor>();
+            services.AddSingleton<IScreenCapture, WindowsScreenCapture>();
+            services.AddSingleton<IInputSimulator, WindowsInputSimulator>();
+            services.AddSingleton<IOcrEngine, OcrEnginePool>();
+            services.AddSingleton<IImageProcessor, WinFormsImageProcessor>();
             // IGameDataService needs a GameDataService instance; construct it here.
             services.AddSingleton<IGameDataService>(sp =>
             {
                 var db = new DatabaseManager();
                 var core = new GameDataService(db);
-                return new InventoryKamera.Infrastructure.InfraGameDataService(core);
+                return new InfraGameDataService(core);
             });
-            services.AddSingleton<IUserInterface, InventoryKamera.Infrastructure.NullUserInterface>();
+            services.AddSingleton<IUserInterface, NullUserInterface>();
+            // ScanProfile: profile path and aspect ratio resolved at scan-start time.
+            services.AddSingleton<IScanProfileService>(sp => new ScanProfileManager());
+            // IScanRunner: orchestrates the full inventory scan using injected services.
+            services.AddSingleton<IScanRunner, WindowsScanRunner>();
 #endif
 
             // Settings service is cross-platform — registered outside any #if WINDOWS block.
             services.AddSingleton<ISettingsService>(sp => new JsonSettingsService(JsonSettingsService.DefaultPath));
 
+#if !WINDOWS
+            // On non-Windows, register a no-op scan runner so DI resolves.
+            // ScanViewModel will show a platform warning when Start is clicked (chunk 9).
+            services.AddSingleton<IScanRunner, NullScanRunner>();
+#endif
+
             // Register view models (cross-platform — no Infrastructure dependency)
             services.AddTransient<MainViewModel>();
-            services.AddTransient<ScanViewModel>();
+            services.AddSingleton<ScanViewModel>();
             services.AddTransient<SettingsViewModel>();
             services.AddTransient<ExportViewModel>();
             services.AddTransient<AboutViewModel>();
