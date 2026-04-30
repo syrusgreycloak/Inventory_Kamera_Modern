@@ -43,7 +43,12 @@ namespace InventoryKamera
 		private readonly IInputSimulator _inputSimulator;
 		private readonly IScanProfileService _scanProfile;
 
+		// Settings snapshot used by the injected-services constructor; null when using WinForms path.
+		private readonly ScanSettings _settings;
+
 		private volatile bool b_threadCancel;
+		// CancellationToken support — set by the GatherData(CancellationToken) overload.
+		private CancellationToken _cancellationToken;
 		public bool WasCancelled => b_threadCancel;
 		private readonly int NumWorkers;
 
@@ -52,6 +57,10 @@ namespace InventoryKamera
 			get { return Characters.Count > 0 || Inventory.Size > 0; }
         }
 
+		/// <summary>
+		/// WinForms-coupled constructor.  Kept for the legacy WinForms app.
+		/// The Avalonia app uses the injected-services overload below.
+		/// </summary>
 		public InventoryKamera(MainForm mainForm = null)
 		{
 			Characters = new List<Character>();
@@ -90,6 +99,7 @@ namespace InventoryKamera
 			_characterScraper = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
 
 			b_threadCancel = false;
+			_cancellationToken = CancellationToken.None;
 
             switch (Properties.Settings.Default.ScannerDelay)
             {
@@ -101,6 +111,50 @@ namespace InventoryKamera
 					break;
             }
 			Logger.Info("Kamera initialized");
+		}
+
+		/// <summary>
+		/// Injected-services constructor for the Avalonia app.
+		/// All services are provided by the DI container; no static service construction here.
+		/// Settings are snapshotted from <paramref name="settings"/> at construction time.
+		/// </summary>
+		public InventoryKamera(
+			IScreenCapture screenCapture,
+			IInputSimulator inputSimulator,
+			IOcrEngine ocrEngine,
+			IImageProcessor imageProcessor,
+			IUserInterface userInterface,
+			IGameDataService gameDataService,
+			IScanProfileService scanProfile,
+			ScanSettings settings)
+		{
+			_screenCapture   = screenCapture   ?? throw new ArgumentNullException(nameof(screenCapture));
+			_inputSimulator  = inputSimulator  ?? throw new ArgumentNullException(nameof(inputSimulator));
+			_ocrEngine       = ocrEngine       ?? throw new ArgumentNullException(nameof(ocrEngine));
+			_imageProcessor  = imageProcessor  ?? throw new ArgumentNullException(nameof(imageProcessor));
+			_userInterface   = userInterface   ?? throw new ArgumentNullException(nameof(userInterface));
+			_gameDataService = gameDataService ?? throw new ArgumentNullException(nameof(gameDataService));
+			_scanProfile     = scanProfile     ?? throw new ArgumentNullException(nameof(scanProfile));
+			_settings        = settings        ?? throw new ArgumentNullException(nameof(settings));
+
+			Characters        = new List<Character>();
+			Inventory         = new Inventory();
+			equippedArtifacts = new List<Artifact>();
+			equippedWeapons   = new List<Weapon>();
+			ImageProcessors   = new List<Thread>();
+			workerQueue       = new Queue<OCRImageCollection>();
+
+			weaponScraper      = new WeaponScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			artifactScraper    = new ArtifactScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			materialScraper    = new MaterialScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+			_characterScraper  = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile);
+
+			b_threadCancel     = false;
+			_cancellationToken = CancellationToken.None;
+
+			NumWorkers = settings.ScannerDelay == 0 ? 3 : 2;
+
+			Logger.Info("Kamera initialized (injected)");
 		}
 
 		public void ResetLogging()
@@ -129,14 +183,44 @@ namespace InventoryKamera
 			workerQueue = new Queue<OCRImageCollection>();
 		}
 
+		// ------------------------------------------------------------------
+		// Settings helpers — resolve from injected snapshot or WinForms defaults
+		// ------------------------------------------------------------------
+
+		private bool S_ScanWeapons      => _settings != null ? _settings.ScanWeapons      : Properties.Settings.Default.ScanWeapons;
+		private bool S_ScanArtifacts    => _settings != null ? _settings.ScanArtifacts    : Properties.Settings.Default.ScanArtifacts;
+		private bool S_ScanCharacters   => _settings != null ? _settings.ScanCharacters   : Properties.Settings.Default.ScanCharacters;
+		private bool S_ScanMaterials    => _settings != null ? _settings.ScanMaterials    : Properties.Settings.Default.ScanMaterials;
+		private bool S_ScanCharDevItems => _settings != null ? _settings.ScanCharDevItems : Properties.Settings.Default.ScanCharDevItems;
+		private bool S_LogScreenshots   => _settings != null ? _settings.LogScreenshots   : Properties.Settings.Default.LogScreenshots;
+		private string S_TravelerName   => _settings != null ? _settings.TravelerName     : Properties.Settings.Default.TravelerName;
+		private string S_WandererName   => _settings != null ? _settings.WandererName     : Properties.Settings.Default.WandererName;
+		private string S_Manequin1Name  => _settings != null ? _settings.Manequin1Name    : Properties.Settings.Default.Manequin1Name;
+		private string S_Manequin2Name  => _settings != null ? _settings.Manequin2Name    : Properties.Settings.Default.Manequin2Name;
+
+		/// <summary>
+		/// Starts the full inventory scan using CancellationToken.None.
+		/// Delegates to <see cref="GatherData(CancellationToken)"/>.
+		/// </summary>
 		public void GatherData()
 		{
+			GatherData(CancellationToken.None);
+		}
+
+		/// <summary>
+		/// Starts the full inventory scan.  The <paramref name="token"/> is checked at each
+		/// category boundary and inside the image-processor worker loop alongside the legacy
+		/// <c>b_threadCancel</c> volatile flag (which remains as a safety net).
+		/// </summary>
+		public void GatherData(CancellationToken token)
+		{
+			_cancellationToken = token;
 
 			ResetLogging();
 
 			_gameDataService.ReloadData();
 
-			// Initize Image Processors
+			// Initialize Image Processors
 			for (int i = 0; i < NumWorkers; i++)
 			{
 				Thread processor = new Thread(ImageProcessorWorker){ IsBackground = true };
@@ -149,9 +233,9 @@ namespace InventoryKamera
 
 
 			// Assign Traveler's name via instance CharacterScraper
-			string travelerName = string.IsNullOrWhiteSpace(Properties.Settings.Default.TravelerName)
+			string travelerName = string.IsNullOrWhiteSpace(S_TravelerName)
 				? _characterScraper.ScanMainCharacterName()
-				: Properties.Settings.Default.TravelerName.ToLower();
+				: S_TravelerName.ToLower();
 			if (!string.IsNullOrWhiteSpace(travelerName))
 			{
 				_gameDataService.UpdateCharacterName("traveler", travelerName);
@@ -163,14 +247,15 @@ namespace InventoryKamera
 			}
 
 			// Assign Wanderer's custom name
-			_gameDataService.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
+			_gameDataService.UpdateCharacterName("wanderer", S_WandererName);
 
 			// Assign Mannequin names
-			_gameDataService.UpdateCharacterName("manequin1", Properties.Settings.Default.Manequin1Name);
-			_gameDataService.UpdateCharacterName("manequin2", Properties.Settings.Default.Manequin2Name);
+			_gameDataService.UpdateCharacterName("manequin1", S_Manequin1Name);
+			_gameDataService.UpdateCharacterName("manequin2", S_Manequin2Name);
 
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
 
-			if (Properties.Settings.Default.ScanWeapons)
+			if (S_ScanWeapons)
 			{
 				Logger.Info("Scanning weapons...");
 				// Get Weapons
@@ -189,7 +274,9 @@ namespace InventoryKamera
 				Logger.Info("Done scanning weapons");
 			}
 
-			if (Properties.Settings.Default.ScanArtifacts)
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
+			if (S_ScanArtifacts)
 			{
 				Logger.Info("Scanning artifacts...");
 
@@ -211,7 +298,9 @@ namespace InventoryKamera
 
 			workerQueue.Enqueue(new OCRImageCollection(null, "END", 0));
 
-			if (Properties.Settings.Default.ScanCharacters)
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
+			if (S_ScanCharacters)
 			{
 				Logger.Info("Scanning characters...");
 				// Get characters
@@ -231,23 +320,26 @@ namespace InventoryKamera
 			// Wait for Image Processors to finish
 			AwaitProcessors();
 
-			if (Properties.Settings.Default.ScanCharacters)
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
+			if (S_ScanCharacters)
 			{
 				// Assign Artifacts to Characters
-				if (Properties.Settings.Default.ScanArtifacts)
+				if (S_ScanArtifacts)
 					AssignArtifacts();
-				if (Properties.Settings.Default.ScanWeapons)
+				if (S_ScanWeapons)
 					AssignWeapons();
 			}
 
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
 			// Scan Character Development Items
-			if (Properties.Settings.Default.ScanCharDevItems)
+			if (S_ScanCharDevItems)
 			{
 				Logger.Info("Scanning character development materials...");
 				// Get Materials
 				Navigation.InventoryScreen();
 				Navigation.SelectCharacterDevelopmentInventory();
-				HashSet<Material> devItems = new HashSet<Material>();
 				try
 				{
 					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
@@ -262,14 +354,15 @@ namespace InventoryKamera
 				Logger.Info("Done scanning character development materials");
 			}
 
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
 			// Scan Materials
-			if (Properties.Settings.Default.ScanMaterials)
+			if (S_ScanMaterials)
 			{
 				Logger.Info("Scanning materials...");
 				// Get Materials
 				Navigation.InventoryScreen();
 				Navigation.SelectMaterialInventory();
-				HashSet<Material> materials = new HashSet<Material>();
 				try
 				{
 					materialScraper.SetInventoryPage(InventoryPage.Materials);
@@ -282,6 +375,14 @@ namespace InventoryKamera
 				}
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning materials");
+			}
+
+			Cleanup:
+			if (token.IsCancellationRequested)
+			{
+				Logger.Info("Scan cancelled via CancellationToken");
+				// Signal workers to stop if they haven't already
+				b_threadCancel = true;
 			}
 		}
 
@@ -299,7 +400,7 @@ namespace InventoryKamera
 			Logger.Debug("Thread #{0} priority: {1}", Thread.CurrentThread.ManagedThreadId, Thread.CurrentThread.Priority);
 			while (true)
 			{
-				if (b_threadCancel)
+				if (_cancellationToken.IsCancellationRequested || b_threadCancel)
 				{
 					workerQueue.Clear();
 					break;
@@ -333,7 +434,7 @@ namespace InventoryKamera
 
 							string weaponPath = $"./logging/weapons/weapon{weapon.Id}/";
 
-							if (Properties.Settings.Default.LogScreenshots) Directory.CreateDirectory(weaponPath);
+							if (S_LogScreenshots) Directory.CreateDirectory(weaponPath);
 
 							if (weapon.IsValid())
 							{
@@ -361,7 +462,7 @@ namespace InventoryKamera
 								}
 							}
 
-                            if (!weapon.IsValid() || weapon.RefinementDefaulted || Properties.Settings.Default.LogScreenshots)
+                            if (!weapon.IsValid() || weapon.RefinementDefaulted || S_LogScreenshots)
                             {
                                 Directory.CreateDirectory(weaponPath + "name");
                                 imageCollection.Bitmaps[0].SaveAsPng(weaponPath + "name/name.png");
@@ -408,7 +509,7 @@ namespace InventoryKamera
 
 							string artifactPath = $"./logging/artifacts/artifact{artifact.Id}/";
 
-                            if (Properties.Settings.Default.LogScreenshots) Directory.CreateDirectory(artifactPath);
+                            if (S_LogScreenshots) Directory.CreateDirectory(artifactPath);
 
 							if (artifact.IsValid())
 							{
@@ -438,7 +539,7 @@ namespace InventoryKamera
 								}
 							}
 
-                            if (!artifact.IsValid() || Properties.Settings.Default.LogScreenshots)
+                            if (!artifact.IsValid() || S_LogScreenshots)
                             {
                                 Directory.CreateDirectory(artifactPath + "name");
                                 imageCollection.Bitmaps[0].SaveAsPng(artifactPath + "name/name.png");

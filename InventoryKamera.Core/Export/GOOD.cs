@@ -91,7 +91,7 @@ namespace InventoryKamera
             }
         }
 
-        internal void WriteToJSON(string outputDirectory)
+        public void WriteToJSON(string outputDirectory)
         {
             // Creates directory if doesn't exist
             Directory.CreateDirectory(outputDirectory);
