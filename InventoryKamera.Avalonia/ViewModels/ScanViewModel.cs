@@ -5,6 +5,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -25,6 +26,7 @@ namespace InventoryKamera.Avalonia.ViewModels
         // ----------------------------------------------------------------
         private readonly ISettingsService  _settingsService;
         private readonly IScanRunner       _scanRunner;
+        private readonly IDialogService    _dialog;
 
         // Active cancellation token source for the running scan.
         private CancellationTokenSource _cts;
@@ -259,10 +261,12 @@ namespace InventoryKamera.Avalonia.ViewModels
 
         public ScanViewModel(
             ISettingsService settingsService,
-            IScanRunner      scanRunner)
+            IScanRunner      scanRunner,
+            IDialogService   dialog)
         {
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _scanRunner      = scanRunner      ?? throw new ArgumentNullException(nameof(scanRunner));
+            _dialog          = dialog          ?? throw new ArgumentNullException(nameof(dialog));
 
             // Wire the NLog → ObservableCollection bridge
             RegisterLogTarget();
@@ -279,6 +283,16 @@ namespace InventoryKamera.Avalonia.ViewModels
         [RelayCommand(CanExecute = nameof(CanStartScan))]
         private async Task StartScan()
         {
+            // Platform guard: scanning is Windows-only. Show an informational dialog and
+            // bail out rather than letting the NullScanRunner throw PlatformNotSupportedException.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                await _dialog.ShowInfoAsync(
+                    "Scanning Unavailable",
+                    "Scanning requires Windows. You can view and export existing scan data on this platform.");
+                return;
+            }
+
             IsScanning = true;
             ResetCounters();
             Console.Clear();

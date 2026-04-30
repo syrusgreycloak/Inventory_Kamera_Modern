@@ -60,7 +60,8 @@ namespace InventoryKamera.Tests
             var settings = new Mock<ISettingsService>(MockBehavior.Loose);
             settings.Setup(s => s.Current).Returns(new ScanSettings());
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
             var ui = new AvaloniaUserInterface(vm);
             return (vm, ui);
         }

@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 #if WINDOWS
 using InventoryKamera.Infrastructure;
+#else
+using InventoryKamera.Avalonia.Services.PlatformStubs;
 #endif
 
 namespace InventoryKamera.Avalonia
@@ -43,7 +45,7 @@ namespace InventoryKamera.Avalonia
         {
             // Register platform-specific infrastructure services.
             // WINDOWS is defined for the net8.0-windows TFM (see .csproj DefineConstants).
-            // On the net8.0 TFM this block is compiled out; chunk 9 adds platform stubs.
+            // On the net8.0 TFM (Linux/macOS) platform stubs are registered instead.
 #if WINDOWS
             services.AddSingleton<IScreenCapture, WindowsScreenCapture>();
             services.AddSingleton<IInputSimulator, WindowsInputSimulator>();
@@ -61,6 +63,16 @@ namespace InventoryKamera.Avalonia
             services.AddSingleton<IScanProfileService>(sp => new ScanProfileManager());
             // IScanRunner: orchestrates the full inventory scan using injected services.
             services.AddSingleton<IScanRunner, WindowsScanRunner>();
+#else
+            // Non-Windows: register throw-on-use stubs so DI resolves on all platforms.
+            // ScanViewModel shows a platform warning dialog before any stub is ever called.
+            services.AddSingleton<IScreenCapture, StubScreenCapture>();
+            services.AddSingleton<IInputSimulator, StubInputSimulator>();
+            services.AddSingleton<IOcrEngine, StubOcrEngine>();
+            services.AddSingleton<IImageProcessor, StubImageProcessor>();
+            services.AddSingleton<IGameDataService, StubGameDataService>();
+            services.AddSingleton<IUserInterface, NullUserInterface>();
+            services.AddSingleton<IScanRunner, NullScanRunner>();
 #endif
 
             // Settings service is cross-platform — registered outside any #if WINDOWS block.
@@ -73,12 +85,6 @@ namespace InventoryKamera.Avalonia
             services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
             services.AddSingleton<IUrlLauncher, ProcessUrlLauncher>();
             services.AddSingleton<IDialogService, MsBoxDialogService>();
-
-#if !WINDOWS
-            // On non-Windows, register a no-op scan runner so DI resolves.
-            // ScanViewModel will show a platform warning when Start is clicked (chunk 9).
-            services.AddSingleton<IScanRunner, NullScanRunner>();
-#endif
 
             // Register view models (cross-platform — no Infrastructure dependency)
             services.AddTransient<MainViewModel>();

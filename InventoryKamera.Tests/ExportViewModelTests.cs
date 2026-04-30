@@ -51,7 +51,8 @@ namespace InventoryKamera.Tests
             settings.Setup(s => s.Current).Returns(scanSettings);
 
             var runner = MakeRunner(hasData: false);
-            var scanVm = new ScanViewModel(settings.Object, runner.Object);
+            var dialogForScan = new Mock<IDialogService>(MockBehavior.Loose);
+            var scanVm = new ScanViewModel(settings.Object, runner.Object, dialogForScan.Object);
 
             var clipboard = new Mock<IClipboardService>(MockBehavior.Loose);
             clipboard.Setup(c => c.SetTextAsync(It.IsAny<string>()))
@@ -103,7 +104,8 @@ namespace InventoryKamera.Tests
             var settings  = new Mock<ISettingsService>(MockBehavior.Loose);
             settings.Setup(s => s.Current).Returns(new ScanSettings());
             var runner    = MakeRunner();
-            var scanVm    = new ScanViewModel(settings.Object, runner.Object);
+            var dialogForScan = new Mock<IDialogService>(MockBehavior.Loose);
+            var scanVm    = new ScanViewModel(settings.Object, runner.Object, dialogForScan.Object);
             var clipboard = new Mock<IClipboardService>();
             var url       = new Mock<IUrlLauncher>();
             var dialog    = new Mock<IDialogService>();

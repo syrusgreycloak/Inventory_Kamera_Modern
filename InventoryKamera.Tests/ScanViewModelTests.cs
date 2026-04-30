@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using InventoryKamera;
+using InventoryKamera.Avalonia.Services;
 using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Configuration;
 using Moq;
@@ -47,7 +48,9 @@ namespace InventoryKamera.Tests
                       .Returns(Task.CompletedTask);
             }
 
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
             return (vm, runner, settings);
         }
 
@@ -221,7 +224,8 @@ namespace InventoryKamera.Tests
                 EquipArtifacts = true
             });
 
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             // Run scan so LastScan gets set
             await vm.StartScanCommand.ExecuteAsync(null);
@@ -318,7 +322,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             Assert.False(vm.ScanWeapons);
         }
@@ -333,7 +338,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             vm.ScanWeapons = false;
 
@@ -351,7 +357,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             vm.ScanWeapons = true; // same value — should not save
 
@@ -368,7 +375,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             var changedProperties = new List<string>();
             vm.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
@@ -388,7 +396,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             // Index 0 → rarity 3
             Assert.Equal(0, vm.MinimumWeaponRarityIndex);
@@ -409,7 +418,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             // ScannerDelay = 0 → Fast (index 0)
             Assert.Equal(0, vm.ScanSpeedIndex);
@@ -436,7 +446,8 @@ namespace InventoryKamera.Tests
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
                   .Returns(Task.CompletedTask);
-            var vm = new ScanViewModel(settings.Object, runner.Object);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
 
             var changed = new List<string>();
             vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
@@ -456,5 +467,58 @@ namespace InventoryKamera.Tests
             Assert.Contains("ScanCharDevItems", changed);
             Assert.Contains("ScanMaterials",    changed);
         }
+
+        // ---------------------------------------------------------------
+        // Test 18 (chunk 9): Platform warning shown on non-Windows
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// On non-Windows, StartScan should show the platform warning dialog
+        /// and return without calling IScanRunner.RunAsync.
+        /// This test is only meaningful when run on Linux/macOS; on Windows it
+        /// verifies the happy-path (no dialog, scan proceeds).
+        /// </summary>
+        [Fact]
+        public async Task StartScan_Shows_PlatformWarning_On_NonWindows()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(new ScanSettings());
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Strict); // Strict — RunAsync must NOT be called on non-Windows
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            dialog.Setup(d => d.ShowInfoAsync(It.IsAny<string>(), It.IsAny<string>()))
+                  .Returns(Task.CompletedTask);
+
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+            bool isWindows = System.Runtime.InteropServices.RuntimeInformation
+                .IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
+
+            if (!isWindows)
+            {
+                // On non-Windows: dialog shown, runner NOT called, IsScanning stays false
+                await vm.StartScanCommand.ExecuteAsync(null);
+
+                dialog.Verify(
+                    d => d.ShowInfoAsync("Scanning Unavailable", It.IsAny<string>()),
+                    Times.Once);
+                runner.VerifyNoOtherCalls();
+                Assert.False(vm.IsScanning);
+            }
+            else
+            {
+                // On Windows: runner IS called (set it up for success), no dialog
+                runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                      .Returns(Task.CompletedTask);
+
+                await vm.StartScanCommand.ExecuteAsync(null);
+
+                dialog.Verify(
+                    d => d.ShowInfoAsync(It.IsAny<string>(), It.IsAny<string>()),
+                    Times.Never);
+                runner.Verify(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()), Times.Once);
+            }
+        }
     }
 }
+

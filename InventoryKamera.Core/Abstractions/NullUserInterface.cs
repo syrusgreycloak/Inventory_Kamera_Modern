@@ -1,12 +1,12 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using InventoryKamera; // IUserInterface, Weapon, Artifact
 
-namespace InventoryKamera.Infrastructure
+namespace InventoryKamera
 {
     /// <summary>
     /// No-op implementation of IUserInterface used when no UI form is available
-    /// (e.g., during static initialization before the main form is shown).
+    /// (e.g., during static initialization before the main form is shown,
+    /// or on non-Windows platforms where no scan UI is active).
     /// </summary>
     public class NullUserInterface : IUserInterface
     {
