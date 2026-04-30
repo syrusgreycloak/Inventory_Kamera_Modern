@@ -8,7 +8,17 @@ Inventory Kamera is a Windows Forms (.NET Framework 4.7.2) desktop application t
 
 ## Build Commands
 
-### Building the Project
+### Avalonia (recommended, cross-platform)
+
+```bash
+dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Debug
+```
+
+Cross-platform TFM: `net8.0`. Windows TFM: `net8.0-windows`.
+
+### WinForms (deprecated)
+
+See `InventoryKamera/DEPRECATED.md`. The WinForms project still builds with Rider's MSBuild and remains available during the M2 beta.
 
 **IMPORTANT:** This project requires Rider's MSBuild (version 18.4.0+) to compile correctly. The codebase uses C# 7.3 features (string interpolation with `$"..."`) that the standard .NET Framework 4.0 MSBuild does not support. Rider's MSBuild includes the Roslyn compiler which handles these features.
 
@@ -27,10 +37,13 @@ Inventory Kamera is a Windows Forms (.NET Framework 4.7.2) desktop application t
 
 ### Running the Application
 ```bash
-# Run from Debug build
+# Run from Avalonia Debug build
+InventoryKamera.Avalonia/bin/Debug/net8.0-windows/InventoryKamera.Avalonia.exe
+
+# Run from WinForms Debug build (deprecated)
 ./InventoryKamera/bin/Debug/InventoryKamera.exe
 
-# Run from Release build
+# Run from WinForms Release build (deprecated)
 ./InventoryKamera/bin/Release/InventoryKamera.exe
 ```
 

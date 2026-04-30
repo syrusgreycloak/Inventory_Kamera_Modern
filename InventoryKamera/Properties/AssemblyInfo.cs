@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Inventory Kamera Modern")]
+[assembly: AssemblyTitle("Inventory Kamera (DEPRECATED — use InventoryKamera.Avalonia)")]
 [assembly: AssemblyDescription("An OCR scanner for Genshin Impact")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Andrew De La Fuente")]

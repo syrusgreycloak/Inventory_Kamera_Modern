@@ -6,6 +6,8 @@ This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you
 
 ## About this project
 
+> **Note:** As of Milestone 2, the cross-platform Avalonia UI at `InventoryKamera.Avalonia/` is the recommended build. The Windows Forms project (`InventoryKamera/`) is deprecated and will be removed in Milestone 2.2. See `InventoryKamera/DEPRECATED.md` for details.
+
 **Inventory Kamera Modern** is a modernized rewrite of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera). The original project is no longer actively maintained; this fork carries it forward with the following changes:
 
 - **Migrated to .NET 8** (from .NET Framework 4.7.2). Modern runtime, modern tooling, modern dependencies.
@@ -43,10 +45,22 @@ Before installing Inventory Kamera Modern, please have **the following things in
 
 Inventory Kamera Modern does not currently publish prebuilt binaries. To run it, build from source:
 
+### Building the Avalonia version (recommended)
+
+```bash
+dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Debug
+# Run:
+InventoryKamera.Avalonia/bin/Debug/net8.0-windows/InventoryKamera.Avalonia.exe
+```
+
+### Building the WinForms version (deprecated)
+
 1. Clone this repository.
 2. Open `InventoryKamera.sln` in JetBrains Rider or Visual Studio 2022.
 3. Build the `InventoryKamera` project in `Debug` or `Release` configuration.
 4. Launch `InventoryKamera.exe` from the build output directory (e.g. `InventoryKamera/bin/Debug/net8.0-windows/`).
+
+**Note:** The WinForms version is deprecated and will be removed in Milestone 2.2. Use the Avalonia version instead.
 
 The application may prompt you for Security and/or User Access on first launch. This access is required to interact with the game.
 
