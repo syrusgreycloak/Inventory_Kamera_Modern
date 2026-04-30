@@ -119,6 +119,25 @@ namespace InventoryKamera.Configuration
         public string Manequin2Name { get; set; } = "Manequin2";
 
         // ------------------------------------------------------------------
+        // Window state (persisted across launches by MainWindow)
+        // ------------------------------------------------------------------
+
+        /// <summary>Last known window width in pixels. 0 = use default.</summary>
+        public double WindowWidth { get; set; }
+
+        /// <summary>Last known window height in pixels. 0 = use default.</summary>
+        public double WindowHeight { get; set; }
+
+        /// <summary>Last known window X position. NaN = let OS place it.</summary>
+        public double WindowX { get; set; } = double.NaN;
+
+        /// <summary>Last known window Y position. NaN = let OS place it.</summary>
+        public double WindowY { get; set; } = double.NaN;
+
+        /// <summary>Whether the window was maximized at last close.</summary>
+        public bool WindowMaximized { get; set; }
+
+        // ------------------------------------------------------------------
         // Process detection
         // ------------------------------------------------------------------
 

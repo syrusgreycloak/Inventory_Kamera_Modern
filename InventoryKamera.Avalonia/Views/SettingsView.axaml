@@ -7,7 +7,7 @@
                 HorizontalScrollBarVisibility="Disabled"
                 Padding="16">
 
-    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="560">
+    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="640" HorizontalAlignment="Stretch">
 
       <!-- ══════════════════════════════════════════════════
            OUTPUT
@@ -213,6 +213,21 @@
             <TextBox Grid.Column="1"
                      Text="{Binding TravelerName, Mode=TwoWay}"
                      Watermark="(leave blank to auto-detect)"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <!-- Wanderer name -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Wanderer custom name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding WandererName, Mode=TwoWay}"
+                     Watermark="wanderer"
                      Background="{StaticResource PrimaryBgBrush}"
                      BorderThickness="1"
                      CornerRadius="4"

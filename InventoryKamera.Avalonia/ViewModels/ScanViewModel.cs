@@ -67,6 +67,14 @@ namespace InventoryKamera.Avalonia.ViewModels
         [NotifyPropertyChangedFor(nameof(MaterialsProgressText))]
         private int _materialsTotal;
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CharDevItemsProgressText))]
+        private int _charDevItemsScanned;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CharDevItemsProgressText))]
+        private int _charDevItemsTotal;
+
         // ----------------------------------------------------------------
         // OCR preview state (set by AvaloniaUserInterface in chunk 6)
         // ----------------------------------------------------------------
@@ -137,10 +145,11 @@ namespace InventoryKamera.Avalonia.ViewModels
         // Computed / derived properties
         // ----------------------------------------------------------------
 
-        public string WeaponsProgressText    => $"{WeaponsScanned} / {WeaponsTotal}";
-        public string ArtifactsProgressText  => $"{ArtifactsScanned} / {ArtifactsTotal}";
-        public string CharactersProgressText => $"{CharactersScanned} / {CharactersTotal}";
-        public string MaterialsProgressText  => $"{MaterialsScanned} / {MaterialsTotal}";
+        public string WeaponsProgressText      => $"{WeaponsScanned} / {WeaponsTotal}";
+        public string ArtifactsProgressText    => $"{ArtifactsScanned} / {ArtifactsTotal}";
+        public string CharactersProgressText   => $"{CharactersScanned} / {CharactersTotal}";
+        public string MaterialsProgressText    => $"{MaterialsScanned} / {MaterialsTotal}";
+        public string CharDevItemsProgressText => $"{CharDevItemsScanned} / {CharDevItemsTotal}";
 
         // ----------------------------------------------------------------
         // Settings-bound properties
@@ -208,23 +217,6 @@ namespace InventoryKamera.Avalonia.ViewModels
             {
                 if (_settingsService.Current.ScanMaterials == value) return;
                 _settingsService.Current.ScanMaterials = value;
-                _settingsService.Save();
-                OnPropertyChanged();
-            }
-        }
-
-        /// <summary>
-        /// Index into the minimum-weapon-rarity selector: 0=★3, 1=★4, 2=★5.
-        /// Persisted as the actual rarity integer (3/4/5) in settings.
-        /// </summary>
-        public int MinimumWeaponRarityIndex
-        {
-            get => Math.Max(0, _settingsService.Current.MinimumWeaponRarity - 3);
-            set
-            {
-                int rarity = value + 3;
-                if (_settingsService.Current.MinimumWeaponRarity == rarity) return;
-                _settingsService.Current.MinimumWeaponRarity = rarity;
                 _settingsService.Save();
                 OnPropertyChanged();
             }
@@ -388,10 +380,11 @@ namespace InventoryKamera.Avalonia.ViewModels
 
         private void ResetCounters()
         {
-            WeaponsScanned    = WeaponsTotal    = 0;
-            ArtifactsScanned  = ArtifactsTotal  = 0;
-            CharactersScanned = CharactersTotal  = 0;
-            MaterialsScanned  = MaterialsTotal   = 0;
+            WeaponsScanned      = WeaponsTotal      = 0;
+            ArtifactsScanned    = ArtifactsTotal    = 0;
+            CharactersScanned   = CharactersTotal   = 0;
+            MaterialsScanned    = MaterialsTotal    = 0;
+            CharDevItemsScanned = CharDevItemsTotal = 0;
         }
 
         private void RegisterLogTarget()

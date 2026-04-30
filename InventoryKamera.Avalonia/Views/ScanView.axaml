@@ -50,17 +50,6 @@
 
           <Separator />
 
-          <!-- Min rarity -->
-          <TextBlock Text="Min Weapon Rarity"
-                     FontSize="12"
-                     Foreground="{StaticResource TextSecondaryBrush}" />
-          <ComboBox SelectedIndex="{Binding MinimumWeaponRarityIndex, Mode=TwoWay}"
-                    HorizontalAlignment="Stretch">
-            <ComboBoxItem Content="★★★ (3-star)" />
-            <ComboBoxItem Content="★★★★ (4-star)" />
-            <ComboBoxItem Content="★★★★★ (5-star)" />
-          </ComboBox>
-
           <!-- Scan speed -->
           <TextBlock Text="Scan Speed"
                      FontSize="12"
@@ -202,6 +191,29 @@
             </ProgressBar>
             <TextBlock Grid.Column="2"
                        Text="{Binding MaterialsProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+          </Grid>
+
+          <!-- Char Dev Items row -->
+          <Grid ColumnDefinitions="120,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Char Dev Items"
+                       VerticalAlignment="Center" />
+            <ProgressBar Grid.Column="1"
+                         Margin="8,0"
+                         Minimum="0"
+                         Maximum="1"
+                         VerticalAlignment="Center">
+              <ProgressBar.Value>
+                <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
+                  <Binding Path="CharDevItemsScanned" />
+                  <Binding Path="CharDevItemsTotal" />
+                </MultiBinding>
+              </ProgressBar.Value>
+            </ProgressBar>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding CharDevItemsProgressText}"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextSecondaryBrush}" />
           </Grid>

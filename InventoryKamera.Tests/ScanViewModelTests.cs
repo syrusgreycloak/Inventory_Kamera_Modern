@@ -385,28 +385,6 @@ namespace InventoryKamera.Tests
         }
 
         [Fact]
-        public void MinimumWeaponRarityIndex_Maps_To_Rarity_Values()
-        {
-            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
-            var scanSettings = new ScanSettings { MinimumWeaponRarity = 3 };
-            settings.Setup(s => s.Current).Returns(scanSettings);
-
-            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
-            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
-                  .Returns(Task.CompletedTask);
-            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
-            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
-
-            // Index 0 → rarity 3
-            Assert.Equal(0, vm.MinimumWeaponRarityIndex);
-
-            // Set index 2 → rarity should be stored as 5
-            vm.MinimumWeaponRarityIndex = 2;
-            Assert.Equal(5, scanSettings.MinimumWeaponRarity);
-            settings.Verify(s => s.Save(), Times.AtLeastOnce);
-        }
-
-        [Fact]
         public void ScanSpeedIndex_Maps_To_ScannerDelay()
         {
             var settings = new Mock<ISettingsService>(MockBehavior.Loose);

@@ -200,6 +200,19 @@ namespace InventoryKamera.Avalonia.ViewModels
             }
         }
 
+        /// <summary>In-game name of the Wanderer character (user-specific override).</summary>
+        public string WandererName
+        {
+            get => _settings.Current.WandererName;
+            set
+            {
+                if (_settings.Current.WandererName == value) return;
+                _settings.Current.WandererName = value;
+                _settings.Save();
+                OnPropertyChanged();
+            }
+        }
+
         /// <summary>Date of the last lookup-table update check (read-only display).</summary>
         public DateTime LastUpdateCheck => _settings.Current.LastUpdateCheck;
 
