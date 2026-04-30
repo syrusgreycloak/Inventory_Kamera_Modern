@@ -21,7 +21,7 @@ namespace InventoryKamera.Infrastructure
         private readonly IInputSimulator     _inputSimulator;
         private readonly IOcrEngine          _ocrEngine;
         private readonly IImageProcessor     _imageProcessor;
-        private readonly IUserInterface      _userInterface;
+        private readonly Func<IUserInterface> _userInterfaceFactory;
         private readonly IGameDataService    _gameDataService;
         private readonly IScanProfileService _scanProfile;
 
@@ -32,22 +32,25 @@ namespace InventoryKamera.Infrastructure
         public List<Character> Characters => _lastRun?.Characters ?? new List<Character>();
         public Inventory Inventory        => _lastRun?.Inventory  ?? new Inventory();
 
+        // IUserInterface is resolved via factory (not constructor-injected) to break a DI cycle:
+        // ScanViewModel → IScanRunner → IUserInterface (AvaloniaUserInterface) → ScanViewModel.
+        // The runner only needs IUserInterface at scan-start time, after the graph is built.
         public WindowsScanRunner(
             IScreenCapture      screenCapture,
             IInputSimulator     inputSimulator,
             IOcrEngine          ocrEngine,
             IImageProcessor     imageProcessor,
-            IUserInterface      userInterface,
+            Func<IUserInterface> userInterfaceFactory,
             IGameDataService    gameDataService,
             IScanProfileService scanProfile)
         {
-            _screenCapture   = screenCapture   ?? throw new ArgumentNullException(nameof(screenCapture));
-            _inputSimulator  = inputSimulator  ?? throw new ArgumentNullException(nameof(inputSimulator));
-            _ocrEngine       = ocrEngine       ?? throw new ArgumentNullException(nameof(ocrEngine));
-            _imageProcessor  = imageProcessor  ?? throw new ArgumentNullException(nameof(imageProcessor));
-            _userInterface   = userInterface   ?? throw new ArgumentNullException(nameof(userInterface));
-            _gameDataService = gameDataService ?? throw new ArgumentNullException(nameof(gameDataService));
-            _scanProfile     = scanProfile     ?? throw new ArgumentNullException(nameof(scanProfile));
+            _screenCapture        = screenCapture   ?? throw new ArgumentNullException(nameof(screenCapture));
+            _inputSimulator       = inputSimulator  ?? throw new ArgumentNullException(nameof(inputSimulator));
+            _ocrEngine            = ocrEngine       ?? throw new ArgumentNullException(nameof(ocrEngine));
+            _imageProcessor       = imageProcessor  ?? throw new ArgumentNullException(nameof(imageProcessor));
+            _userInterfaceFactory = userInterfaceFactory ?? throw new ArgumentNullException(nameof(userInterfaceFactory));
+            _gameDataService      = gameDataService ?? throw new ArgumentNullException(nameof(gameDataService));
+            _scanProfile          = scanProfile     ?? throw new ArgumentNullException(nameof(scanProfile));
         }
 
         public Task RunAsync(ScanSettings settings, CancellationToken token = default)
@@ -63,7 +66,7 @@ namespace InventoryKamera.Infrastructure
                 _inputSimulator,
                 _ocrEngine,
                 _imageProcessor,
-                _userInterface,
+                _userInterfaceFactory(),
                 _gameDataService,
                 _scanProfile,
                 settings);

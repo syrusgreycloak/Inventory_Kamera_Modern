@@ -62,7 +62,16 @@ namespace InventoryKamera.Avalonia
             // ScanProfile: profile path and aspect ratio resolved at scan-start time.
             services.AddSingleton<IScanProfileService>(sp => new ScanProfileManager());
             // IScanRunner: orchestrates the full inventory scan using injected services.
-            services.AddSingleton<IScanRunner, WindowsScanRunner>();
+            // IUserInterface is resolved via Func<> to break a DI cycle:
+            // ScanViewModel -> IScanRunner -> IUserInterface (AvaloniaUserInterface) -> ScanViewModel.
+            services.AddSingleton<IScanRunner>(sp => new WindowsScanRunner(
+                sp.GetRequiredService<IScreenCapture>(),
+                sp.GetRequiredService<IInputSimulator>(),
+                sp.GetRequiredService<IOcrEngine>(),
+                sp.GetRequiredService<IImageProcessor>(),
+                () => sp.GetRequiredService<IUserInterface>(),
+                sp.GetRequiredService<IGameDataService>(),
+                sp.GetRequiredService<IScanProfileService>()));
 #else
             // Non-Windows: register throw-on-use stubs so DI resolves on all platforms.
             // ScanViewModel shows a platform warning dialog before any stub is ever called.
