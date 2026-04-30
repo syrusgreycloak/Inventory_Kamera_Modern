@@ -103,10 +103,10 @@ namespace InventoryKamera.Configuration
 
         /// <summary>
         /// Forces any pending debounced write to disk immediately and synchronously.
-        /// Exposed as <c>internal</c> so test code (via <c>InternalsVisibleTo</c>) can
-        /// deterministically flush without waiting for the timer.
+        /// Internal so test code (via <c>InternalsVisibleTo</c>) can deterministically
+        /// flush without waiting for the timer.
         /// </summary>
-        public void FlushPendingSave()
+        internal void FlushPendingSave()
         {
             lock (_saveLock)
             {
@@ -124,24 +124,22 @@ namespace InventoryKamera.Configuration
         /// <inheritdoc />
         public void Dispose()
         {
+            bool hadPending;
             lock (_saveLock)
             {
                 if (_disposed) return;
                 _disposed = true;
-                // Cancel the timer before we flush to avoid double writes.
+                // Cancel the timer and atomically claim any pending write so the timer
+                // callback cannot also trigger a write (eliminates double-write race).
                 _debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                hadPending = _hasPendingSave;
+                _hasPendingSave = false;
             }
 
             // Flush outside the lock to avoid deadlock if WriteToDisk raises SettingsChanged.
-            bool hadPending;
-            lock (_saveLock) { hadPending = _hasPendingSave; }
             if (hadPending) WriteToDisk();
 
-            lock (_saveLock)
-            {
-                _debounceTimer?.Dispose();
-                _debounceTimer = null;
-            }
+            _debounceTimer.Dispose();
         }
 
         // ------------------------------------------------------------------ //
@@ -201,7 +199,7 @@ namespace InventoryKamera.Configuration
 
             if (!File.Exists(filePath))
             {
-                _current = new ScanSettings();
+                lock (_saveLock) { _current = new ScanSettings(); }
                 Logger.Debug("Settings file not found at {0}; using defaults.", filePath);
                 return;
             }
@@ -214,11 +212,11 @@ namespace InventoryKamera.Configuration
                 if (loaded == null)
                 {
                     Logger.Warn("Settings file at {0} deserialized to null; using defaults.", filePath);
-                    _current = new ScanSettings();
+                    lock (_saveLock) { _current = new ScanSettings(); }
                 }
                 else
                 {
-                    _current = loaded;
+                    lock (_saveLock) { _current = loaded; }
                     Logger.Debug("Settings loaded from {0}", filePath);
                 }
             }
@@ -226,12 +224,12 @@ namespace InventoryKamera.Configuration
             {
                 Logger.Warn(ex, "Corrupt settings file at {0}; falling back to defaults.", filePath);
                 RenameCorruptFile(filePath);
-                _current = new ScanSettings();
+                lock (_saveLock) { _current = new ScanSettings(); }
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Unexpected error reading settings from {0}; using defaults.", filePath);
-                _current = new ScanSettings();
+                lock (_saveLock) { _current = new ScanSettings(); }
             }
         }
 

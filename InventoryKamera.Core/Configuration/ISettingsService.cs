@@ -15,10 +15,8 @@ namespace InventoryKamera.Configuration
         ScanSettings Current { get; }
 
         /// <summary>
-        /// Schedules a write.  Back-to-back calls within 500 ms are coalesced
-        /// (debounced) into a single file write.  Use
-        /// <see cref="JsonSettingsService.FlushPendingSave"/> (internal) or
-        /// <see cref="IDisposable.Dispose"/> to force an immediate write.
+        /// Triggers a debounced save.  Multiple calls within the debounce window
+        /// coalesce into a single file write.
         /// </summary>
         void Save();
 
