@@ -1,10 +1,116 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="InventoryKamera.Avalonia.Views.AboutView">
-    <Grid>
-        <TextBlock Text="About view goes here"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="20" />
-    </Grid>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="16">
+
+    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="560">
+
+      <!-- ══════════════════════════════════════════════════
+           HEADER
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="8">
+
+          <TextBlock FontSize="22"
+                     FontWeight="Bold">
+            <Run Text="Inventory Kamera Modern v" />
+            <Run Text="{Binding Version}" />
+          </TextBlock>
+
+          <Separator />
+
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Text="Local game data:"
+                       Margin="0,0,8,0"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding LocalGameVersion}"
+                       FontSize="13"
+                       VerticalAlignment="Center" />
+          </Grid>
+
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Text="Last update check:"
+                       Margin="0,0,8,0"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding LastUpdateCheck, StringFormat='yyyy-MM-dd HH:mm'}"
+                       FontSize="13"
+                       VerticalAlignment="Center" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           UPDATE ACTIONS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Updates"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Update game data"
+                    Command="{Binding UpdateGameDataCommand}"
+                    ToolTip.Tip="Download the latest Genshin Impact lookup tables from GitHub" />
+            <Button Content="Check for app updates"
+                    Command="{Binding CheckAppUpdatesCommand}"
+                    ToolTip.Tip="Check GitHub releases for a newer version of Inventory Kamera" />
+          </StackPanel>
+
+          <!-- Busy indicator row -->
+          <TextBlock Text="Checking for updates…"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     IsVisible="{Binding IsCheckingUpdates}" />
+          <TextBlock Text="Updating game data…"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     IsVisible="{Binding IsUpdatingGameData}" />
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           LINKS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Links"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="GitHub"
+                    Command="{Binding OpenGitHubCommand}"
+                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/" />
+            <Button Content="Releases"
+                    Command="{Binding OpenReleasesCommand}"
+                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/releases" />
+            <Button Content="Issues"
+                    Command="{Binding OpenIssuesCommand}"
+                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/issues" />
+          </StackPanel>
+
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+
 </UserControl>

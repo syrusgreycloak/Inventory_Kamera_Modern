@@ -24,12 +24,13 @@
     <PackageReference Include="Avalonia.Diagnostics" Version="11.2.3" Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="MsBox.Avalonia" Version="3.0.0-rc2" />
     <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="Octokit" Version="13.0.1" />
     <ProjectReference Include="..\InventoryKamera.Core\InventoryKamera.Core.csproj" />
     <!-- Infrastructure is Windows-only: scoped to net8.0-windows TFM.
          Chunk 9 adds non-Windows stubs so the net8.0 TFM still resolves platform services. -->
-    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj"
-                      Condition="'$(TargetFramework)' == 'net8.0-windows'" />
+    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj" Condition="'$(TargetFramework)' == 'net8.0-windows'" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />

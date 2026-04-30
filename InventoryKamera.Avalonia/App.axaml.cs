@@ -69,6 +69,11 @@ namespace InventoryKamera.Avalonia
             // Folder picker — wraps Avalonia StorageProvider; cross-platform.
             services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
 
+            // Clipboard, URL launcher, and dialog service — cross-platform abstractions.
+            services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
+            services.AddSingleton<IUrlLauncher, ProcessUrlLauncher>();
+            services.AddSingleton<IDialogService, MsBoxDialogService>();
+
 #if !WINDOWS
             // On non-Windows, register a no-op scan runner so DI resolves.
             // ScanViewModel will show a platform warning when Start is clicked (chunk 9).

@@ -55,8 +55,8 @@ namespace InventoryKamera
 
         private ConcurrentDictionary<string, string> Mappings = new ConcurrentDictionary<string, string>();
 
-        internal Version LocalVersion = new Version();
-        internal Version RemoteVersion = new Version();
+        public Version LocalVersion = new Version();
+        public Version RemoteVersion = new Version();
 
         private static readonly List<string> elements = new List<string>
         {

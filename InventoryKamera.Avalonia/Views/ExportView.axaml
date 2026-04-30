@@ -1,10 +1,100 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="InventoryKamera.Avalonia.Views.ExportView">
-    <Grid>
-        <TextBlock Text="Export view goes here"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="20" />
-    </Grid>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Padding="16">
+
+    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="560">
+
+      <!-- ══════════════════════════════════════════════════
+           SCAN STATUS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Export"
+                     FontWeight="Bold"
+                     FontSize="16" />
+
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Text="Last scan:"
+                       Margin="0,0,8,0"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ScanStatusText}"
+                       FontSize="13"
+                       VerticalAlignment="Center" />
+          </Grid>
+
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Text="Output path:"
+                       Margin="0,0,8,0"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding OutputPath}"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           ACTIONS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Actions"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Export GOOD JSON -->
+          <Button Content="Export GOOD JSON"
+                  Command="{Binding ExportGoodJsonCommand}"
+                  HorizontalAlignment="Left"
+                  ToolTip.Tip="Write genshin_inventory.json to the configured output folder" />
+
+          <!-- Open output folder -->
+          <Button Content="Open output folder"
+                  Command="{Binding OpenOutputFolderCommand}"
+                  HorizontalAlignment="Left"
+                  ToolTip.Tip="Open the output folder in Windows Explorer" />
+
+          <Separator />
+
+          <!-- Upload to Genshin Optimizer -->
+          <TextBlock Text="Genshin Optimizer"
+                     FontWeight="SemiBold"
+                     FontSize="13"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <TextBlock FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     TextWrapping="Wrap">
+            Copies the GOOD JSON to your clipboard, then opens the Genshin Optimizer import page.
+            Paste the content into the textbox when prompted.
+          </TextBlock>
+
+          <Button Content="Upload to Genshin Optimizer"
+                  Command="{Binding UploadToOptimizerCommand}"
+                  HorizontalAlignment="Left"
+                  ToolTip.Tip="Copy data and open frzyc.github.io/genshin-optimizer" />
+
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+
 </UserControl>
