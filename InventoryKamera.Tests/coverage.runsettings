@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!-- Exclude CommunityToolkit MVVM source-generated partials and Designer files -->
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/*.g.cs,**/*.Designer.cs</ExcludeByFile>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <!-- Scope to ViewModels and the Services that directly back them.
+               Excludes: Program, App, Locator, PlatformStubs, MsBox, ProcessUrl, Views, Controls -->
+          <Include>[InventoryKamera.Avalonia]InventoryKamera.Avalonia.ViewModels.*,[InventoryKamera.Avalonia]InventoryKamera.Avalonia.Services.AvaloniaUserInterface,[InventoryKamera.Avalonia]InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget,[InventoryKamera.Avalonia]InventoryKamera.Avalonia.Converters.*</Include>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

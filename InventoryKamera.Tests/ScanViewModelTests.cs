@@ -3,20 +3,21 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Headless;
+using Avalonia.Threading;
 using InventoryKamera;
 using InventoryKamera.Avalonia.Services;
 using InventoryKamera.Avalonia.ViewModels;
 using InventoryKamera.Configuration;
 using Moq;
+using NLog;
+using NLog.Config;
 using Xunit;
 
 namespace InventoryKamera.Tests
 {
     /// <summary>
     /// Unit tests for <see cref="ScanViewModel"/>.
-    ///
-    /// NOTE: Tests that require Avalonia.Headless (e.g., Dispatcher.UIThread.RunJobs)
-    /// are skipped here and documented as chunk-10 work.
     /// </summary>
     public class ScanViewModelTests
     {
@@ -152,14 +153,11 @@ namespace InventoryKamera.Tests
 
         // ---------------------------------------------------------------
         // Test 4: Console log target
+        // NOTE: This test runs in ScanViewModelHeadlessTests (see below)
+        // which uses the shared AvaloniaHeadless collection fixture to avoid
+        // Avalonia initialisation conflicts.
+        // (Placeholder kept here for method-count parity with the plan.)
         // ---------------------------------------------------------------
-
-        [Fact(Skip = "Requires Avalonia.Headless (Dispatcher.UIThread); scheduled for chunk 10")]
-        public void Console_Grows_On_Log_Events()
-        {
-            // This test needs Avalonia.Headless to pump the UI thread dispatcher.
-            // Marked Skip — implement in chunk 10 after Avalonia.Headless is configured.
-        }
 
         // ---------------------------------------------------------------
         // Test 5: OCR preview properties
@@ -469,7 +467,250 @@ namespace InventoryKamera.Tests
         }
 
         // ---------------------------------------------------------------
-        // Test 18 (chunk 9): Platform warning shown on non-Windows
+        // Tests 18-21 (chunk 10): new coverage gaps
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// CharactersProgressText and MaterialsProgressText are computed from
+        /// their respective Scanned / Total counter pairs.
+        /// </summary>
+        [Fact]
+        public void CharactersProgressText_Reflects_Counters()
+        {
+            var (vm, _, _) = MakeVm();
+
+            vm.CharactersScanned = 3;
+            vm.CharactersTotal   = 9;
+
+            Assert.Equal("3 / 9", vm.CharactersProgressText);
+        }
+
+        [Fact]
+        public void MaterialsProgressText_Reflects_Counters()
+        {
+            var (vm, _, _) = MakeVm();
+
+            vm.MaterialsScanned = 50;
+            vm.MaterialsTotal   = 200;
+
+            Assert.Equal("50 / 200", vm.MaterialsProgressText);
+        }
+
+        [Fact]
+        public void ProgressText_Shows_Zero_Zero_Initially()
+        {
+            var (vm, _, _) = MakeVm();
+
+            Assert.Equal("0 / 0", vm.WeaponsProgressText);
+            Assert.Equal("0 / 0", vm.ArtifactsProgressText);
+            Assert.Equal("0 / 0", vm.CharactersProgressText);
+            Assert.Equal("0 / 0", vm.MaterialsProgressText);
+        }
+
+        /// <summary>
+        /// Mutating ISettingsService.Current externally (e.g., from another
+        /// ViewModel or thread) does NOT cause the ScanViewModel's hand-rolled
+        /// property getters to fire PropertyChanged.  The VM does NOT subscribe
+        /// to SettingsChanged — it reads Current on each access.
+        /// </summary>
+        [Fact]
+        public void ExternalSettings_Mutation_Does_NOT_Fire_PropertyChanged()
+        {
+            var scanSettings = new ScanSettings { ScanWeapons = true };
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+            var changes = new List<string>();
+            vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+
+            // Mutate directly — bypassing the VM setter.
+            scanSettings.ScanWeapons = false;
+
+            // VM getter still reflects the new value because it reads Current each time...
+            Assert.False(vm.ScanWeapons);
+            // ...but no PropertyChanged was fired (no subscription to SettingsChanged).
+            Assert.DoesNotContain("ScanWeapons", changes);
+        }
+
+        /// <summary>
+        /// Two consecutive scans do not carry over LastScan from the first scan
+        /// if the second scan runner reports no data.
+        /// </summary>
+        [Fact]
+        public async Task Consecutive_Scans_Reset_LastScan_At_Start()
+        {
+            // First runner: has data.
+            var runner1 = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner1.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                   .Returns(Task.CompletedTask);
+            runner1.SetupGet(r => r.HasData).Returns(true);
+            runner1.SetupGet(r => r.Characters).Returns(new List<Character>());
+            runner1.SetupGet(r => r.Inventory).Returns(new Inventory());
+
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(new ScanSettings
+            {
+                OutputPath     = "",   // no write attempted
+                EquipWeapons   = true,
+                EquipArtifacts = true
+            });
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+
+            var vm = new ScanViewModel(settings.Object, runner1.Object, dialog.Object);
+
+            // First scan sets LastScan.
+            await vm.StartScanCommand.ExecuteAsync(null);
+            Assert.NotNull(vm.LastScan);
+
+            // Second runner: no data.
+            var runner2 = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner2.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                   .Returns(Task.CompletedTask);
+            runner2.SetupGet(r => r.HasData).Returns(false);
+
+            // Swap the runner by creating a new VM backed by runner2.
+            var vm2 = new ScanViewModel(settings.Object, runner2.Object, dialog.Object);
+            await vm2.StartScanCommand.ExecuteAsync(null);
+
+            // runner2.HasData == false → LastScan should be null.
+            Assert.Null(vm2.LastScan);
+        }
+
+        /// <summary>
+        /// Calling StopScanCommand while the runner is executing signals the
+        /// CancellationToken passed to RunAsync.
+        /// </summary>
+        [Fact]
+        public async Task StopScan_Signals_CancellationToken()
+        {
+            var tokenWasCancelled = false;
+            var runnerStarted = new TaskCompletionSource<bool>();
+
+            var (vm, _, _) = MakeVm(async (_, token) =>
+            {
+                runnerStarted.SetResult(true);
+                try
+                {
+                    await Task.Delay(10_000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    tokenWasCancelled = true;
+                    throw;
+                }
+            });
+
+            var scanTask = vm.StartScanCommand.ExecuteAsync(null);
+
+            // Wait until the runner body has started.
+            await runnerStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // Cancel from the outside.
+            vm.StopScanCommand.Execute(null);
+            await scanTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.True(tokenWasCancelled, "CancellationToken should have been cancelled");
+            Assert.False(vm.IsScanning, "IsScanning should be false after cancellation");
+        }
+
+        // ---------------------------------------------------------------
+        // Tests 23-27: coverage gap-fillers
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Reading ScanArtifacts / ScanCharacters / ScanCharDevItems / ScanMaterials
+        /// returns the value from the underlying ScanSettings.
+        /// </summary>
+        [Fact]
+        public void ScanToggle_Getters_Return_Settings_Values()
+        {
+            var s = new ScanSettings
+            {
+                ScanArtifacts    = true,
+                ScanCharacters   = false,
+                ScanCharDevItems = true,
+                ScanMaterials    = false
+            };
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(x => x.Current).Returns(s);
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+            Assert.True(vm.ScanArtifacts);
+            Assert.False(vm.ScanCharacters);
+            Assert.True(vm.ScanCharDevItems);
+            Assert.False(vm.ScanMaterials);
+        }
+
+        /// <summary>
+        /// ScanSpeedIndex with a delay between 1 and 499 ms returns index 1 (Normal).
+        /// </summary>
+        [Fact]
+        public void ScanSpeedIndex_Normal_Branch_Delay_100()
+        {
+            var s = new ScanSettings { ScannerDelay = 100 };
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(x => x.Current).Returns(s);
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+            Assert.Equal(1, vm.ScanSpeedIndex);
+        }
+
+        /// <summary>
+        /// ExportLastCommand writes the GOOD JSON to the output path.
+        /// </summary>
+        [Fact]
+        public void ExportLast_Writes_GOOD_JSON_To_OutputPath()
+        {
+            var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.Guid.NewGuid().ToString());
+            System.IO.Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+                runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                      .Returns(Task.CompletedTask);
+                runner.SetupGet(r => r.HasData).Returns(true);
+                runner.SetupGet(r => r.Characters).Returns(new List<Character>());
+                runner.SetupGet(r => r.Inventory).Returns(new Inventory());
+
+                var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+                settings.Setup(s => s.Current).Returns(new ScanSettings
+                {
+                    OutputPath     = tempDir,
+                    EquipWeapons   = true,
+                    EquipArtifacts = true
+                });
+                var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+                var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+                vm.LastScan = runner.Object;
+
+                vm.ExportLastCommand.Execute(null);
+
+                var files = System.IO.Directory.GetFiles(tempDir, "genshinData_GOOD_*.json");
+                Assert.NotEmpty(files);
+            }
+            finally
+            {
+                System.IO.Directory.Delete(tempDir, recursive: true);
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Test 26 (chunk 9): Platform warning shown on non-Windows
         // ---------------------------------------------------------------
 
         /// <summary>
@@ -518,6 +759,74 @@ namespace InventoryKamera.Tests
                     Times.Never);
                 runner.Verify(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()), Times.Once);
             }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Headless tests for ScanViewModel that require Avalonia.UIThread.
+    // Placed in their own class so they share the AvaloniaHeadless collection
+    // fixture without conflicting with the non-headless ScanViewModelTests.
+    // -----------------------------------------------------------------------
+
+    [Collection("AvaloniaHeadless")]
+    public class ScanViewModelHeadlessTests
+    {
+        private readonly HeadlessUnitTestSession _session;
+
+        public ScanViewModelHeadlessTests(AvaloniaHeadlessFixture fixture)
+        {
+            _session = fixture.Session;
+        }
+
+        private void Run(Action action)
+        {
+            _session.Dispatch(() =>
+            {
+                action();
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            }, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Verifies that the ObservableCollectionLogTarget wires correctly to
+        /// ScanViewModel.Console: entries added via NLog logger show up in Console.
+        ///
+        /// The approach here builds an isolated NLog configuration with a dedicated
+        /// rule, so the test is immune to global LogManager state from other tests.
+        /// </summary>
+        [Fact]
+        public void Console_Grows_On_Log_Events()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+                settings.Setup(s => s.Current).Returns(new ScanSettings());
+                var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+                var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+                vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+                // Build an isolated configuration with a rule targeting ONLY the
+                // VM's Console collection, then swap it in.
+                var cfg = new NLog.Config.LoggingConfiguration();
+                var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(vm.Console)
+                {
+                    Name = "IsolatedConsoleTarget_" + System.Guid.NewGuid()
+                };
+                cfg.AddTarget(target);
+                cfg.AddRuleForAllLevels(target, "HeadlessTestLogger.*");
+                LogManager.Configuration = cfg;
+                LogManager.ReconfigExistingLoggers();
+
+                // Obtain a logger that matches the rule pattern.
+                var logger = LogManager.GetLogger("HeadlessTestLogger.Entry");
+                logger.Info("Test console entry");
+
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.NotEmpty(vm.Console);
         }
     }
 }

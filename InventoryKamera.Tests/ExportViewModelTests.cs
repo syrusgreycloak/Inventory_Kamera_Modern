@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using InventoryKamera;
 using InventoryKamera.Avalonia.Services;
@@ -195,6 +196,79 @@ namespace InventoryKamera.Tests
 
             Assert.True(vm.HasScanData);
             Assert.Contains(nameof(ExportViewModel.HasScanData), propertyChanges);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 7: UploadToOptimizer chains clipboard set + url open + dialog
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task UploadToOptimizer_Sets_Clipboard_Opens_Url_Shows_Dialog()
+        {
+            var (vm, _, _, clipboard, url, dialog) = MakeVm(hasScanData: true);
+
+            await vm.UploadToOptimizerCommand.ExecuteAsync(null);
+
+            clipboard.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Once,
+                "Clipboard should receive the GOOD JSON");
+            url.Verify(u => u.Open(It.Is<string>(s => s.Contains("genshin-optimizer"))), Times.Once,
+                "URL opener should point to Genshin Optimizer");
+            dialog.Verify(d => d.ShowInfoAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once,
+                "User should see a confirmation dialog");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 8: ExportGoodJson writes to OutputPath
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ExportGoodJson_Writes_To_OutputPath()
+        {
+            // Use a real temp directory so WriteToJSON can succeed.
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                var (vm, _, _, _, _, _) = MakeVm(hasScanData: true, outputPath: tempDir);
+
+                vm.ExportGoodJsonCommand.Execute(null);
+
+                // WriteToJSON creates genshinData_GOOD_{timestamp}.json inside OutputPath.
+                var files = Directory.GetFiles(tempDir, "genshinData_GOOD_*.json");
+                Assert.NotEmpty(files);
+            }
+            finally
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 9: ScanStatusText shows "Available" when HasScanData
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ScanStatusText_Shows_Available_When_HasData()
+        {
+            var (vm, _, _, _, _, _) = MakeVm(hasScanData: true);
+            Assert.Equal("Available", vm.ScanStatusText);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 10: HasScanData reflects LastScan.HasData (derived correctly)
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void HasScanData_Derived_From_LastScan_HasData()
+        {
+            // hasScanData=true seeds a runner with HasData=true.
+            var (vm, _, _, _, _, _) = MakeVm(hasScanData: true);
+            Assert.True(vm.HasScanData);
+
+            // hasScanData=false → LastScan is null → HasScanData is false.
+            var (vm2, _, _, _, _, _) = MakeVm(hasScanData: false);
+            Assert.False(vm2.HasScanData);
         }
     }
 }

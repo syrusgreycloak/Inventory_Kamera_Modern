@@ -151,5 +151,108 @@ namespace InventoryKamera.Tests
             var (vm, _, _, _) = MakeVm();
             Assert.True(vm.CheckAppUpdatesCommand.CanExecute(null));
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 6: LocalGameVersion is non-empty
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void LocalGameVersion_Is_Not_Empty()
+        {
+            var (vm, _, _, _) = MakeVm();
+            Assert.False(string.IsNullOrWhiteSpace(vm.LocalGameVersion));
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 7: IsCheckingUpdates resets to false if CheckAppUpdates throws
+        //         a network error (simulated by a RateLimitExceededException path).
+        //         We can't directly inject a mock GitHub client, but we can verify
+        //         that the command completes without staying "checking" indefinitely.
+        //         The command will fail due to network (in CI) or succeed; either way
+        //         IsCheckingUpdates must be false afterwards.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task CheckAppUpdates_ResetIsCheckingUpdates_OnCompletion()
+        {
+            var (vm, _, _, _) = MakeVm();
+
+            // Run the command — it will hit GitHub or fail; both paths should reset the flag.
+            try
+            {
+                await vm.CheckAppUpdatesCommand.ExecuteAsync(null);
+            }
+            catch
+            {
+                // Any exception (network, rate limit) is swallowed by the command internally.
+            }
+
+            Assert.False(vm.IsCheckingUpdates,
+                "IsCheckingUpdates must be reset to false after the command finishes");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 8: LastUpdateCheck is updated after CheckAppUpdates completes
+        //         (the command records DateTime.Now to settings before calling GitHub).
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task CheckAppUpdates_Updates_LastUpdateCheck_In_Settings()
+        {
+            var s = new ScanSettings { LastUpdateCheck = DateTime.MinValue };
+            var (vm, settings, _, _) = MakeVm(s);
+
+            try
+            {
+                await vm.CheckAppUpdatesCommand.ExecuteAsync(null);
+            }
+            catch { /* network errors swallowed */ }
+
+            // Settings.Save() must have been called with a LastUpdateCheck != MinValue.
+            settings.Verify(x => x.Save(), Times.AtLeastOnce);
+            Assert.NotEqual(DateTime.MinValue, s.LastUpdateCheck);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 9: IsUpdatingGameData resets to false after UpdateGameData
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task UpdateGameData_ResetsIsUpdatingGameData_OnCompletion()
+        {
+            var (vm, _, _, _) = MakeVm();
+
+            // UpdateGameData calls DatabaseManager.UpdateGameData() synchronously.
+            // We cannot mock the database manager here, but we can verify the flag resets.
+            try
+            {
+                await vm.UpdateGameDataCommand.ExecuteAsync(null);
+            }
+            catch { /* file/network errors are swallowed */ }
+
+            Assert.False(vm.IsUpdatingGameData,
+                "IsUpdatingGameData must be reset to false after the command finishes");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 10: Production 3-param constructor (without DatabaseManager)
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ThreeParamConstructor_Creates_Valid_Vm()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(new ScanSettings());
+            var url    = new Mock<IUrlLauncher>(MockBehavior.Loose);
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            dialog.Setup(d => d.ShowInfoAsync(It.IsAny<string>(), It.IsAny<string>()))
+                  .Returns(Task.CompletedTask);
+
+            // This exercises the 3-param (production) constructor path.
+            var vm = new AboutViewModel(settings.Object, url.Object, dialog.Object);
+
+            Assert.False(string.IsNullOrWhiteSpace(vm.Version));
+            Assert.True(vm.UpdateGameDataCommand.CanExecute(null));
+        }
     }
 }

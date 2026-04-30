@@ -496,5 +496,218 @@ namespace InventoryKamera.Tests
             Assert.Contains("StatusMessage", changedProps);
             Assert.Contains("StatusIsOk", changedProps);
         }
+
+        // ------------------------------------------------------------------
+        // Chunk-10 additions — the 8 IUserInterface methods not yet covered
+        // ------------------------------------------------------------------
+
+        // Test 18 — SetGear(weapon) sets screenshot, name, validity, stats
+        [Fact]
+        public void SetGear_Weapon_SetsDisplayProperties()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var (v, ui) = Make();
+                vm = v;
+                using var img = MakeImage();
+                // Weapon(name, level, ascended, refinementLevel, locked, equippedCharacter, id, _rarity)
+                var weapon = new Weapon("AquilaFavonia", 90, true, 1, false, null, 0, 5);
+                ui.SetGear(img, weapon);
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.Equal("AquilaFavonia", vm.CurrentItemName);
+            Assert.NotNull(vm.CurrentScreenshot);
+            Assert.NotEmpty(vm.CurrentScreenshot);
+        }
+
+        // Test 19 — SetGear(artifact) sets screenshot and SetName
+        [Fact]
+        public void SetGear_Artifact_SetsDisplayProperties()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var (v, ui) = Make();
+                vm = v;
+                using var img = MakeImage();
+                // Use full constructor: (setName, rarity, level, gearSlot, mainStat, subStats)
+                var artifact = new Artifact(
+                    "GladiatorsFinale",
+                    5,
+                    20,
+                    "flower",
+                    "hp",
+                    new System.Collections.Generic.List<Artifact.SubStat>());
+                ui.SetGear(img, artifact);
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.Equal("GladiatorsFinale", vm.CurrentItemName);
+            Assert.NotNull(vm.CurrentScreenshot);
+        }
+
+        // Test 20 — SetCharacter_Constellation logs (no VM change but no exception)
+        [Fact]
+        public void SetCharacter_Constellation_DoesNotThrow()
+        {
+            Run(() =>
+            {
+                var (_, ui) = Make();
+                var ex = Record.Exception(() => ui.SetCharacter_Constellation(4));
+                Assert.Null(ex);
+            });
+        }
+
+        // Test 21 — SetCharacter_Talent respects throttle for screenshot
+        [Fact]
+        public void SetCharacter_Talent_SetsScreenshotOnFirstCall()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var (v, ui) = Make();
+                vm = v;
+                using var img = MakeImage();
+                ui.SetCharacter_Talent(img, "Normal Attack: Favonius Bladework", 1);
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            // Throttle gate: first call should pass and set screenshot.
+            Assert.NotNull(vm.CurrentScreenshot);
+        }
+
+        // Test 22 — SetMora logs and may set screenshot (first call passes throttle)
+        [Fact]
+        public void SetMora_SetsScreenshot()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var (v, ui) = Make();
+                vm = v;
+                using var img = MakeImage();
+                ui.SetMora(img, 12_000_000);
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.NotNull(vm.CurrentScreenshot);
+        }
+
+        // Test 23 — AddError does not throw and does not crash the VM
+        [Fact]
+        public void AddError_DoesNotThrow()
+        {
+            Run(() =>
+            {
+                var (_, ui) = Make();
+                var ex = Record.Exception(() => ui.AddError("something went wrong"));
+                Assert.Null(ex);
+            });
+        }
+
+        // Test 24 — ResetCharacterDisplay clears item display (same as ResetGearDisplay)
+        [Fact]
+        public void ResetCharacterDisplay_ClearsDisplayProperties()
+        {
+            ScanViewModel vm = null;
+
+            Run(() =>
+            {
+                var (v, ui) = Make();
+                vm = v;
+                vm.CurrentItemName    = "Hu Tao";
+                vm.CurrentItemStats   = new[] { "Level 90 / 90" };
+                vm.IsCurrentItemValid = true;
+                vm.CurrentScreenshot  = new byte[] { 1, 2, 3 };
+                ui.ResetCharacterDisplay();
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.Null(vm.CurrentItemName);
+            Assert.Null(vm.CurrentItemStats);
+            Assert.Null(vm.IsCurrentItemValid);
+            Assert.Null(vm.CurrentScreenshot);
+        }
+
+        // Test 25 — ResetErrors is a no-op but must not throw
+        [Fact]
+        public void ResetErrors_DoesNotThrow()
+        {
+            Run(() =>
+            {
+                var (_, ui) = Make();
+                var ex = Record.Exception(() => ui.ResetErrors());
+                Assert.Null(ex);
+            });
+        }
+
+        // Test 26 — Caller's Image<Rgba32> is NOT disposed by the adapter;
+        //           it must still be usable after SetGearPictureBox returns.
+        [Fact]
+        public void SetGearPictureBox_DoesNotDispose_CallerImage()
+        {
+            bool imageStillUsable = false;
+
+            Run(() =>
+            {
+                var (_, ui) = Make();
+                var img = MakeImage(8, 8);
+
+                ui.SetGearPictureBox(img);
+
+                // Trying to access Width on a disposed ImageSharp image throws ObjectDisposedException.
+                try
+                {
+                    var _ = img.Width; // This succeeds only if image is not disposed.
+                    imageStillUsable = true;
+                }
+                catch (ObjectDisposedException)
+                {
+                    imageStillUsable = false;
+                }
+                finally
+                {
+                    img.Dispose();
+                }
+            });
+
+            Assert.True(imageStillUsable, "Caller's Image<Rgba32> should not be disposed by AvaloniaUserInterface");
+        }
+
+        // Test 27 — 11 rapid SetGearPictureBox calls within 100 ms produce
+        //           only ONE screenshot update (throttle gate).
+        [Fact]
+        public void SetGearPictureBox_Throttle_ManyRapidCalls_ProduceOneUpdate()
+        {
+            int snapshotCount = 0;
+
+            Run(() =>
+            {
+                var (vm, ui) = Make();
+
+                vm.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(ScanViewModel.CurrentScreenshot))
+                        Interlocked.Increment(ref snapshotCount);
+                };
+
+                // 11 back-to-back calls — all within well under 100 ms.
+                for (int i = 0; i < 11; i++)
+                {
+                    using var img = MakeImage();
+                    ui.SetGearPictureBox(img);
+                }
+
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            });
+
+            Assert.Equal(1, snapshotCount);
+        }
     }
 }

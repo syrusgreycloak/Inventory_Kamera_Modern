@@ -1,8 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Threading;
+using Avalonia.Headless;
+using Avalonia.Media;
+using Avalonia.Threading;
 using InventoryKamera.Avalonia.Converters;
 using NLog;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace InventoryKamera.Tests
@@ -235,6 +243,244 @@ namespace InventoryKamera.Tests
             var c = new PngBytesToBitmapConverter();
             Assert.Throws<NotSupportedException>(() =>
                 c.ConvertBack(null, typeof(byte[]), null, CultureInfo.InvariantCulture));
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ProgressFractionConverter — additional ToDouble branches
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void ProgressFraction_Double_Values_Work()
+        {
+            var c = new ProgressFractionConverter();
+            var values = new List<object> { 0.5, 1.0 };  // double inputs
+            var result = (double)c.Convert(values, typeof(double), null, CultureInfo.InvariantCulture);
+            Assert.Equal(0.5, result, precision: 10);
+        }
+
+        [Fact]
+        public void ProgressFraction_Float_Values_Work()
+        {
+            var c = new ProgressFractionConverter();
+            var values = new List<object> { 0.25f, 1.0f };  // float inputs
+            var result = (double)c.Convert(values, typeof(double), null, CultureInfo.InvariantCulture);
+            Assert.Equal(0.25, result, precision: 5);
+        }
+
+        [Fact]
+        public void ProgressFraction_Long_Values_Work()
+        {
+            var c = new ProgressFractionConverter();
+            var values = new List<object> { 50L, 200L };  // long inputs
+            var result = (double)c.Convert(values, typeof(double), null, CultureInfo.InvariantCulture);
+            Assert.Equal(0.25, result, precision: 10);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Headless converter tests — require Avalonia UI context for brush/bitmap.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Collection("AvaloniaHeadless")]
+    public class ConverterHeadlessTests
+    {
+        private readonly HeadlessUnitTestSession _session;
+
+        public ConverterHeadlessTests(AvaloniaHeadlessFixture fixture)
+        {
+            _session = fixture.Session;
+        }
+
+        private void Run(Action action)
+        {
+            _session.Dispatch(() =>
+            {
+                action();
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            }, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        // LogLevelToBrushConverter.Convert() requires SolidColorBrush allocation on UI thread
+
+        [Fact]
+        public void LogLevelToBrush_Convert_Info_Returns_Brush()
+        {
+            IBrush result = null;
+            Run(() =>
+            {
+                var c = new LogLevelToBrushConverter();
+                result = (IBrush)c.Convert(LogLevel.Info, typeof(IBrush), null, CultureInfo.InvariantCulture);
+            });
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public void LogLevelToBrush_Convert_Warn_Returns_Brush()
+        {
+            IBrush result = null;
+            Run(() =>
+            {
+                var c = new LogLevelToBrushConverter();
+                result = (IBrush)c.Convert(LogLevel.Warn, typeof(IBrush), null, CultureInfo.InvariantCulture);
+            });
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public void LogLevelToBrush_Convert_Error_Returns_Brush()
+        {
+            IBrush result = null;
+            Run(() =>
+            {
+                var c = new LogLevelToBrushConverter();
+                result = (IBrush)c.Convert(LogLevel.Error, typeof(IBrush), null, CultureInfo.InvariantCulture);
+            });
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public void LogLevelToBrush_Convert_Debug_Returns_DefaultBrush()
+        {
+            IBrush resultDebug = null;
+            IBrush resultNull = null;
+
+            Run(() =>
+            {
+                var c = new LogLevelToBrushConverter();
+                resultDebug = (IBrush)c.Convert(LogLevel.Debug, typeof(IBrush), null, CultureInfo.InvariantCulture);
+                resultNull  = (IBrush)c.Convert(null,           typeof(IBrush), null, CultureInfo.InvariantCulture);
+            });
+
+            Assert.NotNull(resultDebug);
+            Assert.NotNull(resultNull);
+        }
+
+        // PngBytesToBitmapConverter — actual decode path with valid PNG bytes
+
+        [Fact]
+        public void PngBytesToBitmap_ValidPng_Returns_Bitmap()
+        {
+            object result = null;
+
+            Run(() =>
+            {
+                // Create a small PNG in-memory.
+                using var img = new Image<Rgba32>(4, 4);
+                using var ms = new MemoryStream();
+                img.Save(ms, new PngEncoder());
+                var pngBytes = ms.ToArray();
+
+                var c = new PngBytesToBitmapConverter();
+                result = c.Convert(pngBytes, typeof(object), null, CultureInfo.InvariantCulture);
+            });
+
+            Assert.NotNull(result);
+        }
+
+        // ObservableCollectionLogTarget — on-UI-thread path (CheckAccess() == true)
+
+        [Fact]
+        public void ObservableCollectionLogTarget_OnUIThread_AppendsEntry()
+        {
+            var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
+            var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
+            {
+                Name = "UIThreadTarget_" + Guid.NewGuid()
+            };
+
+            var loggerName = "UIThreadLogger_" + Guid.NewGuid().ToString("N");
+            var cfg = new NLog.Config.LoggingConfiguration();
+            cfg.AddTarget(target);
+            cfg.AddRuleForAllLevels(target, loggerName);
+            LogManager.Configuration = cfg;
+            LogManager.ReconfigExistingLoggers();
+
+            var logger = LogManager.GetLogger(loggerName);
+
+            // Log from inside the session.Dispatch callback — this IS the UI thread.
+            _session.Dispatch(() =>
+            {
+                logger.Info("On-UI-thread entry");
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            }, CancellationToken.None).GetAwaiter().GetResult();
+
+            Assert.NotEmpty(collection);
+        }
+
+        // ObservableCollectionLogTarget — MaxEntries trimming (line 44)
+
+        [Fact]
+        public void ObservableCollectionLogTarget_TrimsAtMaxEntries()
+        {
+            var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
+            var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
+            {
+                Name    = "TrimTarget_" + Guid.NewGuid(),
+                MaxEntries = 2   // Very small limit to trigger trimming.
+            };
+
+            var loggerName = "TrimLogger_" + Guid.NewGuid().ToString("N");
+            var cfg = new NLog.Config.LoggingConfiguration();
+            cfg.AddTarget(target);
+            cfg.AddRuleForAllLevels(target, loggerName);
+            LogManager.Configuration = cfg;
+            LogManager.ReconfigExistingLoggers();
+
+            var logger = LogManager.GetLogger(loggerName);
+
+            // Write 3 entries on the UI thread — third should trigger trimming.
+            _session.Dispatch(() =>
+            {
+                logger.Info("Entry 1");
+                logger.Info("Entry 2");
+                logger.Info("Entry 3"); // triggers RemoveAt(0), then Add
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            }, CancellationToken.None).GetAwaiter().GetResult();
+
+            // Collection should have at most MaxEntries items.
+            Assert.True(collection.Count <= 2);
+        }
+
+        // ObservableCollectionLogTarget — Dispatcher.Post path (off-UI-thread)
+        // Use NLog's full logging pipeline with a dedicated config so Write() is called
+        // from a background thread, exercising the Dispatcher.Post branch.
+
+        [Fact]
+        public void ObservableCollectionLogTarget_PostPath_AppendsEntry()
+        {
+            var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
+            var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
+            {
+                Name = "PostPathTarget_" + Guid.NewGuid()
+            };
+
+            // Configure NLog with this target so the logger chain works.
+            var bgLoggerName = "BgLoggerTest_" + Guid.NewGuid().ToString("N");
+            var cfg = new NLog.Config.LoggingConfiguration();
+            cfg.AddTarget(target);
+            cfg.AddRuleForAllLevels(target, bgLoggerName);
+            LogManager.Configuration = cfg;
+            LogManager.ReconfigExistingLoggers();
+
+            var bgLogger = LogManager.GetLogger(bgLoggerName);
+
+            // Log from a background thread — CheckAccess() will be false there,
+            // so ObservableCollectionLogTarget will Post to the UI thread.
+            var logged = new System.Threading.ManualResetEventSlim(false);
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                bgLogger.Warn("Background post test");
+                logged.Set();
+            });
+            logged.Wait(TimeSpan.FromSeconds(5));
+
+            // Flush: the Post should arrive on the UI thread now.
+            _session.Dispatch(() =>
+            {
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            }, CancellationToken.None).GetAwaiter().GetResult();
+
+            Assert.NotEmpty(collection);
         }
     }
 }
