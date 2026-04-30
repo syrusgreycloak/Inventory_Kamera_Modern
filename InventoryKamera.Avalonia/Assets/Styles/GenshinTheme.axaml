@@ -23,7 +23,87 @@
     <Setter Property="Background" Value="{StaticResource PrimaryBgBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
+
+  <Style Selector="UserControl">
+    <Setter Property="Background" Value="{StaticResource PrimaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ── TabItem ── -->
   <Style Selector="TabItem">
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ── TextBlock ── -->
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ── Button (default) ── -->
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Button:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.accent">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ── ProgressBar ── -->
+  <Style Selector="ProgressBar">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+
+  <!-- ── CheckBox ── -->
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- ── ComboBox ── -->
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+  </Style>
+
+  <!-- ── Slider ── -->
+  <Style Selector="Slider">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- ── Expander ── -->
+  <Style Selector="Expander">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{StaticResource PrimaryBgBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <!-- ── Border (panels) ── -->
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+
+  <!-- ── Separator ── -->
+  <Style Selector="Separator">
+    <Setter Property="Background" Value="{StaticResource SecondaryBgBrush}" />
+    <Setter Property="Height" Value="1" />
   </Style>
 </Styles>

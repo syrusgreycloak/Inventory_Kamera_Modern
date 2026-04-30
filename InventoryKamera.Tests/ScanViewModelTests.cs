@@ -303,5 +303,158 @@ namespace InventoryKamera.Tests
             Assert.Equal(0, vm.WeaponsScanned);
             Assert.Equal(0, vm.ArtifactsScanned);
         }
+
+        // ---------------------------------------------------------------
+        // Tests 11-17: Settings-bound observable properties
+        // ---------------------------------------------------------------
+
+        [Fact]
+        public void ScanWeapons_Reads_From_Settings()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { ScanWeapons = false };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            Assert.False(vm.ScanWeapons);
+        }
+
+        [Fact]
+        public void ScanWeapons_Writes_Through_To_Settings_And_Saves()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { ScanWeapons = true };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            vm.ScanWeapons = false;
+
+            Assert.False(scanSettings.ScanWeapons);
+            settings.Verify(s => s.Save(), Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public void ScanWeapons_No_Save_When_Value_Unchanged()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { ScanWeapons = true };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            vm.ScanWeapons = true; // same value — should not save
+
+            settings.Verify(s => s.Save(), Times.Never);
+        }
+
+        [Fact]
+        public void ScanWeapons_Fires_PropertyChanged()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { ScanWeapons = true };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            var changedProperties = new List<string>();
+            vm.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+
+            vm.ScanWeapons = false;
+
+            Assert.Contains("ScanWeapons", changedProperties);
+        }
+
+        [Fact]
+        public void MinimumWeaponRarityIndex_Maps_To_Rarity_Values()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { MinimumWeaponRarity = 3 };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            // Index 0 → rarity 3
+            Assert.Equal(0, vm.MinimumWeaponRarityIndex);
+
+            // Set index 2 → rarity should be stored as 5
+            vm.MinimumWeaponRarityIndex = 2;
+            Assert.Equal(5, scanSettings.MinimumWeaponRarity);
+            settings.Verify(s => s.Save(), Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public void ScanSpeedIndex_Maps_To_ScannerDelay()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings { ScannerDelay = 0 };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            // ScannerDelay = 0 → Fast (index 0)
+            Assert.Equal(0, vm.ScanSpeedIndex);
+
+            // Set index 2 (Slow) → delay should be 500
+            vm.ScanSpeedIndex = 2;
+            Assert.Equal(500, scanSettings.ScannerDelay);
+            settings.Verify(s => s.Save(), Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public void AllScanToggles_WriteThrough_And_FirePropertyChanged()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            var scanSettings = new ScanSettings
+            {
+                ScanArtifacts   = true,
+                ScanCharacters  = true,
+                ScanCharDevItems = true,
+                ScanMaterials   = true
+            };
+            settings.Setup(s => s.Current).Returns(scanSettings);
+
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object);
+
+            var changed = new List<string>();
+            vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+            vm.ScanArtifacts    = false;
+            vm.ScanCharacters   = false;
+            vm.ScanCharDevItems = false;
+            vm.ScanMaterials    = false;
+
+            Assert.False(scanSettings.ScanArtifacts);
+            Assert.False(scanSettings.ScanCharacters);
+            Assert.False(scanSettings.ScanCharDevItems);
+            Assert.False(scanSettings.ScanMaterials);
+
+            Assert.Contains("ScanArtifacts",    changed);
+            Assert.Contains("ScanCharacters",   changed);
+            Assert.Contains("ScanCharDevItems", changed);
+            Assert.Contains("ScanMaterials",    changed);
+        }
     }
 }

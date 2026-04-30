@@ -1,10 +1,322 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:InventoryKamera.Avalonia.Converters"
              x:Class="InventoryKamera.Avalonia.Views.ScanView">
-    <Grid>
-        <TextBlock Text="Scan view goes here"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="20" />
+
+  <UserControl.Resources>
+    <conv:PngBytesToBitmapConverter  x:Key="PngBytesToBitmapConverter" />
+    <conv:ProgressFractionConverter  x:Key="ProgressFractionConverter" />
+    <conv:ValidationIconConverter    x:Key="ValidationIconConverter" />
+    <conv:LogLevelToBrushConverter   x:Key="LogLevelToBrushConverter" />
+    <conv:RelativeTimeConverter      x:Key="RelativeTimeConverter" />
+  </UserControl.Resources>
+
+  <!--
+    Root grid:
+      Row 0  – main content (controls left, status+preview right)   *
+      Row 1  – collapsible console Expander                          Auto
+  -->
+  <Grid RowDefinitions="*, Auto">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COLUMN 0  –  Left panel: scan controls
+    ═══════════════════════════════════════════════════════════ -->
+    <Border Grid.Row="0" Grid.Column="0"
+            Width="280"
+            HorizontalAlignment="Left"
+            Background="{StaticResource SecondaryBgBrush}"
+            Padding="16">
+
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical" Spacing="12">
+
+          <!-- Section header -->
+          <TextBlock Text="Scan Categories"
+                     FontWeight="Bold"
+                     FontSize="13"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Category toggles -->
+          <CheckBox Content="Weapons"
+                    IsChecked="{Binding ScanWeapons, Mode=TwoWay}" />
+          <CheckBox Content="Artifacts"
+                    IsChecked="{Binding ScanArtifacts, Mode=TwoWay}" />
+          <CheckBox Content="Characters"
+                    IsChecked="{Binding ScanCharacters, Mode=TwoWay}" />
+          <CheckBox Content="Character Dev Items"
+                    IsChecked="{Binding ScanCharDevItems, Mode=TwoWay}" />
+          <CheckBox Content="Materials"
+                    IsChecked="{Binding ScanMaterials, Mode=TwoWay}" />
+
+          <Separator />
+
+          <!-- Min rarity -->
+          <TextBlock Text="Min Weapon Rarity"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+          <ComboBox SelectedIndex="{Binding MinimumWeaponRarityIndex, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="★★★ (3-star)" />
+            <ComboBoxItem Content="★★★★ (4-star)" />
+            <ComboBoxItem Content="★★★★★ (5-star)" />
+          </ComboBox>
+
+          <!-- Scan speed -->
+          <TextBlock Text="Scan Speed"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+          <ComboBox SelectedIndex="{Binding ScanSpeedIndex, Mode=TwoWay}"
+                    HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="Fast" />
+            <ComboBoxItem Content="Normal" />
+            <ComboBoxItem Content="Slow" />
+          </ComboBox>
+
+          <Separator />
+
+          <!-- Action buttons -->
+          <Button Content="Start Scan"
+                  Command="{Binding StartScanCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Background="{StaticResource AccentBrush}" />
+
+          <Button Content="Stop Scan"
+                  Command="{Binding StopScanCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+
+          <Button Content="Manual Export"
+                  Command="{Binding ExportLastCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COLUMN 1  –  Right panel: progress + OCR preview
+         (sits next to the 280px left panel using a nested grid)
+    ═══════════════════════════════════════════════════════════ -->
+    <Grid Grid.Row="0"
+          Margin="280,0,0,0"
+          RowDefinitions="Auto,*">
+
+      <!-- ── Progress section ── -->
+      <Border Grid.Row="0"
+              Padding="16"
+              Background="{StaticResource PrimaryBgBrush}">
+        <StackPanel Spacing="8">
+
+          <!-- Status message -->
+          <TextBlock Text="{Binding StatusMessage}"
+                     FontSize="13"
+                     FontWeight="Bold" />
+
+          <!-- Weapons row -->
+          <Grid ColumnDefinitions="120,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Weapons"
+                       VerticalAlignment="Center" />
+            <ProgressBar Grid.Column="1"
+                         Margin="8,0"
+                         Minimum="0"
+                         Maximum="1"
+                         VerticalAlignment="Center">
+              <ProgressBar.Value>
+                <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
+                  <Binding Path="WeaponsScanned" />
+                  <Binding Path="WeaponsTotal" />
+                </MultiBinding>
+              </ProgressBar.Value>
+            </ProgressBar>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding WeaponsProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+          </Grid>
+
+          <!-- Artifacts row -->
+          <Grid ColumnDefinitions="120,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Artifacts"
+                       VerticalAlignment="Center" />
+            <ProgressBar Grid.Column="1"
+                         Margin="8,0"
+                         Minimum="0"
+                         Maximum="1"
+                         VerticalAlignment="Center">
+              <ProgressBar.Value>
+                <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
+                  <Binding Path="ArtifactsScanned" />
+                  <Binding Path="ArtifactsTotal" />
+                </MultiBinding>
+              </ProgressBar.Value>
+            </ProgressBar>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding ArtifactsProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+          </Grid>
+
+          <!-- Characters row -->
+          <Grid ColumnDefinitions="120,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Characters"
+                       VerticalAlignment="Center" />
+            <ProgressBar Grid.Column="1"
+                         Margin="8,0"
+                         Minimum="0"
+                         Maximum="1"
+                         VerticalAlignment="Center">
+              <ProgressBar.Value>
+                <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
+                  <Binding Path="CharactersScanned" />
+                  <Binding Path="CharactersTotal" />
+                </MultiBinding>
+              </ProgressBar.Value>
+            </ProgressBar>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding CharactersProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+          </Grid>
+
+          <!-- Materials row -->
+          <Grid ColumnDefinitions="120,*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Materials"
+                       VerticalAlignment="Center" />
+            <ProgressBar Grid.Column="1"
+                         Margin="8,0"
+                         Minimum="0"
+                         Maximum="1"
+                         VerticalAlignment="Center">
+              <ProgressBar.Value>
+                <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
+                  <Binding Path="MaterialsScanned" />
+                  <Binding Path="MaterialsTotal" />
+                </MultiBinding>
+              </ProgressBar.Value>
+            </ProgressBar>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding MaterialsProgressText}"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ── OCR preview section ── -->
+      <Border Grid.Row="1"
+              Padding="16"
+              Background="{StaticResource SecondaryBgBrush}">
+        <Grid ColumnDefinitions="240,*">
+
+          <!-- Screenshot thumbnail -->
+          <Border Grid.Column="0"
+                  Width="240"
+                  MaxHeight="240"
+                  VerticalAlignment="Top"
+                  Background="{StaticResource PrimaryBgBrush}"
+                  CornerRadius="4">
+            <Image Source="{Binding CurrentScreenshot, Converter={StaticResource PngBytesToBitmapConverter}}"
+                   Stretch="Uniform"
+                   MaxWidth="240"
+                   MaxHeight="240" />
+          </Border>
+
+          <!-- Item details panel -->
+          <StackPanel Grid.Column="1"
+                      Margin="16,0,0,0"
+                      Spacing="8"
+                      VerticalAlignment="Top">
+
+            <!-- Item name -->
+            <TextBlock Text="{Binding CurrentItemName}"
+                       FontSize="18"
+                       FontWeight="Bold" />
+
+            <!-- Item stats list -->
+            <ItemsControl ItemsSource="{Binding CurrentItemStats}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}"
+                             FontSize="13"
+                             Foreground="{StaticResource TextSecondaryBrush}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Validation row -->
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="0,4,0,0">
+              <TextBlock Text="{Binding IsCurrentItemValid, Converter={StaticResource ValidationIconConverter}}"
+                         FontSize="22"
+                         FontWeight="Bold"
+                         VerticalAlignment="Center" />
+              <TextBlock Text="{Binding ValidationMessage}"
+                         FontSize="13"
+                         VerticalAlignment="Center"
+                         Foreground="{StaticResource TextSecondaryBrush}" />
+            </StackPanel>
+
+          </StackPanel>
+        </Grid>
+      </Border>
+
     </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         ROW 1  –  Console (collapsible Expander, full width)
+    ═══════════════════════════════════════════════════════════ -->
+    <Expander Grid.Row="1"
+              Header="Console"
+              IsExpanded="True"
+              HorizontalAlignment="Stretch"
+              Background="{StaticResource PrimaryBgBrush}">
+
+      <Border MaxHeight="200"
+              Background="{StaticResource PrimaryBgBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Console}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="80,60,*">
+                  <!-- Timestamp -->
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding Timestamp, Converter={StaticResource RelativeTimeConverter}}"
+                             FontSize="11"
+                             FontFamily="Consolas,Courier New,monospace"
+                             Foreground="{StaticResource TextSecondaryBrush}"
+                             VerticalAlignment="Top" />
+                  <!-- Level -->
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Level}"
+                             FontSize="11"
+                             FontFamily="Consolas,Courier New,monospace"
+                             Foreground="{Binding Level, Converter={StaticResource LogLevelToBrushConverter}}"
+                             VerticalAlignment="Top" />
+                  <!-- Message -->
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding Message}"
+                             FontSize="11"
+                             FontFamily="Consolas,Courier New,monospace"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Top" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+    </Expander>
+
+  </Grid>
+
 </UserControl>

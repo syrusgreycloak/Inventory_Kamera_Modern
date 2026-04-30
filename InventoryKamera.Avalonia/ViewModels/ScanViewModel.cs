@@ -141,6 +141,119 @@ namespace InventoryKamera.Avalonia.ViewModels
         public string MaterialsProgressText  => $"{MaterialsScanned} / {MaterialsTotal}";
 
         // ----------------------------------------------------------------
+        // Settings-bound properties
+        // These are hand-rolled (not [ObservableProperty]) because the source of
+        // truth is ISettingsService.Current, not a local backing field.
+        // ----------------------------------------------------------------
+
+        /// <summary>Whether to include weapons in the next scan.</summary>
+        public bool ScanWeapons
+        {
+            get => _settingsService.Current.ScanWeapons;
+            set
+            {
+                if (_settingsService.Current.ScanWeapons == value) return;
+                _settingsService.Current.ScanWeapons = value;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>Whether to include artifacts in the next scan.</summary>
+        public bool ScanArtifacts
+        {
+            get => _settingsService.Current.ScanArtifacts;
+            set
+            {
+                if (_settingsService.Current.ScanArtifacts == value) return;
+                _settingsService.Current.ScanArtifacts = value;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>Whether to include characters in the next scan.</summary>
+        public bool ScanCharacters
+        {
+            get => _settingsService.Current.ScanCharacters;
+            set
+            {
+                if (_settingsService.Current.ScanCharacters == value) return;
+                _settingsService.Current.ScanCharacters = value;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>Whether to include character development items in the next scan.</summary>
+        public bool ScanCharDevItems
+        {
+            get => _settingsService.Current.ScanCharDevItems;
+            set
+            {
+                if (_settingsService.Current.ScanCharDevItems == value) return;
+                _settingsService.Current.ScanCharDevItems = value;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>Whether to include materials in the next scan.</summary>
+        public bool ScanMaterials
+        {
+            get => _settingsService.Current.ScanMaterials;
+            set
+            {
+                if (_settingsService.Current.ScanMaterials == value) return;
+                _settingsService.Current.ScanMaterials = value;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// Index into the minimum-weapon-rarity selector: 0=★3, 1=★4, 2=★5.
+        /// Persisted as the actual rarity integer (3/4/5) in settings.
+        /// </summary>
+        public int MinimumWeaponRarityIndex
+        {
+            get => Math.Max(0, _settingsService.Current.MinimumWeaponRarity - 3);
+            set
+            {
+                int rarity = value + 3;
+                if (_settingsService.Current.MinimumWeaponRarity == rarity) return;
+                _settingsService.Current.MinimumWeaponRarity = rarity;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// Index into the scan-speed selector: 0=Fast (0ms delay), 1=Normal (default), 2=Slow.
+        /// Mapped to <see cref="ScanSettings.ScannerDelay"/> as 0/0/500 ms.
+        /// </summary>
+        public int ScanSpeedIndex
+        {
+            get
+            {
+                int delay = _settingsService.Current.ScannerDelay;
+                if (delay <= 0)   return 0; // Fast
+                if (delay < 500)  return 1; // Normal
+                return 2;                   // Slow
+            }
+            set
+            {
+                int delay = value == 0 ? 0 : value == 1 ? 0 : 500;
+                // Keep Normal (index 1) distinguishable: store 100ms for Normal vs 0ms for Fast.
+                if (value == 1) delay = 100;
+                if (_settingsService.Current.ScannerDelay == delay) return;
+                _settingsService.Current.ScannerDelay = delay;
+                _settingsService.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        // ----------------------------------------------------------------
         // Constructor
         // ----------------------------------------------------------------
 
