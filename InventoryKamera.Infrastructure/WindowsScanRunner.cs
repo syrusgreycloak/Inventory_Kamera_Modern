@@ -66,8 +66,37 @@ namespace InventoryKamera.Infrastructure
             else
                 Navigation.Initialize();
 
-            // Apply the user-configured per-step delay (Fast/Normal/Slow → ms).
-            if (settings != null) _inputSimulator.SetDelay(settings.ScannerDelay);
+            // Apply the user-configured per-step delay. Navigation.SetDelay expects a
+            // *multiplier* applied to internal SystemWait values (Speed.UI = 2000ms etc.),
+            // not raw milliseconds.
+            //
+            //   - WinForms legacy: ScannerDelay was a TrackBar index (0/1/2) → 0.5/1.0/1.5x.
+            //   - Avalonia stores it in two ways: the legacy trackbar value (0..2) or the
+            //     ScanSpeedIndex translation (Fast=0, Normal=100, Slow=500).
+            //
+            // Any value <10 is interpreted as legacy trackbar; higher values are interpreted
+            // as "additional ms on top of the 1.0x baseline" → multiplier = 1 + ms/1000.
+            // Floor at 0.5x so a misconfigured 0 doesn't wipe out every UI delay and leave
+            // Genshin no time to render menu transitions.
+            if (settings != null)
+            {
+                double multiplier;
+                if (settings.ScannerDelay < 10)
+                {
+                    multiplier = settings.ScannerDelay switch
+                    {
+                        0 => 0.5,
+                        1 => 1.0,
+                        2 => 1.5,
+                        _ => 1.0,
+                    };
+                }
+                else
+                {
+                    multiplier = 1.0 + settings.ScannerDelay / 1000.0;
+                }
+                _inputSimulator.SetDelay(Math.Max(0.5, multiplier));
+            }
 
             // Detect aspect ratio and load the scan profile for this run.
             var aspect = _screenCapture.GetAspectRatio();
