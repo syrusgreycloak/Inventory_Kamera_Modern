@@ -27,8 +27,11 @@
             Background="{StaticResource SecondaryBgBrush}"
             Padding="16">
 
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Orientation="Vertical" Spacing="12">
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    AllowAutoHide="False">
+        <!-- Right margin reserves space for the scrollbar so it doesn't draw over buttons. -->
+        <StackPanel Orientation="Vertical" Spacing="12" Margin="0,0,14,0">
 
           <!-- Section header -->
           <TextBlock Text="Scan Categories"
