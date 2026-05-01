@@ -20,8 +20,8 @@ namespace InventoryKamera.Avalonia.ViewModels
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-        private const string GitHubOwner = "Andrewthe13th";
-        private const string GitHubRepo  = "Inventory_Kamera";
+        private const string GitHubOwner = "syrusgreycloak";
+        private const string GitHubRepo  = "Inventory_Kamera_Modern";
 
         private readonly ISettingsService _settings;
         private readonly IUrlLauncher     _url;
@@ -192,16 +192,18 @@ namespace InventoryKamera.Avalonia.ViewModels
             try
             {
                 var status = await Task.Run(() => _databaseManager.UpdateGameData());
-                await HandleUpdateStatus(status, forced: false);
 
-                // Stamp the last-update timestamp on success so the About tab reflects when
-                // the user actually refreshed game data, not just when they last checked GitHub.
-                if (status == UpdateStatus.Success)
+                // Stamp the last-check timestamp for any non-failed outcome — a "skipped"
+                // result still represents a successful round-trip to the remote source,
+                // so the user has confirmed currency at this moment.
+                if (status != UpdateStatus.Fail)
                 {
                     _settings.Current.LastUpdateCheck = DateTime.Now;
                     _settings.Save();
                     OnPropertyChanged(nameof(LastUpdateCheck));
                 }
+
+                await HandleUpdateStatus(status, forced: false);
 
                 // Refresh displayed version regardless of status (force-update path may have
                 // bumped the version even when initial status was Skipped).
