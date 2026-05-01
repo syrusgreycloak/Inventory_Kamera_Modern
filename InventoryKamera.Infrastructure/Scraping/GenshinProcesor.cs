@@ -485,22 +485,36 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		public static void SetGamma(double red, double green, double blue, ref Bitmap bitmap)
 		{
-			Bitmap temp = bitmap;
-			Bitmap bmap = (Bitmap)temp.Clone();
-			DrawingColor c;
-			byte[] redGamma = CreateGammaArray(red);
+			// LockBits is ~100× faster than per-pixel GetPixel/SetPixel and avoids the
+			// "Generic GDI+ error" that the original implementation hit on bitmaps cloned
+			// from PNG-decoded streams (worker thread, ImageSharp bridge path).
+			byte[] redGamma   = CreateGammaArray(red);
 			byte[] greenGamma = CreateGammaArray(green);
-			byte[] blueGamma = CreateGammaArray(blue);
-			for (int i = 0; i < bmap.Width; i++)
+			byte[] blueGamma  = CreateGammaArray(blue);
+
+			var rect = new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height);
+			BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+			try
 			{
-				for (int j = 0; j < bmap.Height; j++)
+				int byteCount = Math.Abs(data.Stride) * data.Height;
+				byte[] pixels = new byte[byteCount];
+				Marshal.Copy(data.Scan0, pixels, 0, byteCount);
+
+				// Format32bppArgb laid out as B, G, R, A in memory.
+				for (int i = 0; i + 3 < pixels.Length; i += 4)
 				{
-					c = bmap.GetPixel(i, j);
-					bmap.SetPixel(i, j, DrawingColor.FromArgb(redGamma[c.R],
-					   greenGamma[c.G], blueGamma[c.B]));
+					pixels[i]     = blueGamma[pixels[i]];
+					pixels[i + 1] = greenGamma[pixels[i + 1]];
+					pixels[i + 2] = redGamma[pixels[i + 2]];
+					// alpha (pixels[i + 3]) preserved
 				}
+
+				Marshal.Copy(pixels, 0, data.Scan0, byteCount);
 			}
-			bitmap = (Bitmap)bmap.Clone();
+			finally
+			{
+				bitmap.UnlockBits(data);
+			}
 		}
 
 		private static byte[] CreateGammaArray(double color)
@@ -542,49 +556,39 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		public static void SetColor(string colorFilterType, ref Bitmap bitmap)
 		{
-			Bitmap temp = bitmap;
-			Bitmap bmap = (Bitmap)temp.Clone();
-			DrawingColor c;
-			for (int i = 0; i < bmap.Width; i++)
+			// LockBits-based in-place implementation. Same rationale as SetGamma/SetBrightness.
+			var rect = new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height);
+			BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+			try
 			{
-				for (int j = 0; j < bmap.Height; j++)
+				int byteCount = Math.Abs(data.Stride) * data.Height;
+				byte[] pixels = new byte[byteCount];
+				Marshal.Copy(data.Scan0, pixels, 0, byteCount);
+
+				for (int i = 0; i + 3 < pixels.Length; i += 4)
 				{
-					c = bmap.GetPixel(i, j);
-					int nPixelR = 0;
-					int nPixelG = 0;
-					int nPixelB = 0;
-					if (colorFilterType == "red")
-					{
-						nPixelR = c.R;
-						nPixelG = c.G - 255;
-						nPixelB = c.B - 255;
-					}
-					else if (colorFilterType == "green")
-					{
-						nPixelR = c.R - 255;
-						nPixelG = c.G;
-						nPixelB = c.B - 255;
-					}
-					else if (colorFilterType == "blue")
-					{
-						nPixelR = c.R - 255;
-						nPixelG = c.G - 255;
-						nPixelB = c.B;
-					}
-					nPixelR = Math.Max(nPixelR, 0);
-					nPixelR = Math.Min(255, nPixelR);
+					// Format32bppArgb: B, G, R, A
+					int B = pixels[i];
+					int G = pixels[i + 1];
+					int R = pixels[i + 2];
+					int nR = 0, nG = 0, nB = 0;
 
-					nPixelG = Math.Max(nPixelG, 0);
-					nPixelG = Math.Min(255, nPixelG);
+					if (colorFilterType == "red")        { nR = R;        nG = G - 255; nB = B - 255; }
+					else if (colorFilterType == "green") { nR = R - 255;  nG = G;       nB = B - 255; }
+					else if (colorFilterType == "blue")  { nR = R - 255;  nG = G - 255; nB = B; }
 
-					nPixelB = Math.Max(nPixelB, 0);
-					nPixelB = Math.Min(255, nPixelB);
+					if (nR < 0) nR = 0; else if (nR > 255) nR = 255;
+					if (nG < 0) nG = 0; else if (nG > 255) nG = 255;
+					if (nB < 0) nB = 0; else if (nB > 255) nB = 255;
 
-					bmap.SetPixel(i, j, DrawingColor.FromArgb((byte)nPixelR,
-					  (byte)nPixelG, (byte)nPixelB));
+					pixels[i]     = (byte)nB;
+					pixels[i + 1] = (byte)nG;
+					pixels[i + 2] = (byte)nR;
 				}
+
+				Marshal.Copy(pixels, 0, data.Scan0, byteCount);
 			}
-			bitmap = (Bitmap)bmap.Clone();
+			finally { bitmap.UnlockBits(data); }
 		}
 
 		public static void SetBrightness(int brightness, ref Bitmap bitmap)
@@ -592,31 +596,35 @@ namespace InventoryKamera.Infrastructure.Scraping
 			if (brightness < -255) brightness = -255;
 			if (brightness > 255) brightness = 255;
 
-			Bitmap temp = bitmap;
-			Bitmap bmap = (Bitmap)temp.Clone();
-			DrawingColor c;
-			for (int i = 0; i < bmap.Width; i++)
+			// LockBits-based in-place implementation. Replaces the per-pixel SetPixel +
+			// Clone-on-output pattern that hit "Generic GDI+ error" on bridge-converted bitmaps.
+			var rect = new DrawingRectangle(0, 0, bitmap.Width, bitmap.Height);
+			BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+			try
 			{
-				for (int j = 0; j < bmap.Height; j++)
+				int byteCount = Math.Abs(data.Stride) * data.Height;
+				byte[] pixels = new byte[byteCount];
+				Marshal.Copy(data.Scan0, pixels, 0, byteCount);
+
+				for (int i = 0; i + 3 < pixels.Length; i += 4)
 				{
-					c = bmap.GetPixel(i, j);
-					int cR = c.R + brightness;
-					int cG = c.G + brightness;
-					int cB = c.B + brightness;
+					// Format32bppArgb: B, G, R, A
+					int cB = pixels[i]     + brightness;
+					int cG = pixels[i + 1] + brightness;
+					int cR = pixels[i + 2] + brightness;
 
-					if (cR < 0) cR = 1;
-					if (cR > 255) cR = 255;
+					if (cR < 0) cR = 1; else if (cR > 255) cR = 255;
+					if (cG < 0) cG = 1; else if (cG > 255) cG = 255;
+					if (cB < 0) cB = 1; else if (cB > 255) cB = 255;
 
-					if (cG < 0) cG = 1;
-					if (cG > 255) cG = 255;
-
-					if (cB < 0) cB = 1;
-					if (cB > 255) cB = 255;
-
-					bmap.SetPixel(i, j, DrawingColor.FromArgb((byte)cR, (byte)cG, (byte)cB));
+					pixels[i]     = (byte)cB;
+					pixels[i + 1] = (byte)cG;
+					pixels[i + 2] = (byte)cR;
 				}
+
+				Marshal.Copy(pixels, 0, data.Scan0, byteCount);
 			}
-			bitmap = (Bitmap)bmap.Clone();
+			finally { bitmap.UnlockBits(data); }
 		}
 
 		public static void SetThreshold(int threshold, ref Bitmap bitmap)
@@ -864,18 +872,15 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		public static void SetGamma(double red, double green, double blue, ref Image<Rgba32> image)
 		{
-			Bitmap original = ImageSharpToBitmap(image);
-			Bitmap bmp = original;
+			// SetGamma now modifies the bitmap in place via LockBits — no ref swap, single
+			// allocation, single disposal.
+			Bitmap bmp = ImageSharpToBitmap(image);
 			try
 			{
 				SetGamma(red, green, blue, ref bmp);
 				image = BitmapToImageSharp(bmp);
 			}
-			finally
-			{
-				if (!ReferenceEquals(original, bmp)) original.Dispose();
-				bmp.Dispose();
-			}
+			finally { bmp.Dispose(); }
 		}
 
 		public static void SetInvert(ref Image<Rgba32> image)
