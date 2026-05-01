@@ -102,7 +102,7 @@ namespace InventoryKamera.Tests
         {
             var (vm, _, url, _) = MakeVm();
             vm.OpenGitHubCommand.Execute(null);
-            url.Verify(u => u.Open(It.Is<string>(s => s.Contains("Andrewthe13th") && s.Contains("Inventory_Kamera"))), Times.Once);
+            url.Verify(u => u.Open(It.Is<string>(s => s.Contains("syrusgreycloak") && s.Contains("Inventory_Kamera_Modern"))), Times.Once);
         }
 
         [Fact]

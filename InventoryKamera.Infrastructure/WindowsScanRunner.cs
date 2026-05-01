@@ -1,4 +1,5 @@
 using InventoryKamera.Configuration;
+using InventoryKamera.Infrastructure.Windows;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -55,6 +56,19 @@ namespace InventoryKamera.Infrastructure
 
         public Task RunAsync(ScanSettings settings, CancellationToken token = default)
         {
+            // Locate the Genshin process and capture its window dimensions BEFORE reading
+            // aspect ratio or capturing screenshots. Without this, Navigation's static
+            // width/height are 0 and GetAspectRatio() throws DivideByZeroException.
+            // Use the configured executable list so future renames (e.g. CN client) are
+            // honored from settings rather than the hardcoded fallback.
+            if (settings?.Executables != null && settings.Executables.Count > 0)
+                Navigation.Initialize(settings.Executables);
+            else
+                Navigation.Initialize();
+
+            // Apply the user-configured per-step delay (Fast/Normal/Slow → ms).
+            if (settings != null) _inputSimulator.SetDelay(settings.ScannerDelay);
+
             // Detect aspect ratio and load the scan profile for this run.
             var aspect = _screenCapture.GetAspectRatio();
             double aspectRatio = aspect.Height > 0 ? (double)aspect.Width / aspect.Height : 16.0 / 9.0;
