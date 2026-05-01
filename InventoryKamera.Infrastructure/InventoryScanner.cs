@@ -351,6 +351,8 @@ namespace InventoryKamera
 
 				if (workerQueue.TryDequeue(out OCRImageCollection imageCollection))
 				{
+					try
+					{
 					switch (imageCollection.Type)
 					{
 						case "weapon":
@@ -515,6 +517,27 @@ namespace InventoryKamera
 						default:
 							Logger.Error("Unknown image type in ImageProcessorWorker: {type}", imageCollection.Type);
 							break;
+					}
+					}
+					catch (Exception ex)
+					{
+						// An exception inside the per-item switch must NOT escape the worker
+						// thread — an uncaught background-thread exception terminates the entire
+						// process by runtime policy. Log, dispose any held bitmaps, and keep
+						// the worker alive for the next item.
+						Logger.Error(ex, "ImageProcessorWorker failed processing {Type} #{Id}",
+							imageCollection?.Type ?? "<null>", imageCollection?.Id ?? -1);
+						try
+						{
+							_userInterface?.AddError(
+								$"Worker error on {imageCollection?.Type} #{imageCollection?.Id}: {ex.Message}");
+						}
+						catch { /* never let the error reporter throw */ }
+						try
+						{
+							imageCollection?.Bitmaps?.ForEach(b => b?.Dispose());
+						}
+						catch { /* swallow secondary disposal errors */ }
 					}
 				}
 				else

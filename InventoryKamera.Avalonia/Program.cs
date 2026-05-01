@@ -19,6 +19,22 @@ namespace InventoryKamera.Avalonia
             if (settingsDir != null) Directory.CreateDirectory(settingsDir);
 
             ConfigureLogging();
+
+            // Catch unhandled exceptions on background threads (worker pool, scraper threads,
+            // etc.) and route them to NLog before the runtime tears the process down. Without
+            // this, a worker-thread crash exits to desktop with an empty log.
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                Logger.Fatal(e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString() ?? "unknown"),
+                             "Unhandled exception (terminating={0})", e.IsTerminating);
+                LogManager.Flush();
+            };
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                Logger.Error(e.Exception, "Unobserved task exception");
+                e.SetObserved();
+            };
+
             try
             {
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
