@@ -131,18 +131,28 @@ namespace InventoryKamera
         /// <returns>String parsed from nameplate</returns>
         internal string ScanItemName(Image<Rgba32> nameplate)
         {
-            var oldNameplate = nameplate;
-            nameplate = _imageProcessor.SetGamma(nameplate, 0.2, 0.2, 0.2);
-            if (!ReferenceEquals(oldNameplate, nameplate)) oldNameplate.Dispose();
-            Image<Rgba32> n = _imageProcessor.SetGrayscale(nameplate);
-            n = _imageProcessor.SetInvert(n);
-
-            // Analyze
-            string text = Regex.Replace(_ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleBlock).ToLower(), @"[\W]", string.Empty);
-
-            n.Dispose();
-
-            return text;
+            // The caller owns `nameplate` — do NOT dispose it. SetGamma/SetGrayscale/SetInvert
+            // each return a new Image<Rgba32>; we own those intermediates and dispose them here.
+            // Disposing the input parameter (the previous behavior) caused later GetQuality calls
+            // on the same shared list reference to throw ObjectDisposedException on the worker.
+            var gamma = _imageProcessor.SetGamma(nameplate, 0.2, 0.2, 0.2);
+            try
+            {
+                var gray = _imageProcessor.SetGrayscale(gamma);
+                try
+                {
+                    var inverted = _imageProcessor.SetInvert(gray);
+                    try
+                    {
+                        return Regex.Replace(
+                            _ocrEngine.AnalyzeText(inverted, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleBlock).ToLower(),
+                            @"[\W]", string.Empty);
+                    }
+                    finally { if (!ReferenceEquals(inverted, gray)) inverted.Dispose(); }
+                }
+                finally { if (!ReferenceEquals(gray, gamma)) gray.Dispose(); }
+            }
+            finally { if (!ReferenceEquals(gamma, nameplate)) gamma.Dispose(); }
         }
 
         /// <summary>
