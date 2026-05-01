@@ -338,9 +338,21 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		[DllImport("user32.dll")]
 		private static extern bool GetWindowPlacement(IntPtr hWnd, ref WindowPlacement lpwndpl);
-		
+
 		[DllImport("user32.dll")]
 		private static extern bool SetWindowPlacement(IntPtr hWnd, ref WindowPlacement lpwndpl);
+
+		[DllImport("user32.dll")]
+		private static extern IntPtr GetForegroundWindow();
+
+		[DllImport("user32.dll")]
+		private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+		[DllImport("user32.dll")]
+		private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+		[DllImport("kernel32.dll")]
+		private static extern uint GetCurrentThreadId();
 		
 		private struct WindowPlacement
 		{
@@ -382,12 +394,51 @@ namespace InventoryKamera.Infrastructure.Windows
 						SetWindowPlacement(handle, ref windowPlacement);
 					}
 
-					// Bring game to front
-					SetForegroundWindow(handle);
+					// Bring game to front. SetForegroundWindow is unreliable on Win10+ when the
+					// caller isn't the current foreground window — Windows silently rejects the
+					// request unless we attach our thread input to the current foreground thread
+					// while making the call.
+					ForceForeground(handle);
+					// Give the OS a moment to actually move the window forward and surface its
+					// pixels before any screen capture or input simulation runs. Without this
+					// pause the first capture often grabs whatever was occluding Genshin.
+					System.Threading.Thread.Sleep(500);
 					return true;
 				}
 			}
 			return false;
+		}
+
+		/// <summary>
+		/// Reliably brings the target window to the foreground on Windows 10/11.
+		/// SetForegroundWindow alone is silently rejected when the caller is the
+		/// current foreground window; attaching thread input lifts that restriction.
+		/// </summary>
+		private static void ForceForeground(IntPtr targetHandle)
+		{
+			IntPtr fg = GetForegroundWindow();
+			if (fg == targetHandle) return;
+
+			uint targetThread = GetWindowThreadProcessId(targetHandle, out _);
+			uint fgThread     = GetWindowThreadProcessId(fg, out _);
+			uint thisThread   = GetCurrentThreadId();
+
+			bool attachedToFg     = false;
+			bool attachedToTarget = false;
+			try
+			{
+				if (fgThread != 0 && fgThread != thisThread)
+					attachedToFg = AttachThreadInput(thisThread, fgThread, true);
+				if (targetThread != 0 && targetThread != thisThread)
+					attachedToTarget = AttachThreadInput(thisThread, targetThread, true);
+
+				SetForegroundWindow(targetHandle);
+			}
+			finally
+			{
+				if (attachedToFg)     AttachThreadInput(thisThread, fgThread, false);
+				if (attachedToTarget) AttachThreadInput(thisThread, targetThread, false);
+			}
 		}
 
 		#endregion Window Focusing
