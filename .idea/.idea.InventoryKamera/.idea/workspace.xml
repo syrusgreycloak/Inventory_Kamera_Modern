@@ -15,7 +15,9 @@
     <configurations />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="893fab9a-cd26-4311-91cd-f731eb9f68a5" name="Changes" comment="" />
+    <list default="true" id="893fab9a-cd26-4311-91cd-f731eb9f68a5" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.InventoryKamera/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.InventoryKamera/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -151,7 +153,7 @@
       <workItem from="1777317899504" duration="5624000" />
       <workItem from="1777326976968" duration="23263000" />
       <workItem from="1777437486001" duration="733000" />
-      <workItem from="1777485276393" duration="21773000" />
+      <workItem from="1777485276393" duration="22779000" />
     </task>
     <servers />
   </component>

@@ -29,7 +29,14 @@
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
 
-  <!-- ── TabItem ── -->
+  <!-- ── TabControl / TabItem ── -->
+  <!-- Zero out the default Fluent content padding so child ScrollViewers can use the full
+       tab content area; otherwise the scroll viewport is clipped at the bottom. -->
+  <Style Selector="TabControl">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{StaticResource PrimaryBgBrush}" />
+  </Style>
+
   <Style Selector="TabItem">
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
   </Style>
