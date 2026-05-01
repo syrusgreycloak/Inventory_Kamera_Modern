@@ -7,6 +7,14 @@
         Width="960" Height="780"
         MinWidth="720" MinHeight="520">
 
+    <Window.KeyBindings>
+        <!-- Stop the running scan with Escape or Enter once focus returns to this window
+             (typically via Alt+Tab while the scanner has the cursor in Genshin).
+             CanExecute on StopScanCommand means these are no-ops outside an active scan. -->
+        <KeyBinding Gesture="Escape" Command="{Binding ScanVm.StopScanCommand}" />
+        <KeyBinding Gesture="Enter"  Command="{Binding ScanVm.StopScanCommand}" />
+    </Window.KeyBindings>
+
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type vm:ScanViewModel}">
             <views:ScanView />

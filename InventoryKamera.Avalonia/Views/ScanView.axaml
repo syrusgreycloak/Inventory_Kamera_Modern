@@ -78,6 +78,11 @@
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Center" />
 
+          <TextBlock Text="Tip: Alt+Tab to this window and press Esc or Enter to cancel a running scan."
+                     FontSize="11"
+                     TextWrapping="Wrap"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
           <Button Content="Manual Export"
                   Command="{Binding ExportLastCommand}"
                   HorizontalAlignment="Stretch"
