@@ -3,6 +3,7 @@ using InventoryKamera.Infrastructure.Windows; // Navigation
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace InventoryKamera
 
 		private List<Artifact> equippedArtifacts;
 		private List<Weapon> equippedWeapons;
-		public static Queue<OCRImageCollection> workerQueue;
+		public static ConcurrentQueue<OCRImageCollection> workerQueue;
 		private List<Thread> ImageProcessors;
 
 		private WeaponScraper weaponScraper;
@@ -84,7 +85,7 @@ namespace InventoryKamera
 			equippedArtifacts = new List<Artifact>();
 			equippedWeapons   = new List<Weapon>();
 			ImageProcessors   = new List<Thread>();
-			workerQueue       = new Queue<OCRImageCollection>();
+			workerQueue       = new ConcurrentQueue<OCRImageCollection>();
 
 			weaponScraper      = new WeaponScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile, _settings);
 			artifactScraper    = new ArtifactScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile, _settings);
@@ -122,7 +123,7 @@ namespace InventoryKamera
 		{
 			b_threadCancel = true;
 			AwaitProcessors();
-			workerQueue = new Queue<OCRImageCollection>();
+			workerQueue = new ConcurrentQueue<OCRImageCollection>();
 		}
 
 		// ------------------------------------------------------------------
@@ -344,7 +345,7 @@ namespace InventoryKamera
 			{
 				if (_cancellationToken.IsCancellationRequested || b_threadCancel)
 				{
-					workerQueue.Clear();
+					while (workerQueue.TryDequeue(out _)) { /* drain */ }
 					break;
 				}
 
