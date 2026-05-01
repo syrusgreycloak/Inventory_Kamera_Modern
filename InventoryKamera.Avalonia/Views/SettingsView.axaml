@@ -5,12 +5,9 @@
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled"
-                AllowAutoHide="False"
                 Padding="16,16,16,32">
 
-    <!-- Right margin reserves space for the scrollbar so panels don't sit beneath it. -->
-    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="640" HorizontalAlignment="Stretch"
-                Margin="0,0,14,0">
+    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="640" HorizontalAlignment="Stretch">
 
       <!-- ══════════════════════════════════════════════════
            OUTPUT
