@@ -190,8 +190,11 @@ namespace InventoryKamera
                 if (force)
                 {
                     Logger.Info("Forcing update for game data");
-                    RemoteVersion = CheckRemoteVersion();
                 }
+                // Always probe the remote version — the post-update version write
+                // below requires a non-default RemoteVersion to update LocalVersion,
+                // and a non-forced update path otherwise leaves it as 0.0.
+                RemoteVersion = CheckRemoteVersion() ?? RemoteVersion;
 
                 var lists = Enum.GetValues(typeof(ListType)).Cast<ListType>().ToList();
 

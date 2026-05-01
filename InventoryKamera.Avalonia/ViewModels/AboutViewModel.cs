@@ -194,7 +194,17 @@ namespace InventoryKamera.Avalonia.ViewModels
                 var status = await Task.Run(() => _databaseManager.UpdateGameData());
                 await HandleUpdateStatus(status, forced: false);
 
-                // Refresh displayed version
+                // Stamp the last-update timestamp on success so the About tab reflects when
+                // the user actually refreshed game data, not just when they last checked GitHub.
+                if (status == UpdateStatus.Success)
+                {
+                    _settings.Current.LastUpdateCheck = DateTime.Now;
+                    _settings.Save();
+                    OnPropertyChanged(nameof(LastUpdateCheck));
+                }
+
+                // Refresh displayed version regardless of status (force-update path may have
+                // bumped the version even when initial status was Skipped).
                 OnPropertyChanged(nameof(LocalGameVersion));
             }
             catch (Exception ex)
