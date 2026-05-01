@@ -4,10 +4,15 @@
              x:Class="InventoryKamera.Avalonia.Views.SettingsView">
 
   <ScrollViewer VerticalScrollBarVisibility="Auto"
-                HorizontalScrollBarVisibility="Disabled"
-                Padding="16,16,16,32">
+                HorizontalScrollBarVisibility="Disabled">
 
-    <StackPanel Orientation="Vertical" Spacing="16" MaxWidth="640" HorizontalAlignment="Stretch">
+    <!-- Padding moved off ScrollViewer to the inner panel: ensures ScrollViewer's
+         content-height measurement is correct and the bottom row scrolls fully into view. -->
+    <StackPanel Orientation="Vertical"
+                Spacing="16"
+                MaxWidth="640"
+                HorizontalAlignment="Stretch"
+                Margin="16,16,16,32">
 
       <!-- ══════════════════════════════════════════════════
            OUTPUT
