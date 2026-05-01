@@ -59,6 +59,11 @@ namespace InventoryKamera.Avalonia.ViewModels
         /// <summary>Date/time of the most recent update check (from settings).</summary>
         public DateTime LastUpdateCheck => _settings.Current.LastUpdateCheck;
 
+        /// <summary>URLs exposed for binding so the View doesn't hardcode link targets.</summary>
+        public string RepoUrl     => $"https://github.com/{GitHubOwner}/{GitHubRepo}/";
+        public string ReleasesUrl => $"https://github.com/{GitHubOwner}/{GitHubRepo}/releases";
+        public string IssuesUrl   => $"https://github.com/{GitHubOwner}/{GitHubRepo}/issues";
+
         // ─────────────────────────────────────────────────────────────────────
         // Constructor
         // ─────────────────────────────────────────────────────────────────────

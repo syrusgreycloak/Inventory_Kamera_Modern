@@ -98,13 +98,13 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="GitHub"
                     Command="{Binding OpenGitHubCommand}"
-                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/" />
+                    ToolTip.Tip="{Binding RepoUrl}" />
             <Button Content="Releases"
                     Command="{Binding OpenReleasesCommand}"
-                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/releases" />
+                    ToolTip.Tip="{Binding ReleasesUrl}" />
             <Button Content="Issues"
                     Command="{Binding OpenIssuesCommand}"
-                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera/issues" />
+                    ToolTip.Tip="{Binding IssuesUrl}" />
           </StackPanel>
 
         </StackPanel>
