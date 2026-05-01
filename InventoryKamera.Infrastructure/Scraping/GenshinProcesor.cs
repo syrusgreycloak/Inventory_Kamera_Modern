@@ -816,11 +816,19 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		public static Bitmap ImageSharpToBitmap(Image<Rgba32> img)
 		{
+			// new Bitmap(stream) keeps a reference to the stream — disposing the stream
+			// invalidates the bitmap. Clone into a stream-independent Format32bppArgb
+			// bitmap so SetPixel and LockBits work correctly downstream.
 			using (var ms = new MemoryStream())
 			{
 				img.Save(ms, new PngEncoder());
 				ms.Position = 0;
-				return new Bitmap(ms);
+				using (var temp = new Bitmap(ms))
+				{
+					return temp.Clone(
+						new System.Drawing.Rectangle(0, 0, temp.Width, temp.Height),
+						System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+				}
 			}
 		}
 
