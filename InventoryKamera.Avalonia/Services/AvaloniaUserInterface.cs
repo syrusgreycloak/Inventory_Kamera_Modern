@@ -176,9 +176,9 @@ namespace InventoryKamera.Avalonia.Services
         {
             var png = ToPngBytes(bm);
             string[] stats;
-            // Talent index from CharacterScraper is 1-based (1=Auto, 2=Skill, 3=Burst).
-            int slot = (i >= 1 && i <= 3) ? i - 1 : 0;
-            string label = i == 1 ? "Auto" : i == 2 ? "Skill" : i == 3 ? "Burst" : $"Talent {i}";
+            // Talent index from CharacterScraper is 0-based (0=Auto, 1=Skill, 2=Burst).
+            int slot = (i >= 0 && i <= 2) ? i : 0;
+            string label = i == 0 ? "Auto" : i == 1 ? "Skill" : i == 2 ? "Burst" : $"Talent {i}";
             lock (_charLock)
             {
                 _charTalentLines[slot] = $"{label}: {text}";
