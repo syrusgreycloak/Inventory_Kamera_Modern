@@ -214,6 +214,9 @@ namespace InventoryKamera.Avalonia.Services
         {
             // Surface per-material progress: nameplate as the screenshot, name + count
             // as the OCR-preview header / stats. Mirrors the SetGear pattern.
+            // Log to the console too so the scrolling material list is visible while
+            // running (without this the console looks frozen at "Mora: N").
+            _log.Info("Material: {0} ({1})", string.IsNullOrEmpty(name) ? "<unknown>" : name, count);
             var png = ToPngBytes(bitmap);
             var stats = new[] { $"Count: {count}" };
             Dispatcher.UIThread.Post(() =>
