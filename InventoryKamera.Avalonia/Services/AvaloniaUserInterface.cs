@@ -210,6 +210,21 @@ namespace InventoryKamera.Avalonia.Services
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
         }
 
+        public void SetMaterial(Image<Rgba32> bitmap, string name, int count)
+        {
+            // Surface per-material progress: nameplate as the screenshot, name + count
+            // as the OCR-preview header / stats. Mirrors the SetGear pattern.
+            var png = ToPngBytes(bitmap);
+            var stats = new[] { $"Count: {count}" };
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (png != null) _scanVm.CurrentScreenshot = png;
+                _scanVm.CurrentItemName = name ?? string.Empty;
+                _scanVm.CurrentItemStats = stats;
+                _scanVm.IsCurrentItemValid = !string.IsNullOrEmpty(name);
+            });
+        }
+
         // ----------------------------------------------------------------
         // Counters / Max
         // ----------------------------------------------------------------

@@ -21,6 +21,7 @@ namespace InventoryKamera
         public void SetCharacter_Talent(Image<Rgba32> bm, string text, int i) { }
 
         public void SetMora(Image<Rgba32> mora, int count) { }
+        public void SetMaterial(Image<Rgba32> bitmap, string name, int count) { }
 
         public void SetWeapon_Max(int value) { }
         public void SetArtifact_Max(int value) { }

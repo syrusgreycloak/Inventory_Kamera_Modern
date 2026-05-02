@@ -76,6 +76,19 @@ namespace InventoryKamera.UI
             _form.BeginInvoke((MethodInvoker)(() => { UserInterface.SetMora(clone, count); clone.Dispose(); }));
         }
 
+        public void SetMaterial(Image<Rgba32> bitmap, string name, int count)
+        {
+            // The legacy WinForms SetMaterial took both nameplate and quantity bitmaps;
+            // we only have one image to surface, so we pass it as the nameplate slot and
+            // let the count display in the text box.
+            var clone = bitmap == null ? null : ImageSharpToBitmap(bitmap);
+            _form.BeginInvoke((MethodInvoker)(() =>
+            {
+                UserInterface.SetMaterial(clone, null, name, count);
+                clone?.Dispose();
+            }));
+        }
+
         // Counters / Max
 
         public void SetWeapon_Max(int value)
