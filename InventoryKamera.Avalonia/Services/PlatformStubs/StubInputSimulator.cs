@@ -23,6 +23,7 @@ namespace InventoryKamera.Avalonia.Services.PlatformStubs
         public void SystemWait(ScanDelay delay = ScanDelay.Normal) { Throw(); }
         public void SetDelay(double ms)                         { Throw(); }
         public double GetDelay()                                { Throw(); return 0; }
+        public void EnsureForeground()                          { Throw(); }
         public void SelectNextCharacter()                       { Throw(); }
         public void SelectCharacterAttributes()                 { Throw(); }
         public void SelectCharacterConstellation()              { Throw(); }

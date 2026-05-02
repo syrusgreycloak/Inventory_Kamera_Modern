@@ -16,6 +16,7 @@ namespace InventoryKamera.Infrastructure
         public void SystemWait(ScanDelay delay = ScanDelay.Normal) => Navigation.SystemWait((Navigation.Speed)(int)delay);
         public void SetDelay(double ms) => Navigation.SetDelay(ms);
         public double GetDelay() => Navigation.GetDelay();
+        public void EnsureForeground() => Navigation.EnsureForeground();
         public void SelectNextCharacter() => Navigation.SelectNextCharacter();
         public void SelectCharacterAttributes() => Navigation.SelectCharacterAttributes();
         public void SelectCharacterConstellation() => Navigation.SelectCharacterConstellation();

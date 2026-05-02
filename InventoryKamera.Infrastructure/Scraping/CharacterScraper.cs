@@ -274,6 +274,10 @@ namespace InventoryKamera
 
 			do
 			{
+				// Re-assert game foreground every retry — Rider/notifications/etc. can
+				// surface their own window mid-loop, after which captures grab the wrong
+				// content and OCR returns junk like "co" 75 times in a row.
+				_inputSimulator.EnsureForeground();
 				_inputSimulator.SystemWait(ScanDelay.Fast);
 				using (Image<Rgba32> bm = _screenCapture.CaptureRegion(nameRegion))
 				{

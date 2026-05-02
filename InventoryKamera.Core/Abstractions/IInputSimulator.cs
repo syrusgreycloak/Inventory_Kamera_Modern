@@ -17,6 +17,12 @@ namespace InventoryKamera
         void SetDelay(double ms);
         double GetDelay();
 
+        // Re-asserts the game window as the foreground window. No-op if already foreground.
+        // Call before any capture/click cycle that follows arbitrary delays — Windows can
+        // surface other apps' windows mid-scan (Rider, notifications, etc.) and once Genshin
+        // is occluded, GDI screen capture returns black or wrong content.
+        void EnsureForeground();
+
         // Game navigation actions
         void SelectNextCharacter();
         void SelectCharacterAttributes();

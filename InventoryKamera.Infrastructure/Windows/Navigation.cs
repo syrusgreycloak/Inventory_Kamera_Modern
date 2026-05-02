@@ -255,6 +255,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void CharacterScreen()
 		{
+			EnsureForeground();
 			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
 			sim.Keyboard.KeyPress(slotOneKey);
