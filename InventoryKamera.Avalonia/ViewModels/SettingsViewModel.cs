@@ -187,6 +187,23 @@ namespace InventoryKamera.Avalonia.ViewModels
             }
         }
 
+        /// <summary>
+        /// When true, every captured region (weapon cards, artifact cards, material
+        /// quantity regions, etc.) is dumped to <c>logging/&lt;category&gt;/</c> for
+        /// post-mortem inspection. Off by default — generates hundreds of PNGs per scan.
+        /// </summary>
+        public bool LogScreenshots
+        {
+            get => _settings.Current.LogScreenshots;
+            set
+            {
+                if (_settings.Current.LogScreenshots == value) return;
+                _settings.Current.LogScreenshots = value;
+                _settings.Save();
+                OnPropertyChanged();
+            }
+        }
+
         /// <summary>In-game name of the Traveler character (user-specific).</summary>
         public string TravelerName
         {

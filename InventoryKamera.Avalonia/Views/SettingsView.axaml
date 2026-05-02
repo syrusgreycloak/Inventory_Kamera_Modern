@@ -239,6 +239,14 @@
                      Padding="8,4" />
           </Grid>
 
+          <Separator />
+
+          <!-- Diagnostic logging: dumps every captured region to logging/<category>/.
+               Useful for diagnosing OCR misreads; produces hundreds of PNGs per scan. -->
+          <CheckBox Content="Log all scan screenshots (diagnostics)"
+                    IsChecked="{Binding LogScreenshots, Mode=TwoWay}"
+                    ToolTip.Tip="Saves every captured weapon/artifact/material region to logging/&lt;category&gt;/. Use to inspect what the OCR engine saw on misreads. Off by default — generates lots of files." />
+
           <!-- Last update check -->
           <TextBlock FontSize="12"
                      Foreground="{StaticResource TextSecondaryBrush}">
