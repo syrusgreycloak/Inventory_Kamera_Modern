@@ -122,11 +122,11 @@ namespace InventoryKamera
 							Logger.Debug("Final: {0} : {1}", material.name, material.count);
 							inventory.Materials.Add(material);
 							_userInterface.ResetCharacterDisplay();
-							// Surface name + count to the UI via the dedicated SetMaterial channel.
-							// nameplate is a GDI Bitmap; convert to Image<Rgba32> for the abstraction.
-							using (var ip = GenshinProcesor.BitmapToImageSharp(nameplate))
+							// Surface the quantity bitmap (matches WinForms behaviour: name in
+							// the text area, quantity-region image alongside it).
+							using (var ip = GenshinProcesor.BitmapToImageSharp(quantity))
 								_userInterface.SetMaterial(ip, material.name, material.count);
-							// TODO: dispose quantity (pre-existing leak — see line 207)
+							quantity.Dispose();  // (resolves pre-existing leak — see line 207)
 							previousMaterial.name = material.name;
 						}
 					}
@@ -217,7 +217,7 @@ namespace InventoryKamera
 						Logger.Debug("Final (LastPage): {0} : {1}", material.name, material.count);
 						inventory.Materials.Add(material);
 						_userInterface.ResetCharacterDisplay();
-						using (var ip = GenshinProcesor.BitmapToImageSharp(nameplate))
+						using (var ip = GenshinProcesor.BitmapToImageSharp(quantity))
 							_userInterface.SetMaterial(ip, material.name, material.count);
 						passby = false; // New material found so break on next old material
 						quantity.Dispose();
