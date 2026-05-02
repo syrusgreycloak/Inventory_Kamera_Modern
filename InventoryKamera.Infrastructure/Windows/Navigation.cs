@@ -158,6 +158,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void SelectWeaponInventory()
 		{
+			EnsureForeground();
 			int buttonX = (int)(385 / 1280.0 * GetWidth());
 			int buttonY = (int)(35  / 720.0 * GetHeight());
 			SetCursor(buttonX, buttonY);
@@ -177,6 +178,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void SelectCharacterDevelopmentInventory()
 		{
+			EnsureForeground();
 			int buttonX = (int)(512 / 1280.0 * GetWidth());
 			int buttonY = (int)(40  / 720.0 * GetHeight());
 			SetCursor(buttonX, buttonY);
@@ -186,6 +188,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void SelectMaterialInventory()
 		{
+			EnsureForeground();
 			int buttonX = (int)(636 / 1280.0 * GetWidth());
 			int buttonY = (int)(30  / 720.0 * GetHeight());
 			SetCursor(buttonX, buttonY);
