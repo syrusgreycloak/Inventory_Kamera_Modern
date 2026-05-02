@@ -167,6 +167,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void SelectArtifactInventory()
 		{
+			EnsureForeground();
 			int buttonX = (int)(448 / 1280.0 * GetWidth());
 			int buttonY = (int)(31 / 720.0 * GetHeight());
 			SetCursor(buttonX, buttonY);
@@ -264,6 +265,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void InventoryScreen()
 		{
+			EnsureForeground();
 			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
 			sim.Keyboard.KeyPress(inventoryKey);
@@ -272,6 +274,7 @@ namespace InventoryKamera.Infrastructure.Windows
 
 		public static void MainMenuScreen()
 		{
+			EnsureForeground();
 			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
 			sim.Keyboard.KeyPress(escapeKey);
@@ -373,6 +376,24 @@ namespace InventoryKamera.Infrastructure.Windows
 			Restore = 9, ShowDefault = 10, ForceMinimized = 11
 		};
 
+		// Cache the Genshin window handle so callers can re-foreground between scan
+		// categories without a fresh process lookup. SetCursorPos hits any monitor
+		// regardless of focus, but Graphics.CopyFromScreen returns black pixels when
+		// Genshin is occluded by another window — keeping foreground stable matters.
+		private static IntPtr _genshinHandle;
+
+		/// <summary>
+		/// Re-asserts foreground on the Genshin window using the AttachThreadInput
+		/// trick. Cheap to call — no-op if the window is already foreground.
+		/// </summary>
+		public static void EnsureForeground()
+		{
+			if (_genshinHandle == IntPtr.Zero) return;
+			if (GetForegroundWindow() == _genshinHandle) return;
+			ForceForeground(_genshinHandle);
+			System.Threading.Thread.Sleep(200);
+		}
+
 		public static bool InitializeProcess(string processName, out IntPtr handle)
 		{
 			handle = IntPtr.Zero;
@@ -383,6 +404,7 @@ namespace InventoryKamera.Infrastructure.Windows
 				if (genshin != null)
 				{
 					handle = genshin.MainWindowHandle;
+					_genshinHandle = handle;
 					
 					var windowPlacement = new WindowPlacement{length = Marshal.SizeOf(typeof(WindowPlacement))};
 					GetWindowPlacement(handle, ref windowPlacement);

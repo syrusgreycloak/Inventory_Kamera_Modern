@@ -17,9 +17,6 @@
   <component name="ChangeListManager">
     <list default="true" id="893fab9a-cd26-4311-91cd-f731eb9f68a5" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.InventoryKamera/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.InventoryKamera/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/InventoryKamera.Avalonia/Services/AvaloniaUserInterface.cs" beforeDir="false" afterPath="$PROJECT_DIR$/InventoryKamera.Avalonia/Services/AvaloniaUserInterface.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/InventoryKamera.Core/Configuration/ScanSettings.cs" beforeDir="false" afterPath="$PROJECT_DIR$/InventoryKamera.Core/Configuration/ScanSettings.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/InventoryKamera.Tests/AvaloniaUserInterfaceTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/InventoryKamera.Tests/AvaloniaUserInterfaceTests.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -156,7 +153,7 @@
       <workItem from="1777317899504" duration="5624000" />
       <workItem from="1777326976968" duration="23263000" />
       <workItem from="1777437486001" duration="733000" />
-      <workItem from="1777485276393" duration="34214000" />
+      <workItem from="1777485276393" duration="35076000" />
     </task>
     <servers />
   </component>
