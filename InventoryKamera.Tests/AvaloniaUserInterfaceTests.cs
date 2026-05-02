@@ -381,8 +381,11 @@ namespace InventoryKamera.Tests
         // ------------------------------------------------------------------
 
         [Fact]
-        public void SetGearPictureBox_Throttle_DropsSecondCallWithinWindow()
+        public void SetGearPictureBox_Back_To_Back_Calls_Both_Update()
         {
+            // Throttle was removed — each call should propagate to the VM. The earlier
+            // 100 ms gate dropped legitimate per-weapon updates from concurrent workers
+            // and froze the OCR preview after the first weapon.
             ScanViewModel vm = null;
             int snapshotCount = 0;
 
@@ -391,7 +394,6 @@ namespace InventoryKamera.Tests
                 var (v, ui) = Make();
                 vm = v;
 
-                // Subscribe before both calls
                 vm.PropertyChanged += (_, e) =>
                 {
                     if (e.PropertyName == nameof(ScanViewModel.CurrentScreenshot))
@@ -401,15 +403,13 @@ namespace InventoryKamera.Tests
                 using var img1 = MakeImage();
                 using var img2 = MakeImage();
 
-                // Both calls are back-to-back — well inside the 100 ms throttle window.
-                ui.SetGearPictureBox(img1);  // first: gate passes
-                ui.SetGearPictureBox(img2);  // second: gate blocks (< 100 ms elapsed)
+                ui.SetGearPictureBox(img1);
+                ui.SetGearPictureBox(img2);
 
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
             });
 
-            // Exactly one property-changed event for CurrentScreenshot was posted.
-            Assert.Equal(1, snapshotCount);
+            Assert.Equal(2, snapshotCount);
             Assert.NotNull(vm.CurrentScreenshot);
         }
 
@@ -418,7 +418,7 @@ namespace InventoryKamera.Tests
         // ------------------------------------------------------------------
 
         [Fact]
-        public void SetNavigation_Image_Throttle_DropsRapidUpdates()
+        public void SetNavigation_Image_Back_To_Back_Calls_Both_Update()
         {
             int snapshotCount = 0;
 
@@ -434,12 +434,12 @@ namespace InventoryKamera.Tests
 
                 using var img = MakeImage();
                 ui.SetNavigation_Image(img);
-                ui.SetNavigation_Image(img);  // throttled
+                ui.SetNavigation_Image(img);
 
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
             });
 
-            Assert.Equal(1, snapshotCount);
+            Assert.Equal(2, snapshotCount);
         }
 
         // ------------------------------------------------------------------
@@ -680,10 +680,10 @@ namespace InventoryKamera.Tests
             Assert.True(imageStillUsable, "Caller's Image<Rgba32> should not be disposed by AvaloniaUserInterface");
         }
 
-        // Test 27 — 11 rapid SetGearPictureBox calls within 100 ms produce
-        //           only ONE screenshot update (throttle gate).
+        // Test 27 — N rapid SetGearPictureBox calls produce N screenshot updates
+        //           (throttle gate removed; preview updates fire freely).
         [Fact]
-        public void SetGearPictureBox_Throttle_ManyRapidCalls_ProduceOneUpdate()
+        public void SetGearPictureBox_ManyRapidCalls_All_Update()
         {
             int snapshotCount = 0;
 
@@ -697,7 +697,6 @@ namespace InventoryKamera.Tests
                         Interlocked.Increment(ref snapshotCount);
                 };
 
-                // 11 back-to-back calls — all within well under 100 ms.
                 for (int i = 0; i < 11; i++)
                 {
                     using var img = MakeImage();
@@ -707,7 +706,7 @@ namespace InventoryKamera.Tests
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
             });
 
-            Assert.Equal(1, snapshotCount);
+            Assert.Equal(11, snapshotCount);
         }
     }
 }

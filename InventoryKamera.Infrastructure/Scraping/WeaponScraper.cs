@@ -189,10 +189,19 @@ namespace InventoryKamera
                 card //5
             };
 
-            bool a = false;
+            int minRarity = _settings != null ? _settings.MinimumWeaponRarity : 3;
+            int minLevel  = _settings != null ? _settings.MinimumWeaponLevel  : 1;
 
-            bool belowRarity = GetQuality(name) < (_settings != null ? _settings.MinimumWeaponRarity : 3);
-            bool belowLevel = ScanLevel(level, ref a) < (_settings != null ? _settings.MinimumWeaponLevel : 1);
+            bool belowRarity = GetQuality(name) < minRarity;
+            // ScanLevel runs Tesseract OCR (50–300 ms per call) on the scraper thread.
+            // Skip when the user hasn't set a level filter (default minimum is 1, which
+            // every weapon trivially satisfies). The worker thread does the real level
+            // OCR later regardless of this pre-filter.
+            bool a = false;
+            bool belowLevel = minLevel > 1
+                ? ScanLevel(level, ref a) < minLevel
+                : false;
+
             StopScanning = (SortByLevel && belowLevel) || (!SortByLevel && belowRarity);
 
             if (StopScanning || belowRarity || belowLevel)

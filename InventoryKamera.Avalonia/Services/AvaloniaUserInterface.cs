@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using Avalonia.Threading;
 using InventoryKamera.Avalonia.ViewModels;
@@ -17,8 +16,7 @@ namespace InventoryKamera.Avalonia.Services
     ///
     /// Image-producing calls encode the <see cref="Image{Rgba32}"/> to a PNG
     /// byte array (the caller owns and may dispose the image immediately after
-    /// the method returns).  Screenshot updates are throttled to at most one
-    /// update per <see cref="_previewThrottleMs"/> milliseconds.
+    /// the method returns).
     ///
     /// Text-only state (counters, status, names) is forwarded directly to VM
     /// properties.  Console narrative (constellation/talent/mora progress) is
@@ -32,29 +30,15 @@ namespace InventoryKamera.Avalonia.Services
         private readonly ScanViewModel _scanVm;
 
         // ----------------------------------------------------------------
-        // Screenshot throttle — at most one bitmap update per 100 ms.
-        // The gate is evaluated before the Dispatcher.Post so we skip
-        // useless cross-thread hops entirely.
+        // Per-weapon updates from the worker pool fire at most a few per second
+        // (full OCR per weapon is slow), so a throttle gate dropped legitimate
+        // SetGear calls under concurrent load and froze the preview after the
+        // first weapon. Throttle removed — Dispatcher.Post is cheap enough.
         // ----------------------------------------------------------------
-        private readonly Stopwatch _previewClock = Stopwatch.StartNew();
-        private long _lastPreviewMs = -1000;
-        private static readonly long _previewThrottleMs = 100;
 
         public AvaloniaUserInterface(ScanViewModel scanVm)
         {
             _scanVm = scanVm ?? throw new ArgumentNullException(nameof(scanVm));
-        }
-
-        // ----------------------------------------------------------------
-        // Throttle helper
-        // ----------------------------------------------------------------
-
-        private bool ShouldUpdatePreview()
-        {
-            var now = _previewClock.ElapsedMilliseconds;
-            if (now - _lastPreviewMs < _previewThrottleMs) return false;
-            _lastPreviewMs = now;
-            return true;
         }
 
         // ----------------------------------------------------------------
@@ -74,7 +58,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetGear(Image<Rgba32> bm, Weapon weapon)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             var name = weapon?.Name ?? string.Empty;
             var valid = weapon?.IsValid() ?? false;
@@ -90,7 +73,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetGear(Image<Rgba32> bm, Artifact artifact)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             var name = artifact?.SetName ?? string.Empty;
             var valid = artifact?.IsValid() ?? false;
@@ -106,7 +88,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetGearPictureBox(Image<Rgba32> bm)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
         }
@@ -123,7 +104,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetCharacter_NameAndElement(Image<Rgba32> bm, string name, string element)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             var label = $"{name} ({element})";
             Dispatcher.UIThread.Post(() =>
@@ -135,7 +115,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetCharacter_Level(Image<Rgba32> bm, int level, int maxLevel)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             var stats = new[] { $"Level {level} / {maxLevel}" };
             Dispatcher.UIThread.Post(() =>
@@ -152,7 +131,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetCharacter_Talent(Image<Rgba32> bm, string text, int i)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             _log.Info("Talent {0}: {1}", i, text);
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
@@ -164,7 +142,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetMora(Image<Rgba32> mora, int count)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(mora);
             _log.Info("Mora: {0}", count);
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
@@ -228,7 +205,6 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetNavigation_Image(Image<Rgba32> bm)
         {
-            if (!ShouldUpdatePreview()) return;
             var png = ToPngBytes(bm);
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
         }

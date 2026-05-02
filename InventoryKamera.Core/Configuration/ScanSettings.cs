@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace InventoryKamera.Configuration
 {
@@ -145,6 +146,12 @@ namespace InventoryKamera.Configuration
         /// List of Genshin Impact executable base names (without .exe) to look for.
         /// Default: GenshinImpact, YuanShen.
         /// </summary>
+        /// <remarks>
+        /// <c>ObjectCreationHandling.Replace</c> stops Newtonsoft from appending JSON
+        /// values to the default-initialized list — without it, every save+load cycle
+        /// duplicated the entries.
+        /// </remarks>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public List<string> Executables { get; set; } = new List<string>
         {
             "GenshinImpact",

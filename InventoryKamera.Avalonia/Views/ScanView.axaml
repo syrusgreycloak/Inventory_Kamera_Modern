@@ -88,6 +88,13 @@
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Center" />
 
+          <!-- Reaches ExportViewModel via the parent Window's MainViewModel.ExportVm so
+               the upload-to-optimizer flow is one click from the Scan tab post-scan. -->
+          <Button Content="Upload to Optimizer"
+                  Command="{Binding $parent[Window].DataContext.ExportVm.UploadToOptimizerCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" />
+
         </StackPanel>
       </ScrollViewer>
     </Border>
