@@ -820,33 +820,85 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		#region ImageSharp Bridge
 
-		// Conversion helpers — keep allocation minimal by going through PNG streams.
+		// Conversion helpers — direct pixel-buffer copy via LockBits + Marshal.Copy.
+		// PNG encode/decode (the previous approach) added 30–80 ms per call and was the
+		// dominant per-weapon cost in the scan pipeline.
 
 		public static Bitmap ImageSharpToBitmap(Image<Rgba32> img)
 		{
-			// new Bitmap(stream) keeps a reference to the stream — disposing the stream
-			// invalidates the bitmap. Clone into a stream-independent Format32bppArgb
-			// bitmap so SetPixel and LockBits work correctly downstream.
-			using (var ms = new MemoryStream())
+			int w = img.Width;
+			int h = img.Height;
+			var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+			var rect = new System.Drawing.Rectangle(0, 0, w, h);
+			BitmapData data = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+			try
 			{
-				img.Save(ms, new PngEncoder());
-				ms.Position = 0;
-				using (var temp = new Bitmap(ms))
+				// Pull RGBA pixel data out of ImageSharp into a tight-packed buffer.
+				int rowBytes = w * 4;
+				byte[] src = new byte[w * h * 4];
+				img.CopyPixelDataTo(src);
+
+				// Convert RGBA → BGRA and write into the GDI bitmap row by row,
+				// honoring the bitmap's stride padding.
+				int stride = Math.Abs(data.Stride);
+				byte[] row = new byte[stride];
+				for (int y = 0; y < h; y++)
 				{
-					return temp.Clone(
-						new System.Drawing.Rectangle(0, 0, temp.Width, temp.Height),
-						System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+					int srcOffset = y * rowBytes;
+					for (int x = 0; x < w; x++)
+					{
+						int s = srcOffset + (x * 4);
+						int d = x * 4;
+						row[d]     = src[s + 2]; // B ← R
+						row[d + 1] = src[s + 1]; // G
+						row[d + 2] = src[s];     // R ← B
+						row[d + 3] = src[s + 3]; // A
+					}
+					Marshal.Copy(row, 0, data.Scan0 + (y * data.Stride), stride);
 				}
 			}
+			finally
+			{
+				bmp.UnlockBits(data);
+			}
+			return bmp;
 		}
 
 		public static Image<Rgba32> BitmapToImageSharp(Bitmap bmp)
 		{
-			using (var ms = new MemoryStream())
+			int w = bmp.Width;
+			int h = bmp.Height;
+			var rect = new System.Drawing.Rectangle(0, 0, w, h);
+			BitmapData data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+			try
 			{
-				bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-				ms.Position = 0;
-				return SixLabors.ImageSharp.Image.Load<Rgba32>(ms);
+				int rowBytes = w * 4;
+				int stride = Math.Abs(data.Stride);
+				byte[] row = new byte[stride];
+				byte[] dst = new byte[w * h * 4];
+
+				// Read each row from the GDI bitmap (BGRA) into a managed buffer, then
+				// swap to RGBA in the destination buffer for ImageSharp to consume.
+				for (int y = 0; y < h; y++)
+				{
+					Marshal.Copy(data.Scan0 + (y * data.Stride), row, 0, stride);
+					int dstOffset = y * rowBytes;
+					for (int x = 0; x < w; x++)
+					{
+						int s = x * 4;
+						int d = dstOffset + (x * 4);
+						dst[d]     = row[s + 2]; // R ← B
+						dst[d + 1] = row[s + 1]; // G
+						dst[d + 2] = row[s];     // B ← R
+						dst[d + 3] = row[s + 3]; // A
+					}
+				}
+
+				return SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(dst, w, h);
+			}
+			finally
+			{
+				bmp.UnlockBits(data);
 			}
 		}
 
