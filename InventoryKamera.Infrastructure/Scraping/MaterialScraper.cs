@@ -42,6 +42,7 @@ namespace InventoryKamera
 
 		public void Scan_Materials(ref Inventory inventory)
 		{
+			_inputSimulator.EnsureForeground();
 			if (!inventory.Materials.Contains(new Material("Mora", 0)))
 			{
 				inventory.Materials.Add(new Material("Mora", ScanMora()));
@@ -69,6 +70,15 @@ namespace InventoryKamera
 
 				Logger.Debug("Scanning material page {0}", page);
 				Logger.Debug("Located {0} possible item locations on page.", rectangles.Count);
+
+				// If template-matching produced nothing, there's nothing to scan or scroll
+				// past. r.Last() at the end of this iteration would otherwise throw
+				// "Sequence contains no elements". Bail out cleanly.
+				if (r.Count == 0)
+				{
+					Logger.Warn("No items detected on page {0} — ending material scan.", page);
+					break;
+				}
 
 				foreach (var rectangle in r)
 				{
@@ -267,11 +277,12 @@ namespace InventoryKamera
 				try
 				{
 					GenshinProcesor.SetInvert(ref invert);
-					var input = GenshinProcesor.AnalyzeText(invert).Split(' ').ToList();
-					Logger.Debug("Scanned mora input: {0}", input.ToString());
+					var rawInput = GenshinProcesor.AnalyzeText(invert);
+					var input = rawInput.Split(' ').ToList();
+					Logger.Debug("Scanned mora input (raw): '{0}' -> [{1}]", rawInput, string.Join(", ", input));
 					input.RemoveAll(e => Regex.IsMatch(e.Trim(), @"[^0-9]") || string.IsNullOrWhiteSpace(e.Trim()));
 					var mora = input.LastOrDefault();
-					Logger.Debug("Parsed mora input: {0}", mora);
+					Logger.Debug("Parsed mora input: '{0}'", mora ?? "<none>");
 					return mora;
 				}
 				finally
