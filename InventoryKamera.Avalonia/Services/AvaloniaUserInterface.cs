@@ -45,8 +45,11 @@ namespace InventoryKamera.Avalonia.Services
         // Image helper — must NOT dispose image; caller owns it.
         // ----------------------------------------------------------------
 
+        // Returns null when the caller passed null. MaterialScraper, for example, calls
+        // SetMora(null, count) — IUserInterface implementations must tolerate that.
         private static byte[] ToPngBytes(Image<Rgba32> image)
         {
+            if (image == null) return null;
             using var ms = new MemoryStream();
             image.Save(ms, new PngEncoder());
             return ms.ToArray();
@@ -198,8 +201,12 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetMora(Image<Rgba32> mora, int count)
         {
-            var png = ToPngBytes(mora);
             _log.Info("Mora: {0}", count);
+            // Some scrapers (MaterialScraper) call SetMora with a null bitmap when they
+            // only have a count to surface. Skip the screenshot update in that case so
+            // we don't clear the existing preview.
+            if (mora == null) return;
+            var png = ToPngBytes(mora);
             Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
         }
 
