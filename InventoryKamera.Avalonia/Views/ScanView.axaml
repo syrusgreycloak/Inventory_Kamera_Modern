@@ -308,7 +308,8 @@
 
       <Border MaxHeight="200"
               Background="{StaticResource PrimaryBgBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
+        <ScrollViewer x:Name="ConsoleScrollViewer"
+                      VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Console}">
             <ItemsControl.ItemTemplate>

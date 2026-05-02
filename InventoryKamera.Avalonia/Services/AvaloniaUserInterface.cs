@@ -101,22 +101,58 @@ namespace InventoryKamera.Avalonia.Services
         // ----------------------------------------------------------------
         // Character
         // ----------------------------------------------------------------
+        //
+        // Character info arrives in pieces: name+element, then level, then constellation,
+        // then three talents. Each comes through a different IUserInterface call. To show
+        // the running combined info in the OCR preview pane (mirroring the WinForms
+        // behaviour), keep a per-character buffer keyed by line type. SetCharacter_NameAndElement
+        // resets the buffer (it's the first call for each new character). All other Set*
+        // methods overwrite the slot they own and re-publish the full list.
+
+        private readonly object _charLock = new object();
+        private string _charLevelLine;
+        private string _charConstellationLine;
+        private readonly string[] _charTalentLines = new string[3];
+
+        private string[] BuildCharacterStats()
+        {
+            var lines = new System.Collections.Generic.List<string>(5);
+            if (!string.IsNullOrEmpty(_charLevelLine))         lines.Add(_charLevelLine);
+            if (!string.IsNullOrEmpty(_charConstellationLine)) lines.Add(_charConstellationLine);
+            for (int i = 0; i < 3; i++)
+                if (!string.IsNullOrEmpty(_charTalentLines[i])) lines.Add(_charTalentLines[i]);
+            return lines.ToArray();
+        }
 
         public void SetCharacter_NameAndElement(Image<Rgba32> bm, string name, string element)
         {
             var png = ToPngBytes(bm);
             var label = $"{name} ({element})";
+            string[] stats;
+            lock (_charLock)
+            {
+                _charLevelLine = null;
+                _charConstellationLine = null;
+                _charTalentLines[0] = _charTalentLines[1] = _charTalentLines[2] = null;
+                stats = BuildCharacterStats();
+            }
             Dispatcher.UIThread.Post(() =>
             {
                 _scanVm.CurrentScreenshot = png;
                 _scanVm.CurrentItemName = label;
+                _scanVm.CurrentItemStats = stats;
             });
         }
 
         public void SetCharacter_Level(Image<Rgba32> bm, int level, int maxLevel)
         {
             var png = ToPngBytes(bm);
-            var stats = new[] { $"Level {level} / {maxLevel}" };
+            string[] stats;
+            lock (_charLock)
+            {
+                _charLevelLine = $"Level {level} / {maxLevel}";
+                stats = BuildCharacterStats();
+            }
             Dispatcher.UIThread.Post(() =>
             {
                 _scanVm.CurrentScreenshot = png;
@@ -126,14 +162,34 @@ namespace InventoryKamera.Avalonia.Services
 
         public void SetCharacter_Constellation(int level)
         {
+            string[] stats;
+            lock (_charLock)
+            {
+                _charConstellationLine = $"Constellation: C{level}";
+                stats = BuildCharacterStats();
+            }
             _log.Info("Constellation: C{0}", level);
+            Dispatcher.UIThread.Post(() => _scanVm.CurrentItemStats = stats);
         }
 
         public void SetCharacter_Talent(Image<Rgba32> bm, string text, int i)
         {
             var png = ToPngBytes(bm);
-            _log.Info("Talent {0}: {1}", i, text);
-            Dispatcher.UIThread.Post(() => _scanVm.CurrentScreenshot = png);
+            string[] stats;
+            // Talent index from CharacterScraper is 1-based (1=Auto, 2=Skill, 3=Burst).
+            int slot = (i >= 1 && i <= 3) ? i - 1 : 0;
+            string label = i == 1 ? "Auto" : i == 2 ? "Skill" : i == 3 ? "Burst" : $"Talent {i}";
+            lock (_charLock)
+            {
+                _charTalentLines[slot] = $"{label}: {text}";
+                stats = BuildCharacterStats();
+            }
+            _log.Info("Talent {0} ({1}): {2}", i, label, text);
+            Dispatcher.UIThread.Post(() =>
+            {
+                _scanVm.CurrentScreenshot = png;
+                _scanVm.CurrentItemStats = stats;
+            });
         }
 
         // ----------------------------------------------------------------
