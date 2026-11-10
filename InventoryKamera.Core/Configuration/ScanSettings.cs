@@ -123,6 +123,16 @@ namespace InventoryKamera.Configuration
         /// <summary>In-game name of the Wanderer character. Default: "wanderer".</summary>
         public string WandererName { get; set; } = "wanderer";
 
+        // ------------------------------------------------------------------
+        // Remembered between scans
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Characters found by the last completed character scan, 0 if none yet. The game doesn't
+        /// show how many characters you own, so this is the total for the next scan's progress bar.
+        /// </summary>
+        public int LastCharacterCount { get; set; } = 0;
+
         /// <summary>Display name for mannequin preset slot 1. Default: "Manequin1".</summary>
         public string Manequin1Name { get; set; } = "Manequin1";
 

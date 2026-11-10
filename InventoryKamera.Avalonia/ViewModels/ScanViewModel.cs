@@ -147,7 +147,8 @@ namespace InventoryKamera.Avalonia.ViewModels
 
         public string WeaponsProgressText      => $"{WeaponsScanned} / {WeaponsTotal}";
         public string ArtifactsProgressText    => $"{ArtifactsScanned} / {ArtifactsTotal}";
-        public string CharactersProgressText   => $"{CharactersScanned} / {CharactersTotal}";
+        // Total unknown until a character scan has completed once (see ScanSettings.LastCharacterCount)
+        public string CharactersProgressText   => CharactersTotal > 0 ? $"{CharactersScanned} / {CharactersTotal}" : $"{CharactersScanned}";
         public string MaterialsProgressText    => $"{MaterialsScanned} / {MaterialsTotal}";
         public string CharDevItemsProgressText => $"{CharDevItemsScanned} / {CharDevItemsTotal}";
 
@@ -260,6 +261,9 @@ namespace InventoryKamera.Avalonia.ViewModels
             _scanRunner      = scanRunner      ?? throw new ArgumentNullException(nameof(scanRunner));
             _dialog          = dialog          ?? throw new ArgumentNullException(nameof(dialog));
 
+            // Show the expected character total before the first scan of the session
+            _charactersTotal = _settingsService.Current?.LastCharacterCount ?? 0;
+
             // Wire the NLog → ObservableCollection bridge
             RegisterLogTarget();
         }
@@ -292,11 +296,23 @@ namespace InventoryKamera.Avalonia.ViewModels
             // Snapshot settings at scan start — not subscribed to SettingsChanged.
             var settings = _settingsService.Current;
 
+            // The game doesn't show how many characters there are; use the last scan's count
+            if (settings.ScanCharacters) CharactersTotal = settings.LastCharacterCount;
+
             _cts = new CancellationTokenSource();
 
             try
             {
                 await _scanRunner.RunAsync(settings, _cts.Token);
+
+                // Remember how many characters there are, for the next scan's progress bar
+                int characterCount = _scanRunner.Characters?.Count ?? 0;
+                if (settings.ScanCharacters && characterCount > 0)
+                {
+                    CharactersTotal = characterCount;
+                    settings.LastCharacterCount = characterCount;
+                    _settingsService.Save();
+                }
 
                 // Write GOOD export if output path is configured
                 if (_scanRunner.HasData && !string.IsNullOrWhiteSpace(settings.OutputPath))
@@ -381,6 +397,12 @@ namespace InventoryKamera.Avalonia.ViewModels
         // ----------------------------------------------------------------
         // Helpers
         // ----------------------------------------------------------------
+
+        // A new character since the last scan: grow the total rather than overflow the bar
+        partial void OnCharactersScannedChanged(int value)
+        {
+            if (CharactersTotal > 0 && value > CharactersTotal) CharactersTotal = value;
+        }
 
         private void ResetCounters()
         {

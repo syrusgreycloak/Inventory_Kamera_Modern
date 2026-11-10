@@ -481,7 +481,7 @@ namespace InventoryKamera.Tests
 
             Assert.Equal("0 / 0", vm.WeaponsProgressText);
             Assert.Equal("0 / 0", vm.ArtifactsProgressText);
-            Assert.Equal("0 / 0", vm.CharactersProgressText);
+            Assert.Equal("0", vm.CharactersProgressText);   // total unknown until a character scan completes
             Assert.Equal("0 / 0", vm.MaterialsProgressText);
         }
 
@@ -738,6 +738,88 @@ namespace InventoryKamera.Tests
                 runner.Verify(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()), Times.Once);
             }
         }
+
+        // ---------------------------------------------------------------
+        // Character progress: the game doesn't show a total, so the last
+        // completed scan's count is remembered in settings
+        // ---------------------------------------------------------------
+
+        [Fact]
+        public void CharactersTotal_StartsAtLastCharacterCount()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(new ScanSettings { LastCharacterCount = 94 });
+
+            var vm = new ScanViewModel(settings.Object, new Mock<IScanRunner>().Object, new Mock<IDialogService>().Object);
+
+            Assert.Equal("0 / 94", vm.CharactersProgressText);
+        }
+
+        [Fact]
+        public async Task StartScan_UsesLastCharacterCountAsTotal()
+        {
+            int totalDuringScan = -1;
+            ScanViewModel vmRef = null;
+            var (vm, _, settings) = MakeVm((_, _) =>
+            {
+                totalDuringScan = vmRef.CharactersTotal;
+                return Task.CompletedTask;
+            });
+            vmRef = vm;
+            settings.Object.Current.LastCharacterCount = 94;
+
+            await vm.StartScanCommand.ExecuteAsync(null);
+
+            Assert.Equal(94, totalDuringScan);
+        }
+
+        [Fact]
+        public async Task CompletedScan_RemembersCharacterCount()
+        {
+            var (vm, runner, settings) = MakeVm();
+            runner.Setup(r => r.Characters).Returns(new List<Character> { new Character(), new Character(), new Character() });
+
+            await vm.StartScanCommand.ExecuteAsync(null);
+
+            Assert.Equal(3, settings.Object.Current.LastCharacterCount);
+            Assert.Equal(3, vm.CharactersTotal);
+            settings.Verify(s => s.Save(), Times.AtLeastOnce());
+        }
+
+        [Fact]
+        public async Task CancelledScan_KeepsCharacterCount()
+        {
+            var (vm, runner, settings) = MakeVm((_, _) => throw new OperationCanceledException());
+            runner.Setup(r => r.Characters).Returns(new List<Character> { new Character() });
+            settings.Object.Current.LastCharacterCount = 94;
+
+            await vm.StartScanCommand.ExecuteAsync(null);
+
+            Assert.Equal(94, settings.Object.Current.LastCharacterCount);
+        }
+
+        [Fact]
+        public void CharactersProgressText_UnknownTotal_ShowsCountOnly()
+        {
+            var (vm, _, _) = MakeVm();
+
+            vm.CharactersScanned = 5;
+
+            Assert.Equal("5", vm.CharactersProgressText);
+        }
+
+        [Fact]
+        public void CharactersScanned_PastTotal_GrowsTotal()
+        {
+            // A character obtained since the last scan
+            var (vm, _, _) = MakeVm();
+            vm.CharactersTotal = 94;
+
+            vm.CharactersScanned = 95;
+
+            Assert.Equal(95, vm.CharactersTotal);
+            Assert.Equal("95 / 95", vm.CharactersProgressText);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -808,4 +890,3 @@ namespace InventoryKamera.Tests
         }
     }
 }
-
