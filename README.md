@@ -6,7 +6,7 @@ This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you
 
 ## About this project
 
-**Inventory Kamera Modern** is a modernized fork of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera) (later maintained at [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera)). It keeps the same approach, OCR on screenshots of the game menus, with a new UI and a reworked scanner:
+**Inventory Kamera Modern** is a modernized fork of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera), which is actively maintained at [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera). It keeps the same approach, OCR on screenshots of the game menus, with a new UI and a reworked scanner:
 
 - **New Avalonia UI** with Scan, Export, Settings and About tabs and a live console. The old Windows Forms UI is retired; its last version is kept on the [`history`](../../tree/history) branch and the `winforms-final` tag.
 - **.NET 8** (from .NET Framework 4.7.2), with the scanning logic split into `InventoryKamera.Core` and `InventoryKamera.Infrastructure` and covered by tests.
