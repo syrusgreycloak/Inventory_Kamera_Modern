@@ -16,9 +16,11 @@ namespace InventoryKamera
         /// This used to compare one pixel with the dark frame colour (70, 80, 100) at a tolerance of
         /// 10. On the Fast scan speed the card is sometimes captured while the lock icon is still
         /// fading in, and that pixel is lighter: one scan exported 70 of 392 locked artifacts as
-        /// unlocked (the standard exporter shows the same symptom). The red padlock is visible
-        /// throughout the fade: locked crops had 194-491 red pixels (9%+), unlocked ones none, over
-        /// 684 artifacts and 155 (unlocked) weapons.
+        /// unlocked (the standard exporter shows the same symptom). All 70 were the first locked item
+        /// after an unlocked one: the padlock fades in when the selection moves from an unlocked
+        /// item to a locked one, but disappears at once the other way. The red padlock is visible
+        /// throughout the fade: locked crops were at least 9% red (mid-fade) and unlocked ones 0%,
+        /// including unlocked right after locked, over 684 artifacts and 155 (unlocked) weapons.
         /// </remarks>
         public static bool IsLocked(Image<Rgba32> lockCrop)
         {
