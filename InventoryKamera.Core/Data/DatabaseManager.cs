@@ -47,6 +47,7 @@ namespace InventoryKamera
         private const string ConstellationsURL = repoBaseURL + "ExcelBinOutput/FetterInfoExcelConfigData.json";
         private const string TalentsURL = repoBaseURL + "ExcelBinOutput/AvatarTalentExcelConfigData.json";
         private const string SkillsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillExcelConfigData.json";
+        private const string SkillDepotsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json";
 
         private const string ArtifactsDisplayItemURL = repoBaseURL + "ExcelBinOutput/DisplayItemExcelConfigData.json";
         private const string ArtifactsCodex = repoBaseURL + "ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
@@ -101,12 +102,11 @@ namespace InventoryKamera
         }
 
         private Version CheckRemoteVersion()
-        { 
-            using (var response = new HttpClient().GetAsync(commitsAPIURL))
+        {
             {
                 string pattern = @"(\d+\.\d+\.\d+)";
 
-                string body = response.Result.Content.ReadAsStringAsync().Result;
+                string body = DownloadStringWithRetry(commitsAPIURL);
                 var commits = JsonConvert.DeserializeObject<List<JObject>>(body);
                 foreach (var commit in commits)
                 {
@@ -187,6 +187,9 @@ namespace InventoryKamera
             {
                 UpdateStatus overallStatus = UpdateStatus.Skipped;
                 var statusLock = new object();
+                LastUpdateRateLimited = false;
+                LastUpdateCancelled = false;
+                rateLimitDecision = RateLimitDecision.NotAsked;
                 LoadMappings();
 
                 if (force)
@@ -284,25 +287,104 @@ namespace InventoryKamera
             Mappings.Clear();
         }
 
-        private string LoadJsonFromURLAsync(string url)
-        {
-            string json = "";
+        private string LoadJsonFromURLAsync(string url) => DownloadStringWithRetry(url);
 
-            try
+        // TextMapEN is ~55 MB, so allow far more than HttpClient's default 100 s timeout.
+        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+
+        private const int MaxDownloadAttempts = 5;
+        private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
+
+        /// <summary>
+        /// True if the most recent <see cref="UpdateGameData"/> run failed because GitLab kept
+        /// rate-limiting downloads (HTTP 429) after all retries, as opposed to some other error.
+        /// </summary>
+        public bool LastUpdateRateLimited { get; private set; }
+
+        /// <summary>True if the user chose to stop the most recent update instead of waiting out a rate limit.</summary>
+        public bool LastUpdateCancelled { get; private set; }
+
+        /// <summary>
+        /// Asked (on a worker thread, at most once per update run) when GitLab first rate-limits a download.
+        /// Return true to keep waiting and retrying, false to stop the update. If unset, retries proceed.
+        /// </summary>
+        public Func<bool> ConfirmWaitForRateLimit { get; set; }
+
+        private enum RateLimitDecision { NotAsked, Wait, Stop }
+        private volatile RateLimitDecision rateLimitDecision = RateLimitDecision.NotAsked;
+        private readonly object rateLimitLock = new object();
+
+        // Lists download in parallel; the lock makes the first thread to hit a 429 ask the user
+        // while the others wait for (and then share) that answer, so only one dialog appears.
+        private bool ShouldKeepWaitingForRateLimit()
+        {
+            lock (rateLimitLock)
             {
-                using (WebClient client = new WebClient())
+                if (rateLimitDecision == RateLimitDecision.NotAsked)
                 {
-                    client.Encoding = System.Text.Encoding.UTF8;
-                    json = client.DownloadString(url);
+                    bool wait = ConfirmWaitForRateLimit?.Invoke() ?? true;
+                    rateLimitDecision = wait ? RateLimitDecision.Wait : RateLimitDecision.Stop;
+                    Logger.Info(wait
+                        ? "User chose to wait for the GitLab rate limit to clear."
+                        : "User chose to stop the update because of the GitLab rate limit.");
+                }
+                return rateLimitDecision == RateLimitDecision.Wait;
+            }
+        }
+
+        private void ThrowIfUpdateStopped()
+        {
+            if (rateLimitDecision == RateLimitDecision.Stop)
+            {
+                LastUpdateCancelled = true;
+                throw new OperationCanceledException("Game data update stopped by the user (GitLab rate limit).");
+            }
+        }
+
+        /// <summary>
+        /// Downloads a URL as UTF-8 text. GitLab throttles anonymous downloads with HTTP 429;
+        /// those (and 503s) are retried with exponential backoff, honouring Retry-After when given.
+        /// </summary>
+        private string DownloadStringWithRetry(string url)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                ThrowIfUpdateStopped();
+
+                using (var response = Http.GetAsync(url).GetAwaiter().GetResult())
+                {
+                    var code = (int)response.StatusCode;
+                    bool retryable = code == 429 || code == 503;
+
+                    if (!retryable)
+                    {
+                        response.EnsureSuccessStatusCode();
+                        var bytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                        return System.Text.Encoding.UTF8.GetString(bytes);
+                    }
+
+                    if (code == 429 && !ShouldKeepWaitingForRateLimit()) ThrowIfUpdateStopped();
+
+                    if (attempt >= MaxDownloadAttempts)
+                    {
+                        if (code == 429) LastUpdateRateLimited = true;
+                        throw new HttpRequestException(
+                            $"GitLab returned {code} ({response.ReasonPhrase}) for {url} after {attempt} attempts.");
+                    }
+
+                    // Exponential backoff (5, 10, 20, 40 s) with jitter, unless the server says how long to wait
+                    var retryAfter = response.Headers.RetryAfter;
+                    TimeSpan delay = retryAfter?.Delta
+                        ?? (retryAfter?.Date - DateTimeOffset.UtcNow)
+                        ?? TimeSpan.FromSeconds(5 * Math.Pow(2, attempt - 1) + new Random().NextDouble() * 2);
+                    if (delay < TimeSpan.Zero) delay = TimeSpan.FromSeconds(1);
+                    if (delay > MaxRetryDelay) delay = MaxRetryDelay;
+
+                    Logger.Warn("GitLab returned {0} for {1}; retrying in {2:F0}s (attempt {3}/{4}).",
+                        code, url, delay.TotalSeconds, attempt + 1, MaxDownloadAttempts);
+                    System.Threading.Thread.Sleep(delay);
                 }
             }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            
-            return json;
         }
 
         private UpdateStatus UpdateList(ListType list, bool force = false)
@@ -336,6 +418,11 @@ namespace InventoryKamera
                 }
                 Logger.Info("Finished updating {0} ({1})", list, status);
             }
+            catch (OperationCanceledException)
+            {
+                Logger.Info("Stopped updating {0} data (user cancelled during GitLab rate limit)", list);
+                return UpdateStatus.Fail;
+            }
             catch (Exception e)
             {
                 Logger.Error("Failed to update {0} data", list);
@@ -363,6 +450,12 @@ namespace InventoryKamera
                 var constellations = JArray.Parse(LoadJsonFromURLAsync(ConstellationsURL)).ToObject<List<JObject>>();
                 var talents = JArray.Parse(LoadJsonFromURLAsync(TalentsURL)).ToObject<List<JObject>>();
                 var skills = JArray.Parse(LoadJsonFromURLAsync(SkillsURL)).ToObject<List<JObject>>();
+                var skillDepots = JArray.Parse(LoadJsonFromURLAsync(SkillDepotsURL)).ToObject<List<JObject>>();
+
+                // Lookups for resolving constellation order via each character's skill depot
+                var skillsById = skills.Where(s => s["id"] != null).GroupBy(s => (int)s["id"]).ToDictionary(g => g.Key, g => g.First());
+                var talentsById = talents.Where(t => t["talentId"] != null).GroupBy(t => (int)t["talentId"]).ToDictionary(g => g.Key, g => g.First());
+                var depotsById = skillDepots.Where(d => d["id"] != null).GroupBy(d => (int)d["id"]).ToDictionary(g => g.Key, g => g.First());
 
                 characters.RemoveAll(c => !c.ContainsKey("useType") || c["useType"].ToString() != "AVATAR_FORMAL");
 
@@ -382,8 +475,19 @@ namespace InventoryKamera
                     try
                     {
 
-                        if (name.ToLower() == "PlayerGirl".ToLower()) return; // Both travelers are listed but are essentially identical
-                        if (name.Contains("Mannequin")) return; // Serenitea Pot mannequins have no skills
+                        // Match on internal icon names, which are stable across versions (display names are not:
+                        // every traveler variant displays as "Traveler"). Note MarionetteNew is Sandrone, who is playable.
+                        var iconName = character["iconName"]?.ToString() ?? "";
+
+                        // Non-playable Miliastra Wonderland mannequins (displayed as "Manekin"/"Manekina")
+                        if (iconName.Contains("Mannequin")) return;
+
+                        // Both travelers are listed but are essentially identical; keep only PlayerBoy.
+                        if (iconName.EndsWith("PlayerGirl")) return;
+
+                        // Since 7.x there is also a crossbow PlayerBoy variant with a single non-elemental
+                        // skill depot. Only the original traveler lists one depot per element.
+                        if (iconName.EndsWith("PlayerBoy") && ((character["candSkillDepotIds"] as JArray)?.Count ?? 0) < 2) return;
 
                         string PascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(name);
                         string nameGOOD = Regex.Replace(PascalCase, @"[\W]", string.Empty);
@@ -393,8 +497,6 @@ namespace InventoryKamera
                         // Filter out non-playable characters (NPCs like Columbina, Ineffa)
                         if (characterID > 10000900) return;
 
-                        string const3Description = "";
-                        string skill = "";
 
                         var value = new JObject();
 
@@ -427,100 +529,37 @@ namespace InventoryKamera
 
                                 value.Add("Element", new JArray(playerElements.Values));
 
+                                // Each traveler element has its own skill depot, identified by talentStarName
+                                // (e.g. "Talent_PlayerBoy_Fire").
+                                var travelerDepots = (character["candSkillDepotIds"] as JArray ?? new JArray())
+                                    .Select(id => depotsById.TryGetValue((int)id, out var d) ? d : null)
+                                    .Where(d => d != null)
+                                    .ToList();
+
                                 foreach (var element in playerElements)
                                 {
-                                    var elementSkill = skills.FirstOrDefault(entry => entry["skillIcon"]?.ToString().Contains($"Skill_S_Player{element.Key}") == true);
-                                    
-
-                                    if (elementSkill == null) continue;
-
-                                    string skillHash = elementSkill["nameTextMapHash"].ToString();
-                                    if (!Mappings.ContainsKey(skillHash))
-                                    {
-                                        Logger.Warn("Character {0} traveler skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skillHash);
-                                        continue;
-                                    }
-                                    skill = Mappings[skillHash].ToString();
-
-                                    var travelerConst3 = talents.Where(entry => entry["openConfig"]?.ToString().Contains($"Player_{element.Key}") == true).ElementAtOrDefault(2);
-                                    if (travelerConst3 == null) continue;
-                                    const3Description = travelerConst3["descTextMapHash"].ToString();
-                                    if (!Mappings.ContainsKey(const3Description))
-                                    {
-                                        Logger.Warn("Character {0} traveler constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);
-                                        continue;
-                                    }
-                                    const3Description = Mappings[const3Description].ToString();
-
-                                    if (const3Description.Contains(skill))
-                                    {
-                                        constellationOrder.Add(element.Value, new JArray { "skill", "burst" });
-                                    }
-                                    else
-                                    {
-                                        constellationOrder.Add(element.Value, new JArray { "burst", "skill" });
-                                    }
+                                    var depot = travelerDepots.FirstOrDefault(d => d["talentStarName"]?.ToString().EndsWith($"_{element.Key}") == true);
+                                    var order = depot == null ? null : ResolveConstellationOrder(depot, $"{nameGOOD} ({element.Value})");
+                                    if (order == null) continue;
+                                    constellationOrder.Add(element.Value, order);
                                 }
                                 value.Add("ConstellationOrder", constellationOrder);
                             }
                             else // Any other character that isn't traveler
                             {
-                                // Newer AvatarSkillExcelConfigData entries can omit "skillIcon", so guard against null
-                                var skillEntry = skills.FirstOrDefault(entry => entry["skillIcon"]?.ToString().Contains($"Skill_S_{name}") == true);
-                                if (skillEntry == null)
-                                {
-                                    Logger.Warn("Character {0} has no skill entry with icon Skill_S_{1}.", nameGOOD, name);
-                                    return;
-                                }
-                                skill = skillEntry["nameTextMapHash"].ToString();
-                                if (!Mappings.ContainsKey(skill))
-                                {
-                                    Logger.Warn("Character {0} skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skill);
-                                    return;
-                                }
-                                skill = Mappings[skill].ToString();
-
-
                                 value.Add("ConstellationName", new JArray
                                 {
                                     GetConstellationNameFromId(characterID)
                                 });
 
-                                var constellationOrder = new JArray();
-
-                                // The skill/burst/auto name is always mentioned in the constellation's description so we'll check for it
-                                var const3Entry = talents.Where(entry => entry["icon"]?.ToString().Contains(name) == true).ElementAtOrDefault(2);
-                                if (const3Entry == null)
+                                if (!depotsById.TryGetValue((int)character["skillDepotId"], out var depot))
                                 {
-                                    Logger.Warn("Character {0} has no third constellation entry for icon {1}.", nameGOOD, name);
+                                    Logger.Warn("Character {0} skill depot {1} not found.", nameGOOD, character["skillDepotId"]);
                                     return;
                                 }
-                                const3Description = const3Entry["descTextMapHash"].ToString();
-                                if (!Mappings.ContainsKey(const3Description))
-                                {
-                                    Logger.Warn("Character {0} constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);
-                                    return;
-                                }
-                                const3Description = Mappings[const3Description].ToString();
 
-                                // Check for Normal Attack/Charged Attack constellations (C3 boosts auto talent)
-                                if (const3Description.Contains("Normal Attack") || const3Description.Contains("Charged Attack"))
-                                {
-                                    // C3 = auto, C5 = burst (normal attack carries)
-                                    constellationOrder.Add("auto");
-                                    constellationOrder.Add("burst");
-                                }
-                                else if (const3Description.Contains(skill))
-                                {
-                                    constellationOrder.Add("skill");
-                                    constellationOrder.Add("burst");
-                                }
-                                else
-                                {
-                                    constellationOrder.Add("burst");
-                                    constellationOrder.Add("skill");
-                                }
-
+                                // Characters without readable constellations (e.g. Aloy) never reach C3, so any order is harmless
+                                var constellationOrder = ResolveConstellationOrder(depot, nameGOOD) ?? new JArray { "skill", "burst" };
                                 value.Add("ConstellationOrder", constellationOrder);
 
                                 value.Add("Element", new JArray(GetElementFromID(characterID)));
@@ -551,6 +590,56 @@ namespace InventoryKamera
                         Logger.Warn(ex);
                     }
                 });
+
+                // Determines which talents C3 and C5 boost by reading those constellations' descriptions
+                // ("Increases the Level of <talent> by 3") and matching them against the depot's talent names.
+                // Returns [c3Talent, c5Talent] using "auto"/"skill"/"burst", or null if it can't be resolved.
+                JArray ResolveConstellationOrder(JObject depot, string label)
+                {
+                    string TextOf(JToken hash) =>
+                        hash != null && Mappings.TryGetValue(hash.ToString(), out var text) ? text : "";
+
+                    string SkillName(JToken skillId) =>
+                        skillId != null && skillsById.TryGetValue((int)skillId, out var s) ? TextOf(s["nameTextMapHash"]) : "";
+
+                    var depotSkills = depot["skills"] as JArray;
+                    var talentNames = new[]
+                    {
+                        ("auto", SkillName(depotSkills?.ElementAtOrDefault(0))),
+                        ("skill", SkillName(depotSkills?.ElementAtOrDefault(1))),
+                        ("burst", SkillName(depot["energySkill"])),
+                    };
+
+                    string Classify(string description)
+                    {
+                        foreach (var (key, talentName) in talentNames)
+                            if (!string.IsNullOrEmpty(talentName) && description.Contains(talentName)) return key;
+                        if (description.Contains("Normal Attack")) return "auto";
+                        if (description.Contains("Elemental Skill")) return "skill";
+                        if (description.Contains("Elemental Burst")) return "burst";
+                        return null;
+                    }
+
+                    var depotTalents = depot["talents"] as JArray;
+                    JObject Constellation(int index)
+                    {
+                        var id = depotTalents?.ElementAtOrDefault(index);
+                        return id != null && talentsById.TryGetValue((int)id, out var t) ? t : null;
+                    }
+
+                    var c3 = Constellation(2);
+                    var c5 = Constellation(4);
+                    var c3Talent = c3 == null ? null : Classify(TextOf(c3["descTextMapHash"]));
+                    var c5Talent = c5 == null ? null : Classify(TextOf(c5["descTextMapHash"]));
+
+                    if (c3Talent == null || c5Talent == null || c3Talent == c5Talent)
+                    {
+                        Logger.Warn("Could not resolve constellation order for {0} (C3: {1}, C5: {2}).", label, c3Talent ?? "?", c5Talent ?? "?");
+                        return null;
+                    }
+
+                    return new JArray { c3Talent, c5Talent };
+                }
 
                 string GetConstellationNameFromId(int targetID)
                 {

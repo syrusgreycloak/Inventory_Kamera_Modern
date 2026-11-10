@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using InventoryKamera.Avalonia.Services;
@@ -193,6 +194,7 @@ namespace InventoryKamera.Avalonia.ViewModels
         private async Task UpdateGameData()
         {
             IsUpdatingGameData = true;
+            _databaseManager.ConfirmWaitForRateLimit = ConfirmWaitForRateLimit;
 
             try
             {
@@ -266,6 +268,23 @@ namespace InventoryKamera.Avalonia.ViewModels
                     }
                     break;
 
+                case UpdateStatus.Fail when _databaseManager.LastUpdateCancelled:
+                    await _dialog.ShowInfoAsync(
+                        "Update stopped",
+                        "Game data update stopped. Your existing game data has not been changed.\n\n" +
+                        "GitLab, which hosts the game data, was limiting downloads. " +
+                        "Please try again in a few minutes.");
+                    break;
+
+                case UpdateStatus.Fail when _databaseManager.LastUpdateRateLimited:
+                    await _dialog.ShowInfoAsync(
+                        "GitLab download limit reached",
+                        "GitLab, which hosts the game data, is temporarily limiting downloads. " +
+                        "This is not a problem with Inventory Kamera or your game data, " +
+                        "and your existing game data has not been changed.\n\n" +
+                        "Please wait a few minutes (occasionally up to an hour) and try again.");
+                    break;
+
                 case UpdateStatus.Fail:
                 default:
                     await _dialog.ShowErrorAsync(
@@ -273,6 +292,22 @@ namespace InventoryKamera.Avalonia.ViewModels
                         "Unable to update game data. Please check the log for more details.");
                     break;
             }
+        }
+
+        /// <summary>
+        /// Called by <see cref="DatabaseManager"/> on a worker thread the first time GitLab rate-limits
+        /// a download during an update. Blocks that thread until the user answers the dialog.
+        /// </summary>
+        private bool ConfirmWaitForRateLimit()
+        {
+            return Dispatcher.UIThread.InvokeAsync(() => _dialog.ConfirmAsync(
+                    "GitLab is limiting downloads",
+                    "GitLab, which hosts the game data, is temporarily limiting downloads. " +
+                    "This is not an error in Inventory Kamera.\n\n" +
+                    "Inventory Kamera can keep retrying automatically for about a minute and a half.\n\n" +
+                    "Yes: keep waiting and retry.\n" +
+                    "No: stop now and try again later (your existing game data will not be changed)."))
+                .GetAwaiter().GetResult();
         }
     }
 }
