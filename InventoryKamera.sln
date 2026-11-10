@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryKamera.Infrastruct
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryKamera.Avalonia", "InventoryKamera.Avalonia\InventoryKamera.Avalonia.csproj", "{9DD65990-8134-4231-8286-7595A3CF5BC8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryKamera.Infrastructure.Tests", "InventoryKamera.Infrastructure.Tests\InventoryKamera.Infrastructure.Tests.csproj", "{E72E82C6-8A39-43D5-8FEB-0194BD18046E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{9DD65990-8134-4231-8286-7595A3CF5BC8}.Release|x64.Build.0 = Release|Any CPU
 		{9DD65990-8134-4231-8286-7595A3CF5BC8}.Release|x86.ActiveCfg = Release|Any CPU
 		{9DD65990-8134-4231-8286-7595A3CF5BC8}.Release|x86.Build.0 = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|x64.Build.0 = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Debug|x86.Build.0 = Debug|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|x64.ActiveCfg = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|x64.Build.0 = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|x86.ActiveCfg = Release|Any CPU
+		{E72E82C6-8A39-43D5-8FEB-0194BD18046E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the Windows-only Infrastructure project (OCR, image processing).
+       Kept separate from InventoryKamera.Tests, which stays cross-platform (net8.0). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\InventoryKamera.Infrastructure\InventoryKamera.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Real trained data, so OCR tests exercise the same engine configuration as the scanner -->
+    <None Include="..\InventoryKamera\tessdata\*" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

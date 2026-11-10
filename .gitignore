@@ -48,6 +48,7 @@ Generated\ Files/
 [Bb]uild[Ll]og.*
 *Tests/
 !InventoryKamera.Tests/
+!InventoryKamera.Infrastructure.Tests/
 
 # NUnit
 *.VisualState.xml

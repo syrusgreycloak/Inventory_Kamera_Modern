@@ -346,43 +346,8 @@ namespace InventoryKamera
 			return -1;
 		}
 
-		public int ScanRefinement(Image<Rgba32> image)
-		{
-			// Removed scaling loop - process image once at original size
-			// Scaling was distorting digit "2" specifically, causing 100% OCR failure on R2 weapons
-			Image<Rgba32> n = _imageProcessor.SetGrayscale(image);
-			n = _imageProcessor.SetInvert(n);
-
-			// Restrict OCR to digits: unconstrained, Tesseract read every R2 badge as "|?)" (the badge's
-			// edges became "|" and ")" and the 2 became "?"). With the digit whitelist all 155 saved
-			// refinement crops from a full scan (R1-R5) read correctly.
-			string text = _ocrEngine.AnalyzeText(n, PageSegmentationMode.SingleLine, numbersOnly: true).Trim();
-			n.Dispose();
-
-			// Debug logging to see raw OCR output
-			Logger.Debug("Refinement OCR raw output: '{0}'", text);
-
-			text = Regex.Replace(text, @"[^\d]", string.Empty);
-			Logger.Debug("Refinement OCR after regex: '{0}'", text);
-
-			// Handle multi-digit reads - Tesseract often reads R2 as "12" and R3 as "13"
-			// Extract the last digit when we get invalid multi-digit results
-			if (text.Length > 1 && int.TryParse(text, out int multiDigit) && multiDigit > 5)
-			{
-				text = text.Substring(text.Length - 1);
-				Logger.Debug("Refinement OCR extracted last digit: '{0}'", text);
-			}
-
-			// Parse Int
-			if (int.TryParse(text, out int refinementLevel) && 1 <= refinementLevel && refinementLevel <= 5)
-			{
-				Logger.Debug("Refinement OCR parsed successfully: {0}", refinementLevel);
-				return refinementLevel;
-			}
-
-			Logger.Debug("Refinement OCR failed to parse valid level (1-5)");
-			return -1;
-		}
+		public int ScanRefinement(Image<Rgba32> image) =>
+			RefinementReader.Read(image, _imageProcessor, _ocrEngine);
 
 		public string ScanEquippedCharacter(Image<Rgba32> bm)
 		{
