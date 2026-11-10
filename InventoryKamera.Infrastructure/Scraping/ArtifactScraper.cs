@@ -254,30 +254,9 @@ namespace InventoryKamera
 
 		private bool IsSanctified(Image<Rgba32> card)
 		{
-			// Check for purple sanctifying indicator bar
-			// The purple color varies in brightness, so check if it's in the purple range
-			using (var sanctifyBitmap = GetSanctifyBitmap(card))
-			{
-				Rgba32 pixelColor = sanctifyBitmap[sanctifyBitmap.Width / 2, sanctifyBitmap.Height / 2];
-
-				// Purple range: Blue should be highest, Red should be moderate, Green lowest
-				// Check if this is a purple-ish color (Blue > Red > Green pattern)
-				bool isPurple = pixelColor.B > pixelColor.R && pixelColor.R >= pixelColor.G &&
-				                pixelColor.B > 150; // Blue channel must be reasonably high
-
-				Logger.Debug("    IsSanctified check: got RGB({0},{1},{2}), isPurple={3}",
-					pixelColor.R, pixelColor.G, pixelColor.B, isPurple);
-				return isPurple;
-			}
-		}
-
-		private Image<Rgba32> GetSanctifyBitmap(Image<Rgba32> card)
-		{
-			return _imageProcessor.Crop(card, new ISRect(
-				x: (int)(card.Width * 0.40),
-				y: (int)(card.Height * (_screenCapture.IsNormal ? 0.3333 : 0.2941)),
-				width: (int)(card.Width * 0.20),
-				height: (int)(card.Height * (_screenCapture.IsNormal ? 0.0526 : 0.0470))));
+			bool sanctified = ElixirReader.IsElixirCrafted(card, _screenCapture.IsNormal);
+			Logger.Debug("    IsSanctified check: {0}", sanctified);
+			return sanctified;
 		}
 
 		private Image<Rgba32> GetArtifactLockedBitmap(Image<Rgba32> card)
@@ -341,6 +320,7 @@ namespace InventoryKamera
 			int rarity = 0;
 			int level = 0;
 			bool _lock = false;
+			bool elixirCrafted = false;
 
 			if (bm.Count >= 6)
 			{
@@ -352,6 +332,9 @@ namespace InventoryKamera
 
 				// Locked if the red padlock shows (see LockReader)
 				_lock = LockReader.IsLocked(bm[a_lock]);
+
+				// The whole card is the last image
+				if (bm.Count >= 8) elixirCrafted = ElixirReader.IsElixirCrafted(bm[7], _screenCapture.IsNormal);
 
 				// Improved Scanning using multi threading
 				Logger.Debug("  Starting OCR tasks for artifact #{0}...", id);
@@ -375,7 +358,7 @@ namespace InventoryKamera
 				Logger.Debug("  All OCR tasks completed for artifact #{0}", id);
 			}
 			Logger.Debug("  Creating Artifact object for #{0}: set={1}, rarity={2}, level={3}, slot={4}", id, setName, rarity, level, gearSlot);
-			return new Artifact(setName, rarity, level, gearSlot, mainStat, subStats, equippedCharacter, id, _lock);
+			return new Artifact(setName, rarity, level, gearSlot, mainStat, subStats, equippedCharacter, id, _lock) { ElixirCrafted = elixirCrafted };
 		}
 
 		private static int GetRarity(Image<Rgba32> bm)

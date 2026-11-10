@@ -40,6 +40,10 @@ namespace InventoryKamera
 		[JsonProperty("lock")]
 		public bool Lock { get; private set; }
 
+		/// <summary>Crafted with a Sanctifying Elixir (GOOD v3 <c>elixirCrafted</c>).</summary>
+		[JsonProperty("elixirCrafted")]
+		public bool ElixirCrafted { get; internal set; }
+
         [JsonProperty("id")]
 		public int Id { get; private set; }
 
