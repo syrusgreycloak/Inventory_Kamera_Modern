@@ -49,8 +49,15 @@ namespace InventoryKamera.Avalonia.ViewModels
                 _settings.Current.OutputPath = value;
                 _settings.Save();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(NeedsSetup));
             }
         }
+
+        /// <summary>
+        /// True on the first start, or while no output folder is set (scans aren't saved without
+        /// one). The app then opens on the Settings tab and shows a setup note.
+        /// </summary>
+        public bool NeedsSetup => _settings.IsFirstRun || string.IsNullOrWhiteSpace(OutputPath);
 
         // ─────────────────────────────────────────────────────────────────────
         // Item filters

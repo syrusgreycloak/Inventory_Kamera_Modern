@@ -26,16 +26,17 @@ namespace InventoryKamera.Tests
             SettingsViewModel settings,
             ExportViewModel export,
             AboutViewModel about)
-            MakeMainVm()
+            MakeMainVm(string outputPath = @"C:\Exports", bool firstRun = false)
         {
             // Build the full VM tree the same way the DI container would.
             var settingsMock = new Mock<ISettingsService>(MockBehavior.Loose);
             settingsMock.Setup(s => s.Current).Returns(new ScanSettings
             {
-                OutputPath     = "",
+                OutputPath     = outputPath,
                 EquipWeapons   = true,
                 EquipArtifacts = true
             });
+            settingsMock.Setup(s => s.IsFirstRun).Returns(firstRun);
 
             var runner = new Mock<IScanRunner>(MockBehavior.Loose);
             runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
@@ -103,6 +104,46 @@ namespace InventoryKamera.Tests
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // Test 2b: Opens on Settings until the app is set up
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void SelectedTab_FirstRun_IsSettings()
+        {
+            var (main, _, settings, _, _) = MakeMainVm(firstRun: true);
+            Assert.Same(settings, main.SelectedTab);
+            Assert.Equal(1, main.SelectedTabIndex);
+        }
+
+        [Fact]
+        public void SelectedTab_NoOutputFolder_IsSettings()
+        {
+            var (main, _, settings, _, _) = MakeMainVm(outputPath: "");
+            Assert.Same(settings, main.SelectedTab);
+        }
+
+        [Fact]
+        public void NeedsSetup_ClearsWhenOutputFolderIsChosen()
+        {
+            var (_, _, settings, _, _) = MakeMainVm(outputPath: "");
+            Assert.True(settings.NeedsSetup);
+
+            settings.OutputPath = @"C:\Exports";
+
+            Assert.False(settings.NeedsSetup);
+        }
+
+        [Fact]
+        public void SelectedTabIndex_SelectsTab()
+        {
+            var (main, _, _, export, _) = MakeMainVm();
+
+            main.SelectedTabIndex = 2;
+
+            Assert.Same(export, main.SelectedTab);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // Test 3: SelectedTab is observable
         // ─────────────────────────────────────────────────────────────────────
 
@@ -117,6 +158,7 @@ namespace InventoryKamera.Tests
             main.SelectedTab = settings;
 
             Assert.Contains("SelectedTab", changes);
+            Assert.Contains("SelectedTabIndex", changes);
             Assert.Same(settings, main.SelectedTab);
         }
 

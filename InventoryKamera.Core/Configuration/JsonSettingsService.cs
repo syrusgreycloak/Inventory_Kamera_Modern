@@ -67,6 +67,9 @@ namespace InventoryKamera.Configuration
         public ScanSettings Current => _current;
 
         /// <inheritdoc />
+        public bool IsFirstRun { get; private set; }
+
+        /// <inheritdoc />
         public event EventHandler SettingsChanged;
 
         /// <inheritdoc />
@@ -197,7 +200,8 @@ namespace InventoryKamera.Configuration
         {
             string filePath = _pathFactory();
 
-            if (!File.Exists(filePath))
+            IsFirstRun = !File.Exists(filePath);
+            if (IsFirstRun)
             {
                 lock (_saveLock) { _current = new ScanSettings(); }
                 Logger.Debug("Settings file not found at {0}; using defaults.", filePath);

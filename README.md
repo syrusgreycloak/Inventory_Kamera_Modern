@@ -78,12 +78,12 @@ Scanning is Windows-only, because it captures and controls the game window.
 
 ## How to configure Inventory Kamera Modern
 
-Open the `Settings` tab before scanning. You can:
+The app opens on the `Settings` tab on first start, and whenever no output folder is set (scans aren't saved without one). You can:
 
 - Choose a **Scan Speed**: _Fast_, _Normal_ or _Slow_. Start with Fast; if you see misreads on a slower PC, try Normal.
 - Set **Item Filters**: minimum weapon and artifact rarity and level.
 - Choose whether to **update equipped weapons and artifacts** during the scan (needed for the `location` field in the export).
-- Enter your **Traveler** and **Wanderer** names if you renamed them (leave blank to auto-detect).
+- Under **Names**, enter your **Traveler's** name (leave blank to read it from the game) and the **Wanderer's** name if you renamed him.
 - Rebind the **Hotkeys** for the inventory, character screen and first character slot.
 - Pick the **Output folder** for exports.
 - Turn on **Log all scan screenshots** to save what the scanner saw to the `logging` folder (useful for bug reports).

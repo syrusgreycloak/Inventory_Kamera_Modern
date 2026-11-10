@@ -60,6 +60,7 @@ namespace InventoryKamera.Tests
             Assert.Equal(1, s.Slot1Key);
             Assert.True(s.UpgradeNeeded);
             Assert.False(s.LogScreenshots);
+            Assert.True(svc.IsFirstRun);
         }
 
         // -----------------------------------------------------------------------
@@ -84,6 +85,7 @@ namespace InventoryKamera.Tests
             Assert.Equal(expectedPath, svc2.Current.OutputPath);
             Assert.False(svc2.Current.ScanWeapons);
             Assert.Equal(5, svc2.Current.MinimumArtifactRarity);
+            Assert.False(svc2.IsFirstRun);
         }
 
         // -----------------------------------------------------------------------

@@ -312,6 +312,10 @@ namespace InventoryKamera.Avalonia.ViewModels
                         Log.Error(ex, "GOOD export write failed");
                     }
                 }
+                else if (_scanRunner.HasData)
+                {
+                    Log.Warn("Scan finished, but no output folder is set, so nothing was saved. Choose one in Settings, then use Manual Export.");
+                }
 
                 LastScan = _scanRunner.HasData ? _scanRunner : null;
             }

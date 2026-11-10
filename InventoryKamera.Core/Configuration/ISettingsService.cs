@@ -15,6 +15,12 @@ namespace InventoryKamera.Configuration
         ScanSettings Current { get; }
 
         /// <summary>
+        /// True if there was no settings file when the settings were loaded: the app is starting
+        /// for the first time (or the file was deleted), and the user hasn't seen the settings yet.
+        /// </summary>
+        bool IsFirstRun { get; }
+
+        /// <summary>
         /// Triggers a debounced save.  Multiple calls within the debounce window
         /// coalesce into a single file write.
         /// </summary>

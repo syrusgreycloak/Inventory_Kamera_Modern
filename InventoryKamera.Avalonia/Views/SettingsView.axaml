@@ -14,6 +14,22 @@
                 HorizontalAlignment="Stretch"
                 Margin="16,16,16,32">
 
+      <!-- First start, or no output folder: what to set before scanning -->
+      <Border Classes="panel" Padding="16" IsVisible="{Binding NeedsSetup}"
+              BorderBrush="{StaticResource WarningBrush}" BorderThickness="1">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Before your first scan"
+                     FontWeight="Bold"
+                     FontSize="14" />
+          <TextBlock TextWrapping="Wrap"
+                     Text="• Choose an output folder. Scans aren't saved without one." />
+          <TextBlock TextWrapping="Wrap"
+                     Text="• Enter your Traveler's name, and the Wanderer's name if you renamed him (under Names). A blank Traveler name is read from the game." />
+          <TextBlock TextWrapping="Wrap"
+                     Text="• If you changed the game's inventory (B), character (C) or first-slot (1) keys, set them under Hotkeys." />
+        </StackPanel>
+      </Border>
+
       <!-- ══════════════════════════════════════════════════
            OUTPUT
       ══════════════════════════════════════════════════ -->
@@ -41,6 +57,50 @@
             <Button Grid.Column="1"
                     Content="Browse…"
                     Command="{Binding BrowseOutputPathCommand}" />
+          </Grid>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ══════════════════════════════════════════════════
+           NAMES
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Names"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <!-- Traveler name -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Traveler name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding TravelerName, Mode=TwoWay}"
+                     Watermark="(leave blank to auto-detect)"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <!-- Wanderer name -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Wanderer name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding WandererName, Mode=TwoWay}"
+                     Watermark="wanderer"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
           </Grid>
 
         </StackPanel>
@@ -207,36 +267,6 @@
                            FormatString="0"
                            Background="{StaticResource PrimaryBgBrush}"
                            BorderThickness="1" />
-          </Grid>
-
-          <!-- Traveler name -->
-          <Grid ColumnDefinitions="200,*">
-            <TextBlock Grid.Column="0"
-                       Text="Traveler custom name"
-                       VerticalAlignment="Center"
-                       FontSize="12" />
-            <TextBox Grid.Column="1"
-                     Text="{Binding TravelerName, Mode=TwoWay}"
-                     Watermark="(leave blank to auto-detect)"
-                     Background="{StaticResource PrimaryBgBrush}"
-                     BorderThickness="1"
-                     CornerRadius="4"
-                     Padding="8,4" />
-          </Grid>
-
-          <!-- Wanderer name -->
-          <Grid ColumnDefinitions="200,*">
-            <TextBlock Grid.Column="0"
-                       Text="Wanderer custom name"
-                       VerticalAlignment="Center"
-                       FontSize="12" />
-            <TextBox Grid.Column="1"
-                     Text="{Binding WandererName, Mode=TwoWay}"
-                     Watermark="wanderer"
-                     Background="{StaticResource PrimaryBgBrush}"
-                     BorderThickness="1"
-                     CornerRadius="4"
-                     Padding="8,4" />
           </Grid>
 
           <Separator />

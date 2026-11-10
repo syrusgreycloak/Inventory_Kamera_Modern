@@ -30,7 +30,7 @@
         </DataTemplate>
     </Window.DataTemplates>
 
-    <TabControl>
+    <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
         <TabItem Header="Scan" Content="{Binding ScanVm}" />
         <TabItem Header="Settings" Content="{Binding SettingsVm}" />
         <TabItem Header="Export" Content="{Binding ExportVm}" />

@@ -16,8 +16,23 @@ namespace InventoryKamera.Avalonia.ViewModels
         [ObservableProperty]
         private AboutViewModel _aboutVm;
 
+        /// <summary>The selected tab's view model.</summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]
         private object _selectedTab;
+
+        /// <summary>Tab order, matching MainWindow.axaml.</summary>
+        private object[] Tabs => new object[] { ScanVm, SettingsVm, ExportVm, AboutVm };
+
+        /// <summary>Index of <see cref="SelectedTab"/>, for binding to the TabControl.</summary>
+        public int SelectedTabIndex
+        {
+            get => System.Array.IndexOf(Tabs, SelectedTab);
+            set
+            {
+                if (value >= 0 && value < Tabs.Length) SelectedTab = Tabs[value];
+            }
+        }
 
         public MainViewModel(
             ScanViewModel scanVm,
@@ -29,7 +44,8 @@ namespace InventoryKamera.Avalonia.ViewModels
             _settingsVm = settingsVm;
             _exportVm = exportVm;
             _aboutVm = aboutVm;
-            _selectedTab = _scanVm;
+            // Open on Settings until the app is set up (first start, or no output folder)
+            _selectedTab = _settingsVm.NeedsSetup ? (object)_settingsVm : _scanVm;
         }
     }
 }
