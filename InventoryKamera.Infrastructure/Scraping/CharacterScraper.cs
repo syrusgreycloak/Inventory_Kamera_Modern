@@ -479,21 +479,14 @@ namespace InventoryKamera
 				string text = _ocrEngine.AnalyzeText(n).Trim();
 				Logger.Debug("Scanned character level as {0}", text);
 
-				text = Regex.Replace(text, @"(?![0-9/]).", string.Empty);
-				Logger.Debug("Filtered scanned text to {0}", text);
-				if (text.Contains("/"))
+				if (CharacterLevelReader.TryParse(text, out int level, out int maxLevel, out bool isAscended))
 				{
-					var values = text.Split('/');
-                    if (int.TryParse(values[0], out int level) && int.TryParse(values[1], out int maxLevel))
-                    {
-                        maxLevel = (int)Math.Round(maxLevel / 10.0, MidpointRounding.AwayFromZero) * 10;
-                        ascended = 20 <= level && level < maxLevel;
-                        _userInterface.SetCharacter_Level(bm, level, maxLevel);
-                        n.Dispose();
-                        bm.Dispose();
-                        Logger.Debug("Parsed character level as {0}", level);
-                        return level;
-                    }
+					ascended = isAscended;
+					_userInterface.SetCharacter_Level(bm, level, maxLevel);
+					n.Dispose();
+					bm.Dispose();
+					Logger.Debug("Parsed character level as {0}/{1}", level, maxLevel);
+					return level;
 				}
 				Logger.Debug("Failed to parse character level and ascension from {0} (text), retrying", text);
 
