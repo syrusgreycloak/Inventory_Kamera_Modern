@@ -36,6 +36,7 @@ namespace InventoryKamera
 			int page = 1;
 			var (rectangles, cols, rows) = GetPageOfItems(page);
 			int fullPage = cols * rows;
+			int rowsPerPage = rows; // first page is always a full grid
 			int totalRows = (int)Math.Ceiling(artifactCount / (decimal)cols);
 			int cardsQueued = 0;
 			int rowsQueued = 0;
@@ -151,7 +152,7 @@ namespace InventoryKamera
                     _inputSimulator.SystemWait(ScanDelay.Fast);
 				}
 				++page;
-				(rectangles, cols, rows) = GetPageOfItems(page, acceptLess: totalRows - rowsQueued <= fullPage);
+				(rectangles, cols, rows) = GetPageOfItems(page, acceptLess: InventoryPaging.IsLastPage(totalRows, rowsQueued, rowsPerPage));
 			}
 		}
 
