@@ -38,7 +38,7 @@ namespace InventoryKamera
         public Size Size { get => new Size(Width, Height); set { _Right = value.Width + _Left; _Bottom = value.Height + _Top; } }
 
         // Conversions to/from SixLabors.ImageSharp.Rectangle only — no System.Drawing coupling in Core.
-        // System.Drawing interop lives in InventoryKamera/Infrastructure/Compat/RectGdiExtensions.cs.
+        // System.Drawing interop lives in InventoryKamera.Infrastructure/Compat/RectGdiExtensions.cs.
         public static implicit operator Rectangle(RECT r) => new Rectangle(r.Left, r.Top, r.Width, r.Height);
         public static implicit operator RECT(Rectangle r) => new RECT(r.Left, r.Top, r.Right, r.Bottom);
 

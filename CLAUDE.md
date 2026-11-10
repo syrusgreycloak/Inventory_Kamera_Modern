@@ -4,152 +4,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Inventory Kamera is a Windows Forms (.NET Framework 4.7.2) desktop application that scans Genshin Impact inventory data using OCR (Optical Character Recognition). It captures screenshots of the game window and uses Tesseract OCR with custom trained data to extract information about characters, weapons, artifacts, and materials. The scanned data is exported in GOOD (Genshin Open Object Description) format, a JSON-based standard compatible with popular Genshin Impact optimizer tools.
+Inventory Kamera Modern scans Genshin Impact characters, weapons, artifacts and materials with OCR and exports them in GOOD (Genshin Open Object Description) JSON, the format used by Genshin Optimizer and similar tools. It captures screenshots of the game window, drives the game menus with simulated keyboard/mouse input, and reads the screenshots with Tesseract and a custom trained model for the game's font.
 
-## Build Commands
+The app is an Avalonia UI on .NET 8. The old Windows Forms version was removed from master; it is preserved on the `history` branch and the `winforms-final` tag.
 
-### Avalonia (recommended, cross-platform)
+## Build and Test
 
 ```bash
+# Build the app (both targets: net8.0 and net8.0-windows)
 dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Debug
-```
 
-Cross-platform TFM: `net8.0`. Windows TFM: `net8.0-windows`.
-
-### WinForms (deprecated)
-
-See `InventoryKamera/DEPRECATED.md`. The WinForms project still builds with Rider's MSBuild and remains available during the M2 beta.
-
-**IMPORTANT:** This project requires Rider's MSBuild (version 18.4.0+) to compile correctly. The codebase uses C# 7.3 features (string interpolation with `$"..."`) that the standard .NET Framework 4.0 MSBuild does not support. Rider's MSBuild includes the Roslyn compiler which handles these features.
-
-```bash
-# Build in Debug configuration (use dash switches to avoid Git bash path translation)
-"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Debug -nologo -v:minimal
-
-# Build in Release configuration
-"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Release -nologo -v:minimal
-
-# Build for specific platform (x64, x86, or AnyCPU)
-"L:/Programs/JetBrains/Rider/tools/MSBuild/Current/Bin/amd64/MSBuild.exe" "C:/Users/karlp/RiderProjects/Inventory_Kamera/InventoryKamera.sln" -p:Configuration=Release -p:Platform=x64 -nologo -v:minimal
-```
-
-**Note:** The build will show `error MSB3202` about missing `InventoryKameraWPF.csproj` but this is expected - the main `InventoryKamera.exe` compiles successfully.
-
-### Running the Application
-```bash
-# Run from Avalonia Debug build
+# Run (Windows build; asks for administrator rights)
 InventoryKamera.Avalonia/bin/Debug/net8.0-windows/InventoryKamera.Avalonia.exe
 
-# Run from WinForms Debug build (deprecated)
-./InventoryKamera/bin/Debug/InventoryKamera.exe
-
-# Run from WinForms Release build (deprecated)
-./InventoryKamera/bin/Release/InventoryKamera.exe
+# Tests
+dotnet test InventoryKamera.Tests/InventoryKamera.Tests.csproj
+dotnet test InventoryKamera.Infrastructure.Tests/InventoryKamera.Infrastructure.Tests.csproj
 ```
 
-### Restoring NuGet Packages
-```bash
-nuget restore InventoryKamera.sln
-```
+- The build fails with MSB3027 (file locked) while the app is running; close it first.
+- The app manifest requires administrator rights (to send input to the elevated game). Running from Rider needs Rider started as administrator and the `net8.0-windows` target.
+- The `net8.0` target builds the UI for macOS/Linux with stub platform services; scanning only works on `net8.0-windows`.
 
-## Architecture Overview
+## Projects
 
-### Core Components
+- **`InventoryKamera.Core`** (net8.0, no System.Drawing): models (`Character`, `Weapon`, `Artifact`, `Material`, `Inventory`), GOOD export (`Export/GOOD.cs`), game data (`Data/DatabaseManager.cs`, `Data/GameDataSource.cs`), settings and scan profile (`Configuration/`), and the platform interfaces in `Abstractions/` (`IScreenCapture`, `IInputSimulator`, `IOcrEngine`, `IImageProcessor`, `IUserInterface`, `IScanRunner`, `IGameDataService`).
+- **`InventoryKamera.Infrastructure`** (net8.0-windows): the Windows implementations and the scanner.
+  - `WindowsScanRunner` / `InventoryScanner`: run a scan and the OCR worker threads.
+  - `Windows/Navigation.cs`: window capture, input, aspect ratio handling.
+  - `Scraping/*Scraper.cs`: one scraper per inventory type.
+  - `Scraping/*Reader.cs`: small, testable readers for single fields (talent list, constellations, character level and name, material counts, locks, refinement, equipped, artifact substats). New screen-reading logic should go in a reader with tests, not inline in a scraper.
+  - `Scraping/GenshinProcesor.cs`: OCR helpers and name matching (spelling is historical).
+  - `OcrEnginePool.cs`: pool of Tesseract engines; disposed on app exit.
+- **`InventoryKamera.Avalonia`**: MVVM UI with CommunityToolkit.Mvvm. `App.axaml.cs` sets up DI (Windows services on Windows, `Services/PlatformStubs/` elsewhere). Views: Scan, Export, Settings, About.
+- **`InventoryKamera.Tests`**: ViewModel, settings, GOOD export and game data tests.
+- **`InventoryKamera.Infrastructure.Tests`**: reader tests against real screenshot crops in `TestData/`, using the real trained data.
 
-**Data Flow Pipeline:**
-1. `Navigation` - Captures game window and simulates keyboard/mouse input
-2. `Scraper` classes - Extract regions from screenshots and queue them for OCR
-3. `ImageProcessorWorker` threads - Process OCR queue using Tesseract engines
-4. `InventoryKamera` class - Aggregates results and manages worker threads
-5. `GOOD` class - Exports data in GOOD JSON format
+## Data Files
 
-### Key Directories
+- **`reference_data/`**: verified game data (`characters.json`, `weapons.json`, `artifacts.json`, `materials.json`, `version.txt`), `ScanProfile.json` (scan region coordinates) and `stat_priorities.json` (planned for Milestone 3). Copied to `inventorylists/` in the build output. `Update game data` (About tab) refreshes the game data at runtime from the configured repository (default: Dimbreath's animegamedata2; changeable in Settings > Advanced).
+- **`tessdata/`**: the custom trained data (`genshin_best_eng.traineddata`, `genshin_fast_09_04_21.traineddata`). If OCR accuracy suddenly degrades, check these are in the output's `tessdata/`.
+- Settings are stored in `%AppData%/InventoryKamera/settings.json`.
 
-- **`InventoryKamera/data/`** - Core data structures and export logic
-  - `InventoryKamera.cs` - Main orchestration class, manages multi-threaded OCR processing
-  - `DatabaseManager.cs` - Loads/updates reference data from local JSON files and GitHub
-  - `GOOD.cs` - Exports scanned data to GOOD JSON format
-  - `Inventory.cs` - Container for weapons, artifacts, and materials
-  - `OCRImageCollection.cs` - Wrapper for queuing images to worker threads
+## Scanning Architecture
 
-- **`InventoryKamera/game/`** - Game data models and navigation
-  - `Navigation.cs` - Window capture, input simulation, aspect ratio handling
-  - `Character.cs`, `Weapon.cs`, `Artifact.cs` - Game object models with GOOD serialization
-
-- **`InventoryKamera/scraping/`** - OCR scanning implementations
-  - `Scraper.cs` - Base OCR functionality, manages Tesseract engine pool
-  - `WeaponScraper.cs`, `ArtifactScraper.cs`, `CharacterScraper.cs`, `MaterialScraper.cs` - Specialized scanners for each inventory type
-
-- **`InventoryKamera/ui/`** - Windows Forms UI
-  - `MainForm.cs` - Main application window, scan controls, settings
-  - `UserInterface.cs` - Static helper for thread-safe UI updates from worker threads
-
-### Multi-Threading Architecture
-
-The application uses a producer-consumer pattern:
-- **Main thread (UI thread):** Navigation and screenshot capture
-- **Scraper threads:** Capture screenshots, crop regions, enqueue to `workerQueue`
-- **Image processor workers (2-3 threads):** Dequeue items, run OCR, validate and store results
-
-Worker threads are spawned in `InventoryKamera.GatherData()` and process items from the shared `Queue<OCRImageCollection>`. The queue is thread-safe and workers use `TryDequeue()` to retrieve work items. A special "END" message signals workers to terminate after weapon/artifact scanning completes.
-
-### OCR Engine Pool
-
-`Scraper.cs` maintains a `ConcurrentBag<TesseractEngine>` with 8 pre-initialized engines to avoid initialization overhead. Workers borrow an engine, perform OCR, and return it to the pool. Custom trained data files in `tessdata/` improve accuracy for Genshin Impact's UI font.
-
-### Reference Data
-
-The `inventorylists/` directory contains JSON files mapping item names to GOOD format identifiers:
-- `characters.json` - Character data with constellation order and weapon type
-- `weapons.json`, `artifacts.json` - Item name mappings
-- `materials.json`, `devmaterials.json`, `allmaterials.json` - Material name mappings
-
-These files are loaded at startup and can be auto-updated from Dimbreath's GenshinData GitHub repository via `DatabaseManager`.
-
-### Game Integration
-
-The scanner requires:
-- Genshin Impact running in 16:9 or 16:10 resolution (windowed or fullscreen)
-- Game language set to English
-- Paimon menu open before starting scan
-
-`Navigation.Initialize()` finds the game process (GenshinImpact.exe or YuanShen.exe), captures window dimensions, and verifies aspect ratio. The `InputSimulator` library sends keyboard inputs to navigate menus while `Graphics.CopyFromScreen()` captures specific regions.
-
-### Validation and Error Logging
-
-Each scanned item is validated (e.g., `Weapon.IsValid()` checks name, rarity, level, refinement). Invalid items trigger detailed logging to `./logging/weapons/`, `./logging/artifacts/`, etc., with cropped images and metadata for debugging. Users can enable "Log All Screenshots" to capture every scan attempt.
+Producer-consumer: scrapers navigate the game and capture screenshots on the scan thread, crop regions and enqueue them to `InventoryScanner.workerQueue`; worker threads dequeue, run OCR, validate and store results. An "END" message stops the workers. UI updates from worker threads go through `IUserInterface` (`AvaloniaUserInterface` posts to the Avalonia UI thread); never touch Avalonia controls from a worker thread.
 
 ## Important Development Notes
 
-### Resolution and Aspect Ratio Handling
-All region coordinates in scrapers are calculated as ratios of the game window dimensions (see `Navigation.CaptureWindow()` and region calculations in scraper classes). When adding new regions, always use proportional coordinates based on a reference resolution (typically 1280x720 or 1920x1080).
+### Resolution and aspect ratio
+The game must run at 16:9 or 16:10; ultrawide (21:9) is not supported yet. Region coordinates are proportional to the game window (reference 1920x1080 or 1280x720), either from `ScanProfile.json` or scaled in code. When adding regions, always scale from a reference resolution.
 
-### Traveler Character Handling
-The Traveler character's name is user-specific. `CharacterScraper.ScanMainCharacterName()` OCRs the name from the character screen, then `Scraper.AddTravelerToCharacterList()` creates a character entry by cloning the generic "traveler" template from `characters.json`.
+### Scan speed
+Fast (scanner delay 0) is the default and is verified to match the game on a full account. UI elements can still be animating when a screenshot is taken on Fast (e.g. the lock icon fading in), so readers should tolerate partial fades rather than rely on single pixels.
 
-### Thread Safety
-UI updates from worker threads must use `UserInterface` static methods, which internally use `Control.BeginInvoke()`. Never call WinForms controls directly from worker threads.
+### Traveler and Wanderer
+Their names are user-specific. The Traveler's name is OCR'd (or taken from settings) and a character entry is cloned from the generic `traveler` template in `characters.json`; the element comes from the character screen header.
 
-### Tesseract Language Files
-The custom trained data files (`genshin_best_eng.traineddata`, `genshin_fast_09_04_21.traineddata`) are critical for accuracy. These files are copied to the output directory during build (see `.csproj` `<None>` elements). If OCR accuracy degrades, check that these files are present in the `tessdata/` directory.
+### Debugging OCR issues
+1. Turn on "Log all scan screenshots" in Settings.
+2. Run a scan; images go to `logging/` in the output folder (wiped at the start of each scan).
+3. Inspect the crops, add a failing crop to `InventoryKamera.Infrastructure.Tests/TestData/`, and fix the reader against the test.
+4. Never put the player's UID or other personal details in test data; crop it out.
 
-## Common Workflows
-
-### Adding Support for a New Character
-1. Update `inventorylists/characters.json` with character data (name, constellation order, weapon type)
-2. The scanner should automatically detect the character during the next scan
-3. Test by scanning the character screen with the new character
-
-### Debugging OCR Issues
-1. Enable "Log All Screenshots" in the UI
-2. Run a scan to populate `./logging/` with cropped images
-3. Examine the saved images to identify problematic regions
-4. Adjust region coordinates in the relevant scraper class
-5. Consider updating Tesseract trained data if text recognition is consistently failing
-
-### Updating Reference Data
-The "Update Lookup Tables" option in the UI runs `DatabaseManager.UpdateAll()`, which:
-1. Fetches latest data from Dimbreath's GenshinData repository
-2. Parses JSON to extract item names and metadata
-3. Converts to GOOD format and saves to `inventorylists/`
-4. Should be run after each major Genshin Impact version update
+### Updating reference data
+After a game update, run `Update game data`, then diff the result against `reference_data/` (e.g. `python validate_constellations.py` for constellation order) before committing refreshed files. See `reference_data/README.md`.

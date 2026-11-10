@@ -9,7 +9,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>InventoryKamera.Avalonia</RootNamespace>
     <AssemblyName>InventoryKamera.Avalonia</AssemblyName>
-    <ApplicationIcon>..\InventoryKamera\Item_Special_Kamera.ico</ApplicationIcon>
+    <ApplicationIcon>Item_Special_Kamera.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>Inventory Kamera Modern</AssemblyTitle>
     <Version>2.0.0.0</Version>
@@ -40,19 +40,17 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\InventoryKamera\inventorylists\**\*" Link="inventorylists\%(RecursiveDir)%(Filename)%(Extension)">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <!-- Game-data files committed in reference_data/ (characters/weapons/artifacts/materials JSON
-         and version.txt). Linked into the same inventorylists/ output folder so DatabaseManager
-         finds them. Refreshable at runtime via the About tab's "Update game data" command. -->
+    <!-- Data files committed in reference_data/: game data (characters/weapons/artifacts/materials
+         JSON and version.txt, refreshable at runtime via the About tab's "Update game data"),
+         ScanProfile.json and stat_priorities.json. Linked into the inventorylists/ output folder,
+         where DatabaseManager and the scan runner look for them. -->
     <None Include="..\reference_data\*.json" Link="inventorylists\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\reference_data\version.txt" Link="inventorylists\version.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\InventoryKamera\tessdata\**\*" Link="tessdata\%(RecursiveDir)%(Filename)%(Extension)">
+    <None Include="..\tessdata\*.traineddata" Link="tessdata\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

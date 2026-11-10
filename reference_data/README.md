@@ -45,13 +45,21 @@ Artifact set and piece name mappings, including:
 
 Character/weapon ascension material mappings.
 
+### ScanProfile.json
+
+Scan region coordinates (as fractions of the game window) per aspect ratio. To adjust a region without recompiling, edit the copy in the build output's `inventorylists/`.
+
+### stat_priorities.json
+
+Per-character stat priorities for artifact recommendations. Not used by the scanner yet; planned for Milestone 3.
+
 ## Usage
 
 ### Validation After Database Update
 
 ```bash
-# After running "Update Lookup Tables" in the app, diff the files:
-diff reference_data/characters.json InventoryKamera/bin/Debug/inventorylists/characters.json
+# After running "Update game data" (About tab) in the app, diff the files:
+diff reference_data/characters.json InventoryKamera.Avalonia/bin/Debug/net8.0-windows/inventorylists/characters.json
 
 # Check for unexpected ConstellationOrder changes:
 python validate_constellations.py
@@ -62,7 +70,7 @@ python validate_constellations.py
 If database update fails or produces corrupt data:
 
 ```bash
-cp reference_data/*.json InventoryKamera/bin/Debug/inventorylists/
+cp reference_data/*.json InventoryKamera.Avalonia/bin/Debug/net8.0-windows/inventorylists/
 ```
 
 ## Update Policy
