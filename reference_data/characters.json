@@ -55,6 +55,20 @@
     ],
     "WeaponType": 3
   },
+  "alyosha": {
+    "GOOD": "Alyosha",
+    "ConstellationName": [
+      "Canis Borzoides"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "electro"
+    ],
+    "WeaponType": 2
+  },
   "amber": {
     "GOOD": "Amber",
     "ConstellationName": [
@@ -853,6 +867,20 @@
     ],
     "WeaponType": 0
   },
+  "linnea": {
+    "GOOD": "Linnea",
+    "ConstellationName": [
+      "Alcyon"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "geo"
+    ],
+    "WeaponType": 3
+  },
   "lisa": {
     "GOOD": "Lisa",
     "ConstellationName": [
@@ -866,6 +894,20 @@
       "electro"
     ],
     "WeaponType": 4
+  },
+  "lohen": {
+    "GOOD": "Lohen",
+    "ConstellationName": [
+      "Lepus Miles"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "cryo"
+    ],
+    "WeaponType": 2
   },
   "lynette": {
     "GOOD": "Lynette",
@@ -922,6 +964,20 @@
       "cryo"
     ],
     "WeaponType": 2
+  },
+  "mitya": {
+    "GOOD": "Mitya",
+    "ConstellationName": [
+      "Nodus Gordianus"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "electro"
+    ],
+    "WeaponType": 4
   },
   "mona": {
     "GOOD": "Mona",
@@ -1007,6 +1063,20 @@
     ],
     "WeaponType": 4
   },
+  "nicole": {
+    "GOOD": "Nicole",
+    "ConstellationName": [
+      "Reliquiarium"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "pyro"
+    ],
+    "WeaponType": 4
+  },
   "nilou": {
     "GOOD": "Nilou",
     "ConstellationName": [
@@ -1049,6 +1119,20 @@
     ],
     "WeaponType": 1
   },
+  "odette": {
+    "GOOD": "Odette",
+    "ConstellationName": [
+      "Cygnus Olor"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "cryo"
+    ],
+    "WeaponType": 0
+  },
   "ororon": {
     "GOOD": "Ororon",
     "ConstellationName": [
@@ -1062,6 +1146,20 @@
       "electro"
     ],
     "WeaponType": 3
+  },
+  "prune": {
+    "GOOD": "Prune",
+    "ConstellationName": [
+      "Turris Venefica"
+    ],
+    "ConstellationOrder": [
+      "burst",
+      "skill"
+    ],
+    "Element": [
+      "anemo"
+    ],
+    "WeaponType": 4
   },
   "qiqi": {
     "GOOD": "Qiqi",
@@ -1118,6 +1216,20 @@
       "cryo"
     ],
     "WeaponType": 2
+  },
+  "sandrone": {
+    "GOOD": "Sandrone",
+    "ConstellationName": [
+      "Narcissorolegium"
+    ],
+    "ConstellationOrder": [
+      "burst",
+      "skill"
+    ],
+    "Element": [
+      "cryo"
+    ],
+    "WeaponType": 1
   },
   "sangonomiyakokomi": {
     "GOOD": "SangonomiyaKokomi",
@@ -1311,6 +1423,20 @@
     },
     "WeaponType": 0
   },
+  "valeriy": {
+    "GOOD": "Valeriy",
+    "ConstellationName": [
+      "Ursus Magnus"
+    ],
+    "ConstellationOrder": [
+      "auto",
+      "burst"
+    ],
+    "Element": [
+      "electro"
+    ],
+    "WeaponType": 0
+  },
   "varesa": {
     "GOOD": "Varesa",
     "ConstellationName": [
@@ -1352,6 +1478,34 @@
       "anemo"
     ],
     "WeaponType": 3
+  },
+  "vesna": {
+    "GOOD": "Vesna",
+    "ConstellationName": [
+      "Amentum Vernum"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "anemo"
+    ],
+    "WeaponType": 0
+  },
+  "vodyanitsa": {
+    "GOOD": "Vodyanitsa",
+    "ConstellationName": [
+      "Piscicula Aurea"
+    ],
+    "ConstellationOrder": [
+      "skill",
+      "burst"
+    ],
+    "Element": [
+      "hydro"
+    ],
+    "WeaponType": 4
   },
   "wanderer": {
     "GOOD": "Wanderer",
