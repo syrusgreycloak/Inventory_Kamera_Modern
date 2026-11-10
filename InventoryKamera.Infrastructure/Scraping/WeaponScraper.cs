@@ -255,10 +255,6 @@ namespace InventoryKamera
 				// Check for Rarity
 				rarity = GetQuality(bm[w_name]);
 
-				// Check for equipped color
-				var equippedColor = new Rgba32(255, 231, 187, 255);
-				Rgba32 equippedStatus = bm[w_equippedCharacter][5, 5];
-				bool b_equipped = _imageProcessor.CompareColors(equippedColor, equippedStatus);
 
 				// Check for lock color
 				var lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
@@ -273,16 +269,12 @@ namespace InventoryKamera
 				});
 				var taskLevel = Task.Run(() => level = ScanLevel(bm[w_level], ref ascended));
 				var taskRefinement = Task.Run(() => refinementLevel = ScanRefinement(bm[w_refinement]));
-				var taskEquipped = Task.Run(() => equippedCharacter = ScanEquippedCharacter(bm[w_equippedCharacter]));
 
 				tasks.Add(taskName);
 				tasks.Add(taskLevel);
 				tasks.Add(taskRefinement);
 
-				if (b_equipped)
-				{
-					tasks.Add(taskEquipped);
-				}
+				tasks.Add(Task.Run(() => equippedCharacter = ScanEquippedCharacter(bm[w_equippedCharacter])));
 
 				await Task.WhenAll(tasks.ToArray());
 
@@ -349,32 +341,8 @@ namespace InventoryKamera
 		public int ScanRefinement(Image<Rgba32> image) =>
 			RefinementReader.Read(image, _imageProcessor, _ocrEngine);
 
-		public string ScanEquippedCharacter(Image<Rgba32> bm)
-		{
-			Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
-			var oldN = n;
-			n = _imageProcessor.SetContrast(n, 60.0);
-			if (!ReferenceEquals(oldN, n)) oldN.Dispose();
-
-			string extractedString = _ocrEngine.AnalyzeText(n);
-			n.Dispose();
-
-			if (extractedString != "")
-			{
-				var regexItem = new Regex("Equipped:");
-				if (regexItem.IsMatch(extractedString))
-				{
-					var name = extractedString.Split(':')[1];
-
-					name = Regex.Replace(name, @"[\W]", string.Empty).ToLower();
-					name = _gameDataService.FindClosestCharacterName(name);
-
-					return name;
-				}
-			}
-			// artifact has no equipped character
-			return null;
-		}
+		public string ScanEquippedCharacter(Image<Rgba32> bm) =>
+			EquippedReader.Read(bm, _imageProcessor, _ocrEngine, n => _gameDataService.FindClosestCharacterName(n));
 
 		#endregion Task Methods
 	}

@@ -23,5 +23,7 @@
     <!-- Real trained data, so OCR tests exercise the same engine configuration as the scanner -->
     <None Include="..\InventoryKamera\tessdata\*" Link="tessdata\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Verified game data, so name matching runs against the real character list -->
+    <None Include="..\reference_data\*.json" Link="inventorylists\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

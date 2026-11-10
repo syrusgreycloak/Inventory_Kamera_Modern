@@ -348,10 +348,6 @@ namespace InventoryKamera
 				// Get Rarity
 				rarity = GetRarity(bm[a_name]);
 
-				// Check for equipped color
-				Rgba32 equippedColor = new Rgba32(255, 231, 187, 255);
-				Rgba32 equippedStatus = bm[a_equippedCharacter][5, 5];
-				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
 
 				// Check for lock color
 				Rgba32 lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
@@ -366,7 +362,6 @@ namespace InventoryKamera
 				var taskMain  = taskGear.ContinueWith( (antecedent) => mainStat = ScanArtifactMainStat(bm[a_mainStat], antecedent.Result));
 				var taskLevel = Task.Run(() => level = ScanArtifactLevel(bm[a_level]));
 				var taskSubs  = Task.Run(() => subStats = ScanArtifactSubStats(bm[a_subStats]));
-				var taskEquip = Task.Run(() => equippedCharacter = ScanArtifactEquippedCharacter(bm[a_equippedCharacter]));
 				var taskName = Task.Run(() => setName = ScanArtifactSet(bm[a_name]));
 
 				tasks.Add(taskGear);
@@ -374,10 +369,7 @@ namespace InventoryKamera
 				tasks.Add(taskLevel);
 				tasks.Add(taskSubs);
 				tasks.Add(taskName);
-				if (b_equipped)
-				{
-					tasks.Add(taskEquip);
-				}
+				tasks.Add(Task.Run(() => equippedCharacter = ScanArtifactEquippedCharacter(bm[a_equippedCharacter])));
 
 				Logger.Debug("  Waiting for {0} OCR tasks to complete for artifact #{1}...", tasks.Count, id);
 				await Task.WhenAll(tasks.ToArray());
@@ -584,30 +576,10 @@ namespace InventoryKamera
             return substats;
         }
 
-        private static string ScanArtifactEquippedCharacter(Image<Rgba32> img)
-		{
-			using (var bm = GenshinProcesor.ImageSharpToBitmap(img))
-			{
-				Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-				GenshinProcesor.SetContrast(60.0, ref n);
-
-				string equippedCharacter = GenshinProcesor.AnalyzeText(n).ToLower();
-				n.Dispose();
-
-				if (equippedCharacter != "")
-				{
-					if (equippedCharacter.Contains("equipped") && equippedCharacter.Contains(":"))
-					{
-						equippedCharacter = Regex.Replace(equippedCharacter.Split(':')[1], @"[\W]", string.Empty);
-						equippedCharacter = GenshinProcesor.FindClosestCharacterName(equippedCharacter);
-
-						return equippedCharacter;
-					}
-				}
-				// artifact has no equipped character
-				return null;
-			}
-		}
+		// Uses the injected game data service: the static GenshinProcesor keeps its own copy of the
+		// game data that never receives the user's custom Traveler/Wanderer names.
+		private string ScanArtifactEquippedCharacter(Image<Rgba32> img) =>
+			EquippedReader.Read(img, _imageProcessor, _ocrEngine, n => _gameDataService.FindClosestCharacterName(n));
 
 		private static string ScanArtifactSet(Image<Rgba32> img)
         {

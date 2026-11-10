@@ -561,13 +561,22 @@ namespace InventoryKamera
             }
         }
 
+        // Equipped items record the Traveler as "Traveler" (the GOOD location key), while the scanned
+        // character's NameGOOD includes the element (e.g. "TravelerCryo").
+        private static bool IsEquippedBy(string location, string nameGOOD) =>
+            location == nameGOOD ||
+            (location == "Traveler" && nameGOOD != null && nameGOOD.StartsWith("Traveler"));
+
+        private static string LocationFor(string nameGOOD) =>
+            nameGOOD != null && nameGOOD.StartsWith("Traveler") ? "Traveler" : nameGOOD;
+
         public void AssignArtifacts()
 		{
 			foreach (Artifact artifact in equippedArtifacts)
 			{
 				foreach (Character character in Characters)
 				{
-					if (artifact.EquippedCharacter == character.NameGOOD)
+					if (IsEquippedBy(artifact.EquippedCharacter, character.NameGOOD))
 					{
 						character.AssignArtifact(artifact); // Do we even need to do this?
 						Logger.Debug("Assigned {fearSlot} to {character}", artifact.GearSlot, character.NameGOOD);
@@ -583,7 +592,7 @@ namespace InventoryKamera
 			{
 				foreach (Weapon weapon in equippedWeapons)
 				{
-					if (weapon.EquippedCharacter == character.NameGOOD)
+					if (IsEquippedBy(weapon.EquippedCharacter, character.NameGOOD))
 					{
 						character.AssignWeapon(weapon);
 						Logger.Debug("Assigned {weapon} to {character}", weapon.Name, character.NameGOOD);
@@ -592,7 +601,7 @@ namespace InventoryKamera
 				}
 				if (character.Weapon is null)
 				{
-					Inventory.Add(new Weapon(character.WeaponType, character.NameGOOD));
+					Inventory.Add(new Weapon(character.WeaponType, LocationFor(character.NameGOOD)));
 					Logger.Info("Default weapon assigned to {character}", character.NameGOOD);
 				}
 			}
