@@ -68,8 +68,15 @@ namespace InventoryKamera
 
         /// <summary>
         /// OCRs a count crop at several scales and votes. This is the reading that used to live in
-        /// <c>MaterialScraper.ScanMaterialCount</c>, unchanged.
+        /// <c>MaterialScraper.ScanMaterialCount</c>, except that it starts at 2x.
         /// </summary>
+        /// <remarks>
+        /// It used to start at 1x. At 1x and 1.5x a 1080p digit is about 10 px tall, and Tesseract
+        /// read a "2" as "F4" and then "4"; two matching readings settle a count, so it returned 4.
+        /// From 2x it read "2" every time. Starting at 2x read all 371 counts of a full Character
+        /// Development Items scan correctly (1x: 2 wrong). The digits-only whitelist did worse
+        /// (2 and 3 wrong), so it isn't used.
+        /// </remarks>
         public static int ReadCount(Bitmap bm, NLog.Logger logger = null)
         {
             Dictionary<int, int> counts = new Dictionary<int, int>();
@@ -77,7 +84,7 @@ namespace InventoryKamera
             var bRange = new IntRange(0, 150);
             var gRange = new IntRange(0, 150);
 
-            for (var scale = 1.0; scale <= 3; scale += 0.5)
+            for (var scale = 2.0; scale <= 3; scale += 0.5)
             {
                 using (Bitmap rescaled = GenshinProcesor.ResizeImage(bm, (int)(bm.Width * scale), (int)(bm.Height * scale)))
                 {

@@ -73,6 +73,18 @@ namespace InventoryKamera.Infrastructure.Tests
             Assert.Equal(hasCard, MaterialCountReader.FindLabelBand(strip, minRows: 18, maxRows: MaterialCountReader.LabelHeight1080) != null);
         }
 
+        /// <summary>
+        /// A label crop showing "2" that Tesseract read as "F4" and "4" at 1x and 1.5x, which used
+        /// to settle the vote on 4.
+        /// </summary>
+        [Fact]
+        public void ReadCount_SmallTwo_IsNotReadAsFour()
+        {
+            using var label = Load("label_2_small.png");
+            using var bitmap = GenshinProcesor.ImageSharpToBitmap(label);
+            Assert.Equal(2, MaterialCountReader.ReadCount(bitmap));
+        }
+
         private static Image<Rgba32> Load(string file) =>
             Image.Load<Rgba32>(Path.Combine(System.AppContext.BaseDirectory, "TestData", "MaterialCounts", file));
 
