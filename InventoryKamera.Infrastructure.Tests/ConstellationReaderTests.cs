@@ -31,6 +31,9 @@ namespace InventoryKamera.Infrastructure.Tests
         [InlineData("c4_tighnari.png", 4)]
         [InlineData("c5_keqing.png", 5)]
         [InlineData("c6_bennett.png", 6)]
+        // A bright background star right behind the locked 6th node: the ring's average reached
+        // 130 (inconclusive), its median stays at 84
+        [InlineData("c5_keqing_star_glow.png", 5)]
         public void CountActivated_SavedScreen_ReturnsConstellation(string file, int expected)
         {
             using var screenshot = Screenshot(file);

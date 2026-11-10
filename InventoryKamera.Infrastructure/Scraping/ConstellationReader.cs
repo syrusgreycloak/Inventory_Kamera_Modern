@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -11,8 +12,11 @@ namespace InventoryKamera
     /// </summary>
     /// <remarks>
     /// Activated nodes have a bright, element-coloured frame; locked nodes are dark discs with a
-    /// padlock. Measured on a full 16:9 scan (94 characters x 6 nodes) over a ring 30-36 px from the
-    /// node centre at 1080p: activated nodes averaged at least 173 brightness, locked at most 102.
+    /// padlock. Brightness is the median over a ring 30-36 px from the node centre (at 1080p), not
+    /// the average: a lit star in the background can sit right behind a node, and its glow covers
+    /// part of the ring. Keqing's locked 6th node averaged 130 that way (inconclusive), but its
+    /// median was 84. Over a full 16:9 scan (94 characters x 6 nodes) the median was at least 177
+    /// for activated nodes and at most 84 for locked ones.
     /// </remarks>
     public static class ConstellationReader
     {
@@ -28,10 +32,10 @@ namespace InventoryKamera
         };
 
         /// <summary>Ring brightness at or above this means activated.</summary>
-        public const double ActivatedMinBrightness = 150;
+        public const double ActivatedMinBrightness = 145;
 
         /// <summary>Ring brightness at or below this means locked. In between is too close to call.</summary>
-        public const double LockedMaxBrightness = 125;
+        public const double LockedMaxBrightness = 115;
 
         /// <summary>
         /// Number of activated constellations (0-6), or null if the screenshot can't be trusted: a node
@@ -65,7 +69,7 @@ namespace InventoryKamera
             return count;
         }
 
-        /// <summary>Average brightness (max channel) of a ring 30-36 px (at 1080p) from the node centre.</summary>
+        /// <summary>Median brightness (max channel) of a ring 30-36 px (at 1080p) from the node centre.</summary>
         public static double RingBrightness(Image<Rgba32> screenshot, (double X, double Y) centre)
         {
             int cx = (int)(centre.X * screenshot.Width);
@@ -74,8 +78,7 @@ namespace InventoryKamera
             double inner = 30 * scale, outer = 36 * scale;
             int r = (int)Math.Ceiling(outer);
 
-            double sum = 0;
-            int count = 0;
+            var values = new List<int>();
             for (int dy = -r; dy <= r; dy++)
             {
                 for (int dx = -r; dx <= r; dx++)
@@ -87,12 +90,13 @@ namespace InventoryKamera
                     if (x < 0 || y < 0 || x >= screenshot.Width || y >= screenshot.Height) continue;
 
                     var p = screenshot[x, y];
-                    sum += Math.Max(p.R, Math.Max(p.G, p.B));
-                    count++;
+                    values.Add(Math.Max(p.R, Math.Max(p.G, p.B)));
                 }
             }
 
-            return count == 0 ? 0 : sum / count;
+            if (values.Count == 0) return 0;
+            values.Sort();
+            return values[values.Count / 2];
         }
     }
 }
