@@ -39,6 +39,43 @@ namespace InventoryKamera.Infrastructure.Tests
             Assert.Equal(expected, MaterialCountReader.ReadCount(bitmap));
         }
 
+        /// <summary>
+        /// Enhancement ores at the end of the weapon page (scrolled to the end, 1080p), read the
+        /// same way. The old fixed crop read the first as 209.
+        /// </summary>
+        [Theory]
+        [InlineData("ore_mystic.png", 259)]
+        [InlineData("ore_fine.png", 131)]
+        [InlineData("ore_enhancement.png", 2)]
+        public void LabelBand_EnhancementOre_ReadsCount(string file, int expected)
+        {
+            using var strip = Load(file);
+
+            var band = MaterialCountReader.FindLabelBand(strip, minRows: 18, maxRows: MaterialCountReader.LabelHeight1080);
+            Assert.NotNull(band);
+
+            var (top, bottom) = band.Value;
+            using var label = strip.Clone(c => c.Crop(new Rectangle(0, top, strip.Width, bottom - top + 1)));
+            using var bitmap = GenshinProcesor.ImageSharpToBitmap(label);
+            Assert.Equal(expected, MaterialCountReader.ReadCount(bitmap));
+        }
+
+        /// <summary>
+        /// The item grid is a full grid, so the last row can end in empty cells. The ore scan skips
+        /// cells without a label strip; a weapon's card has one.
+        /// </summary>
+        [Theory]
+        [InlineData("empty_cell.png", false)]
+        [InlineData("weapon_cell.png", true)]
+        public void FindLabelBand_WeaponPageCell_FindsLabelOnlyOnCards(string file, bool hasCard)
+        {
+            using var strip = Load(file);
+            Assert.Equal(hasCard, MaterialCountReader.FindLabelBand(strip, minRows: 18, maxRows: MaterialCountReader.LabelHeight1080) != null);
+        }
+
+        private static Image<Rgba32> Load(string file) =>
+            Image.Load<Rgba32>(Path.Combine(System.AppContext.BaseDirectory, "TestData", "MaterialCounts", file));
+
         [Fact]
         public void FindLabelBand_NoLabel_ReturnsNull()
         {

@@ -24,10 +24,17 @@ namespace InventoryKamera
             SortByLevel = settings != null ? settings.MinimumWeaponLevel > 1 : false;
         }
 
+        /// <summary>Enhancement ores shown after the weapons, in the order they appear (highest rarity first).</summary>
+        internal static readonly string[] EnhancementOres = { "MysticEnhancementOre", "FineEnhancementOre", "EnhancementOre" };
+
+        // Weapons counted by the last ScanWeapons, for scrolling to the end afterwards
+        private int _weaponCount;
+
         public void ScanWeapons(int count = 0)
         {
             // Determine maximum number of weapons to scan
             int weaponCount = count == 0 ? ScanItemCount() : count;
+            _weaponCount = weaponCount;
             int page = 0;
             var (rectangles, cols, rows) = GetPageOfItems(page);
             int fullPage = cols * rows;
@@ -165,6 +172,94 @@ namespace InventoryKamera
                     }
                     Logger.Debug("Inventory is sorted by quality");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Reads the enhancement ores at the end of the weapon inventory. Call on the weapon page
+        /// after <see cref="ScanWeapons"/>.
+        /// </summary>
+        /// <remarks>
+        /// The ores are always the last items on the weapon page (one card per ore you have, so 0 to
+        /// 3 cards), and the weapon count the game shows doesn't include them, so the weapon scan
+        /// never reaches them. Scroll to the end, then read the last cards backwards (skipping empty
+        /// cells) until one isn't an ore. A weapon can't be taken for an ore: its name has to match one of the three ore
+        /// names closely (95%).
+        /// </remarks>
+        public List<Material> ScanEnhancementOres()
+        {
+            var ores = new List<Material>();
+
+            // Scroll to the end; scrolling past it does nothing. 10 notches per row, as above.
+            _inputSimulator.SetCursor(
+                (int)(_screenCapture.GetWidth() * 0.35),
+                (int)(_screenCapture.GetHeight() * 0.5));
+            int rows = (int)Math.Ceiling((_weaponCount + EnhancementOres.Length) / 8.0) + 1;
+            for (int i = 0; i < 10 * rows; i++)
+            {
+                _inputSimulator.MouseVerticalScroll(-1);
+                _inputSimulator.Wait(1);
+            }
+            _inputSimulator.SystemWait(ScanDelay.Normal);
+
+            var (rectangles, _, _) = GetPageOfItems(999, acceptLess: true);
+            Logger.Debug("Enhancement ores: {0} items on the last weapon page", rectangles.Count);
+
+            // The boxes are a full grid, so the last row can end in empty cells; clicking one doesn't
+            // change the selection. Skip cells without an item card.
+            foreach (var rectangle in Enumerable.Reverse(rectangles))
+            {
+                if (ores.Count == EnhancementOres.Length) break;
+                if (!HasItemCard(rectangle)) continue;
+
+                _inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
+                _inputSimulator.Click();
+                _inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
+
+                string name;
+                using (var card = GetItemCard())
+                using (var nameplate = GetItemNameBitmap(card))
+                    name = ScanEnchancementOreName(nameplate);
+
+                string ore = EnhancementOres.FirstOrDefault(o => string.Equals(o, name, StringComparison.OrdinalIgnoreCase));
+                if (ore == null)
+                {
+                    Logger.Debug("Enhancement ores: stopped at '{0}'", name ?? "(no match)");
+                    break;
+                }
+
+                int quantity = MaterialScraper.ScanMaterialCount(rectangle, out System.Drawing.Bitmap countImage);
+                using (countImage)
+                {
+                    if ((_settings != null && _settings.LogScreenshots) || quantity == 0)
+                        SaveInventoryBitmapGdi(countImage, $"{ore}_Quantity.png");
+                    using (var preview = InventoryKamera.Infrastructure.Scraping.GenshinProcesor.BitmapToImageSharp(countImage))
+                        _userInterface.SetMaterial(preview, ore, quantity);
+                }
+
+                if (quantity == 0)
+                {
+                    _userInterface.AddError($"Failed to parse quantity for {ore}");
+                    continue;
+                }
+
+                Logger.Info("{0}: {1}", ore, quantity);
+                ores.Add(new Material(ore, quantity));
+            }
+
+            return ores;
+        }
+
+        /// <summary>True if an item card fills this grid cell: its light label strip is there.</summary>
+        private bool HasItemCard(ISRect cell)
+        {
+            double scale = _screenCapture.GetHeight() / 1080.0;
+            int top = cell.Bottom - (int)(45 * scale);
+            using (var strip = _screenCapture.CaptureRegion(cell.X, top, cell.Width, (int)(75 * scale)))
+            {
+                return MaterialCountReader.FindLabelBand(strip,
+                    minRows: (int)(18 * scale),
+                    maxRows: (int)Math.Ceiling(MaterialCountReader.LabelHeight1080 * scale)) != null;
             }
         }
 

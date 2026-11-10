@@ -213,6 +213,22 @@ namespace InventoryKamera
 				{
 					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
+				// Enhancement ores sit after the weapons and level weapons, so they come with the
+				// Character Development Items (the only place they're shown is the weapon page)
+				if (S_ScanCharDevItems && !token.IsCancellationRequested && !b_threadCancel)
+				{
+					try
+					{
+						foreach (var ore in weaponScraper.ScanEnhancementOres())
+							Inventory.Materials.Add(ore);
+					}
+					catch (Exception ex)
+					{
+						Logger.Error(ex, "Enhancement ore scan failed");
+						_userInterface.AddError("Could not read enhancement ores: " + ex.Message);
+					}
+				}
+
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning weapons");
 			}

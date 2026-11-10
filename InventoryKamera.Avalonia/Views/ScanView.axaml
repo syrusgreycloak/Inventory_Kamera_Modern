@@ -47,7 +47,8 @@
           <CheckBox Content="Characters"
                     IsChecked="{Binding ScanCharacters, Mode=TwoWay}" />
           <CheckBox Content="Character Dev Items"
-                    IsChecked="{Binding ScanCharDevItems, Mode=TwoWay}" />
+                    IsChecked="{Binding ScanCharDevItems, Mode=TwoWay}"
+                    ToolTip.Tip="Also reads the weapon enhancement ores, which are shown after the weapons. Needs Weapons selected too." />
           <CheckBox Content="Materials"
                     IsChecked="{Binding ScanMaterials, Mode=TwoWay}" />
 
