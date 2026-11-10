@@ -350,10 +350,8 @@ namespace InventoryKamera
 				rarity = GetRarity(bm[a_name]);
 
 
-				// Check for lock color
-				Rgba32 lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
-				Rgba32 lockStatus = bm[a_lock][10, 10];
-				_lock = GenshinProcesor.CompareColors(lockedColor, lockStatus);
+				// Locked if the red padlock shows (see LockReader)
+				_lock = LockReader.IsLocked(bm[a_lock]);
 
 				// Improved Scanning using multi threading
 				Logger.Debug("  Starting OCR tasks for artifact #{0}...", id);

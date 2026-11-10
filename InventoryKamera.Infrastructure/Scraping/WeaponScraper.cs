@@ -257,10 +257,8 @@ namespace InventoryKamera
 				rarity = GetQuality(bm[w_name]);
 
 
-				// Check for lock color
-				var lockedColor = new Rgba32(70, 80, 100, 255); // Dark area around red lock
-				Rgba32 lockStatus = bm[w_lock][5, 5];
-				locked = _imageProcessor.CompareColors(lockedColor, lockStatus);
+				// Locked if the red padlock shows (see LockReader)
+				locked = LockReader.IsLocked(bm[w_lock]);
 
 				List<Task> tasks = new List<Task>();
 
