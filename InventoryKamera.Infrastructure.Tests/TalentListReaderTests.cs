@@ -43,10 +43,29 @@ namespace InventoryKamera.Infrastructure.Tests
         [InlineData("pyro_no_cyan.png", 6, 10, 10)]          // Mavuika
         [InlineData("pyro_with_cyan_dark.png", 7, 10, 10)]   // Diluc C6, dark background
         [InlineData("pyro_with_cyan_light.png", 6, 9, 10)]   // Bennett C6, light clouds behind the text
+        // From a full scan, where a third (since removed) reading made these fall back to clicking
+        [InlineData("scan_cryo_shenhe.png", 1, 1, 1)]
+        [InlineData("scan_cryo_freminet.png", 4, 4, 1)]      // C6: auto and skill boosted
+        [InlineData("scan_cryo_sandrone.png", 8, 7, 6)]
+        [InlineData("scan_electro_dori.png", 1, 4, 4)]
+        [InlineData("scan_pyro_arlecchino.png", 10, 10, 6)]
         public void ReadLevels_SavedScreen_ReturnsShownLevels(string file, int auto, int skill, int burst)
         {
             using var screenshot = Screenshot(file);
             Assert.Equal(new[] { auto, skill, burst }, TalentListReader.ReadLevels(screenshot, _fixture.Ocr));
+        }
+
+        /// <summary>
+        /// Screens from a full scan where one level can't be read (a sparkle on Kazuha's skill
+        /// "Lv.", a light patch of background behind Xinyan's auto level): must fall back, not guess.
+        /// </summary>
+        [Theory]
+        [InlineData("scan_anemo_kazuha_sparkle.png")]
+        [InlineData("scan_pyro_xinyan_light_patch.png")]
+        public void ReadLevels_LevelObscured_IsInconclusive(string file)
+        {
+            using var screenshot = Screenshot(file);
+            Assert.Null(TalentListReader.ReadLevels(screenshot, _fixture.Ocr));
         }
 
         [Fact]

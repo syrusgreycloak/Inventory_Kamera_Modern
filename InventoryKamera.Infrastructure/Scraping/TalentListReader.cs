@@ -17,9 +17,11 @@ namespace InventoryKamera
     /// constellation are cyan, the rest white. The level lines sit at fixed heights (long names wrap
     /// upwards), and passives have no level line, so the "Lv." lines in order are auto, skill and
     /// burst, also for Mona and Ayaka, whose sprint talent sits between skill and burst.
-    /// Measured on 15 screenshots (every element, with and without cyan levels): each of the three
-    /// readings below got all 15 right, but neighbouring settings got 14, because background
-    /// sparkles (and Cryo's snowflakes) can land on a digit. Hence three readings that must agree.
+    /// Measured on 109 screens (a full 94-character scan plus 15 hand-picked ones, every element,
+    /// with and without cyan levels): both readings below were right on 104, and never returned
+    /// three levels that were wrong. On the other 5 a sparkle on a "Lv." line (or a light patch of
+    /// background) hid one level, which leaves two levels and falls back to clicking. Lower mask
+    /// thresholds let more background through and did worse. The two readings must agree.
     /// </remarks>
     public static class TalentListReader
     {
@@ -43,7 +45,6 @@ namespace InventoryKamera
             {
                 Read(screenshot, ocrEngine, NarrowRegion1080, minGreenBlue: 200, scale: 2),
                 Read(screenshot, ocrEngine, WideRegion1080,   minGreenBlue: 200, scale: 2),
-                Read(screenshot, ocrEngine, NarrowRegion1080, minGreenBlue: 190, scale: 3),
             };
 
             var first = readings[0];

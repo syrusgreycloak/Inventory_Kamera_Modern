@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using DrawingSize = System.Drawing.Size;
@@ -530,8 +531,7 @@ namespace InventoryKamera
 				{
 					if ((_settings != null ? _settings.LogScreenshots : false))
 					{
-						Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
-						screenshot.Save($"./logging/characters/{character.NameGOOD}/constellation.png");
+						SaveInBackground(screenshot, $"./logging/characters/{character.NameGOOD}", "constellation.png");
 					}
 
 					int? counted = ConstellationReader.CountActivated(screenshot);
@@ -594,6 +594,24 @@ namespace InventoryKamera
 			return constellation;
 		}
 
+		/// <summary>
+		/// Saves a copy of a full-screen debug image without holding up the scan: encoding a
+		/// 1920x1080 PNG takes about a second, which is more than reading the screen.
+		/// </summary>
+		private static void SaveInBackground(Image<Rgba32> image, string directory, string fileName)
+		{
+			Directory.CreateDirectory(directory);
+			var copy = image.Clone();
+			Task.Run(() =>
+			{
+				using (copy)
+				{
+					try { copy.Save(Path.Combine(directory, fileName)); }
+					catch (Exception ex) { Logger.Warn(ex, "Could not save debug image {0}", fileName); }
+				}
+			});
+		}
+
 		private Dictionary<string, int> ScanTalents(Character character)
 		{
 			Logger.Debug("Starting talent scan for character: {0}", character.NameGOOD);
@@ -612,15 +630,14 @@ namespace InventoryKamera
 				{
 					if ((_settings != null ? _settings.LogScreenshots : false))
 					{
-						Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
-						screenshot.Save($"./logging/characters/{character.NameGOOD}/talents.png");
+						SaveInBackground(screenshot, $"./logging/characters/{character.NameGOOD}", "talents.png");
 					}
 
 					int[] levels = TalentListReader.ReadLevels(screenshot, _ocrEngine);
 					if (levels != null)
 					{
 						var names = new[] { "auto", "skill", "burst" };
-						var listRegion = TalentListReader.WideRegion1080;
+						var listRegion = TalentListReader.NarrowRegion1080;
 						double sx = screenshot.Width / 1920.0, sy = screenshot.Height / 1080.0;
 						using (var list = screenshot.Clone(c => c.Crop(new ISRect(
 							(int)(listRegion.X * sx), (int)(listRegion.Y * sy),
