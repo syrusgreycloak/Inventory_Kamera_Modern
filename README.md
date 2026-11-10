@@ -6,21 +6,24 @@ This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you
 
 ## About this project
 
-> **Note:** As of Milestone 2, the cross-platform Avalonia UI at `InventoryKamera.Avalonia/` is the recommended build. The Windows Forms project (`InventoryKamera/`) is deprecated and will be removed in Milestone 2.2. See `InventoryKamera/DEPRECATED.md` for details.
+**Inventory Kamera Modern** is a modernized fork of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera) (later maintained at [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera)). It keeps the same approach, OCR on screenshots of the game menus, with a new UI and a reworked scanner:
 
-**Inventory Kamera Modern** is a modernized rewrite of the original [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera). The original project is no longer actively maintained; this fork carries it forward with the following changes:
+- **New Avalonia UI** with Scan, Export, Settings and About tabs and a live console. The old Windows Forms UI is retired; its last version is kept on the [`history`](../../tree/history) branch and the `winforms-final` tag.
+- **.NET 8** (from .NET Framework 4.7.2), with the scanning logic split into `InventoryKamera.Core` and `InventoryKamera.Infrastructure` and covered by tests.
+- **GOOD v3 export**, including equipped weapons and artifacts, and a one-click upload to Genshin Optimizer.
+- **Faster character scans:** talent levels are read from one screenshot of the Talents tab instead of opening each talent (it falls back to clicking when the screenshot is unclear), and the constellation tab is read as it opens.
+- **Scanning fixes**, among them:
+  - material counts are read from the card's label strip, so the last page (fish included) no longer misreads;
+  - artifact and weapon locks are detected by the red padlock, so locks aren't missed on the Fast scan speed;
+  - character levels, constellations (including the C3/C5 talent order) and long names such as Kaedehara Kazuha read correctly.
+- **Configurable game data source:** if the game data repository moves, point the updater at the new one in Settings.
 
-- **Migrated to .NET 8** (from .NET Framework 4.7.2). Modern runtime, modern tooling, modern dependencies.
-- **Platform-agnostic Core library** extracted from the WinForms project so the business logic can be reused across UIs.
-- **Updated OCR pipeline** to `TesseractOCR 5.5.2`, with material quantity OCR accuracy improved from ~50% to effectively 100%.
-- **Externalized scan region coordinates** into `inventorylists/ScanProfile.json` so users can adjust them without recompiling.
-
-The current UI is still Windows Forms. The next major step is a cross-platform **Avalonia** UI that will allow the app to run on Windows, macOS, and Linux from the same codebase. Windows Forms will continue to ship until Avalonia reaches feature parity, then it will be retired.
+On the maintainer's account (94 characters, 155 weapons, 684 artifacts, about 600 materials) a full scan at Fast speed matches the game exactly.
 
 ## Table of Contents
 > **Note**
 >
-> Please **read the following instructions carefully** and setup before using the scanner.
+> Please **read the following instructions carefully** and set up before using the scanner.
 - Getting Started
   - [Installing Inventory Kamera Modern](#installing-inventory-kamera-modern)
   - [Setting up Genshin Impact](#setting-up-genshin-impact)
@@ -41,28 +44,21 @@ Before installing Inventory Kamera Modern, please have **the following things in
 
 - [GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/) launcher
 - [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x86 or x64)](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022), _**A computer restart may be required after installing this package for the first time**_
-- [.NET 8 Runtime (Windows Desktop)](https://dotnet.microsoft.com/download/dotnet/8.0) — required to run the application
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) to build the app (the .NET 8 Desktop Runtime is enough to run a build)
 
 Inventory Kamera Modern does not currently publish prebuilt binaries. To run it, build from source:
 
-### Building the Avalonia version (recommended)
-
 ```bash
-dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Debug
+git clone https://github.com/syrusgreycloak/Inventory_Kamera_Modern.git
+cd Inventory_Kamera_Modern
+dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Release
 # Run:
-InventoryKamera.Avalonia/bin/Debug/net8.0-windows/InventoryKamera.Avalonia.exe
+InventoryKamera.Avalonia/bin/Release/net8.0-windows/InventoryKamera.Avalonia.exe
 ```
 
-### Building the WinForms version (deprecated)
+The app asks for administrator rights when it starts. It needs them to send keyboard and mouse input to the game, which runs elevated. (If you run it from an IDE such as Rider, start the IDE as administrator and use the `net8.0-windows` target.)
 
-1. Clone this repository.
-2. Open `InventoryKamera.sln` in JetBrains Rider or Visual Studio 2022.
-3. Build the `InventoryKamera` project in `Debug` or `Release` configuration.
-4. Launch `InventoryKamera.exe` from the build output directory (e.g. `InventoryKamera/bin/Debug/net8.0-windows/`).
-
-**Note:** The WinForms version is deprecated and will be removed in Milestone 2.2. Use the Avalonia version instead.
-
-The application may prompt you for Security and/or User Access on first launch. This access is required to interact with the game.
+Scanning is Windows-only, because it captures and controls the game window.
 
 ## Setting up Genshin Impact
 
@@ -75,36 +71,35 @@ The application may prompt you for Security and/or User Access on first launch. 
      - Don't know if a resolution is 16:9 or 16:10? [Find out here](https://andrew.hedges.name/experiments/aspect_ratio/).
         > **Warning**
         >
-        > Ultrawide screens are not supported.
+        > Ultrawide screens (21:9) are not supported yet. Run the game windowed at a 16:9 resolution instead.
         > Additionally, HDR is not currently supported. If you experience scanning issues, please make sure this is disabled in Windows Settings
    - Under `Controls`, set _Control Type_ to Keyboard.
-     - If you rebound keys (inventory (default: B), character screen (default: C), or selecting character 1 (default: 1)) revert your binding to default or set up the new key binding in Inventory Kamera Modern.
+     - If you rebound keys (inventory (default: B), character screen (default: C), or selecting character 1 (default: 1)) revert your binding to default or set the new key bindings under `Settings` > `Hotkeys`.
 
 ## How to configure Inventory Kamera Modern
 
-Before starting the scanner, you can (optionally) edit the following options:
+Open the `Settings` tab before scanning. You can:
 
-- Select which categories (weapons, artifacts, characters, items) you want to scan.
-- Configure minimum weapon and artifact rarity to be scanned.
-- Set the scanner delays to slow Inventory Kamera Modern's scanning speed if you experience problems with scanning.
-- Set the file export destination in the File Directory.
-- Inventory Kamera Modern uses the default keybinds to open the inventory (B) and character screens (C). These settings may be customized within Inventory Kamera Modern's options.
+- Choose a **Scan Speed**: _Fast_, _Normal_ or _Slow_. Start with Fast; if you see misreads on a slower PC, try Normal.
+- Set **Item Filters**: minimum weapon and artifact rarity and level.
+- Choose whether to **update equipped weapons and artifacts** during the scan (needed for the `location` field in the export).
+- Enter your **Traveler** and **Wanderer** names if you renamed them (leave blank to auto-detect).
+- Rebind the **Hotkeys** for the inventory, character screen and first character slot.
+- Pick the **Output folder** for exports.
+- Turn on **Log all scan screenshots** to save what the scanner saw to the `logging` folder (useful for bug reports).
+- Under **Advanced**, change the **Game data source** (see [Updating for new game versions](#updating-for-new-game-versions)).
 
 ## How to run Inventory Kamera Modern
 
-1. Start the Inventory Kamera Modern scan by **leaving the game with the Paimon Menu open** and clicking 'Scan'.
+1. Open the game and **leave it on the Paimon Menu**.
+2. In the `Scan` tab, choose the categories to scan (Characters, Weapons, Artifacts, Materials, Character Dev Items) and click **Start Scan**.
 > **Warning**
 >
-> While scanning, **do not use your mouse or keyboard**. The scanner uses keyboard and mouse input to automate scanning.
+> While scanning, **do not use your mouse or keyboard**. The scanner uses keyboard and mouse input to automate scanning, and moving the mouse can make it misread.
 >
-> If you want to terminate the scan early, you can press `ENTER` button at any time. This will cancel the scan, and the application will not automatically output any scanned results. You may press the 'Export Scanned Data' button to force the export of the most recently collected data (whether it's complete or incomplete).
+> To stop a scan early, Alt+Tab to Inventory Kamera Modern and press `Esc` or `Enter`, or click **Stop Scan**. Nothing is exported automatically after a cancelled scan; use **Manual Export** to save what was scanned so far.
 
-2. Wait for Inventory Kamera Modern to complete its scan for the `Scan Items` selections.
-
-3. Press the `Open Export Folder` button to open a File Explorer window. This is where Inventory Kamera Modern exports its scanned data.
-
-
-
+3. When the scan finishes, the GOOD file is written to the output folder. Use **Open output folder** in the `Export` tab to find it, or **Upload to Genshin Optimizer** to copy the data and open the optimizer.
 
 ## Updating for new game versions
 
@@ -112,9 +107,9 @@ Inventory Kamera Modern uses lists of valid items and characters to assist with 
 
 ### Updating automatically
 
-A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera Modern syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/animegamedata2) for new game versions. Big thanks for all the hard work done there.
+Click `Update game data` in the `About` tab after each game update. Inventory Kamera Modern syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/animegamedata2) for new game versions. Big thanks for all the hard work done there.
 
-If the update window does not show up when the applications starts, you can select `Update Lookup Tables` under `Options` to run the automatic updater. You may optionally force the updater to run if it does not detect a new Genshin Impact version. 
+If it doesn't find a newer game version, it offers to run the update anyway.
 
 If the game data repository moves again, you can point the updater at the new one without waiting for an app update: under `Settings` > `Advanced` > `Game data source`, paste the GitLab or GitHub repository URL and branch, then use `Test` to check it. `Reset to default` restores Dimbreath's repository.
 
@@ -122,7 +117,7 @@ If the game data repository moves again, you can point the updater at the new on
 
 > **Warning**
 > 
-> This option should only be necessary if Inventory Kamera Modern's `Update Lookup Tables` reports an error or the generated ouputs are invalid.
+> This option should only be necessary if `Update game data` reports an error or the generated outputs are invalid.
 
 The materials and weapons lists are kept in a simple key:value JSON-readable format. 'value' is the name of an item in [PascalCase](<https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats>) and 'key' is whatever 'value' is but in lowercase. 
 
@@ -230,7 +225,7 @@ Consider using [a JSON text validator](https://jsonlint.com/) after following th
 
 ## Reporting an issue
 
-If you run into a problem with the scanner (e.g. a bug, app crash, invalid export format), please open an issue on this project's GitHub repository and try to fill it out as much as possible. Screenshots, video recordings, and the contents of the `logging` folder are extremely helpful for debugging — attach a zipped copy if relevant. You may check the 'Log All Screenshots' box to force screenshot capture in most areas that may concern the developer.
+If you run into a problem with the scanner (e.g. a bug, app crash, invalid export format), please open an issue on this project's GitHub repository and try to fill it out as much as possible. Screenshots, video recordings, and the contents of the `logging` folder are extremely helpful for debugging — attach a zipped copy if relevant. You may turn on 'Log all scan screenshots' in Settings to force screenshot capture in most areas that may concern the developer.
 
 > **Note**
 >
