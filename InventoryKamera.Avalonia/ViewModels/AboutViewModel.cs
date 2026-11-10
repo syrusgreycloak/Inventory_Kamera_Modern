@@ -314,6 +314,10 @@ namespace InventoryKamera.Avalonia.ViewModels
         /// </summary>
         private bool ConfirmWaitForRateLimit()
         {
+            // Without a running Avalonia application (e.g. under unit tests) there is no UI thread to
+            // show the dialog on, and waiting for one would block forever: keep retrying instead.
+            if (global::Avalonia.Application.Current == null) return true;
+
             return Dispatcher.UIThread.InvokeAsync(() => _dialog.ConfirmAsync(
                     $"{HostName} is limiting downloads",
                     $"{HostName}, which hosts the game data, is temporarily limiting downloads. " +

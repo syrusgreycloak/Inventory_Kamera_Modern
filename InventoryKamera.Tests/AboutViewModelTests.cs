@@ -218,20 +218,17 @@ namespace InventoryKamera.Tests
         // ─────────────────────────────────────────────────────────────────────
 
         [Fact]
-        public async Task UpdateGameData_ResetsIsUpdatingGameData_OnCompletion()
+        public async Task UpdateGameData_InvalidSource_ShowsErrorWithoutDownloading()
         {
-            var (vm, _, _, _) = MakeVm();
+            // An invalid repository setting stops the command before any network access. (This test
+            // used to run a real game data update, which hung the suite when GitLab rate-limited it.)
+            var (vm, _, _, dialog) = MakeVm(new ScanSettings { GameDataRepoUrl = "https://bitbucket.org/a/b" });
 
-            // UpdateGameData calls DatabaseManager.UpdateGameData() synchronously.
-            // We cannot mock the database manager here, but we can verify the flag resets.
-            try
-            {
-                await vm.UpdateGameDataCommand.ExecuteAsync(null);
-            }
-            catch { /* file/network errors are swallowed */ }
+            await vm.UpdateGameDataCommand.ExecuteAsync(null);
 
+            dialog.Verify(d => d.ShowErrorAsync("Invalid game data source", It.Is<string>(m => m.Contains("gitlab.com and github.com"))), Times.Once);
             Assert.False(vm.IsUpdatingGameData,
-                "IsUpdatingGameData must be reset to false after the command finishes");
+                "IsUpdatingGameData must be false after the command finishes");
         }
 
         // ─────────────────────────────────────────────────────────────────────
