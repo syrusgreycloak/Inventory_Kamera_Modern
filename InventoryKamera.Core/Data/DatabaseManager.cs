@@ -37,8 +37,10 @@ namespace InventoryKamera
 
         private readonly string NewVersion = "version.txt";
 
-        private const string commitsAPIURL = "https://gitlab.com/api/v4/projects/53216109/repository/commits";
-        private const string repoBaseURL = "https://gitlab.com/Dimbreath/AnimeGameData/-/raw/master/";
+        // Dimbreath/AnimeGameData (project 53216109) was deprecated at game version 6.6 after hitting the
+        // GitLab repository size limit; data from 7.0 on is published in Dimbreath/animegamedata2 (branch "main").
+        private const string commitsAPIURL = "https://gitlab.com/api/v4/projects/83871005/repository/commits";
+        private const string repoBaseURL = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/";
         private const string TextMapEnURL = repoBaseURL + "TextMap/TextMapEN.json";
         private const string TextMapMediumEnURL = repoBaseURL + "TextMap/TextMap_MediumEN.json";
         private const string CharactersURL = repoBaseURL + "ExcelBinOutput/AvatarExcelConfigData.json";
@@ -427,7 +429,7 @@ namespace InventoryKamera
 
                                 foreach (var element in playerElements)
                                 {
-                                    var elementSkill = skills.FirstOrDefault(entry => entry["skillIcon"].ToString().Contains($"Skill_S_Player{element.Key}"));
+                                    var elementSkill = skills.FirstOrDefault(entry => entry["skillIcon"]?.ToString().Contains($"Skill_S_Player{element.Key}") == true);
                                     
 
                                     if (elementSkill == null) continue;
@@ -440,7 +442,9 @@ namespace InventoryKamera
                                     }
                                     skill = Mappings[skillHash].ToString();
 
-                                    const3Description = talents.Where(entry => entry["openConfig"].ToString().Contains($"Player_{element.Key}")).ElementAt(2)["descTextMapHash"].ToString();
+                                    var travelerConst3 = talents.Where(entry => entry["openConfig"]?.ToString().Contains($"Player_{element.Key}") == true).ElementAtOrDefault(2);
+                                    if (travelerConst3 == null) continue;
+                                    const3Description = travelerConst3["descTextMapHash"].ToString();
                                     if (!Mappings.ContainsKey(const3Description))
                                     {
                                         Logger.Warn("Character {0} traveler constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);
@@ -461,7 +465,14 @@ namespace InventoryKamera
                             }
                             else // Any other character that isn't traveler
                             {
-                                skill = skills.First(entry => entry["skillIcon"].ToString().Contains($"Skill_S_{name}"))["nameTextMapHash"].ToString();
+                                // Newer AvatarSkillExcelConfigData entries can omit "skillIcon", so guard against null
+                                var skillEntry = skills.FirstOrDefault(entry => entry["skillIcon"]?.ToString().Contains($"Skill_S_{name}") == true);
+                                if (skillEntry == null)
+                                {
+                                    Logger.Warn("Character {0} has no skill entry with icon Skill_S_{1}.", nameGOOD, name);
+                                    return;
+                                }
+                                skill = skillEntry["nameTextMapHash"].ToString();
                                 if (!Mappings.ContainsKey(skill))
                                 {
                                     Logger.Warn("Character {0} skill hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, skill);
@@ -478,7 +489,13 @@ namespace InventoryKamera
                                 var constellationOrder = new JArray();
 
                                 // The skill/burst/auto name is always mentioned in the constellation's description so we'll check for it
-                                const3Description = talents.Where(entry => entry["icon"].ToString().Contains(name)).ElementAt(2)["descTextMapHash"].ToString();
+                                var const3Entry = talents.Where(entry => entry["icon"]?.ToString().Contains(name) == true).ElementAtOrDefault(2);
+                                if (const3Entry == null)
+                                {
+                                    Logger.Warn("Character {0} has no third constellation entry for icon {1}.", nameGOOD, name);
+                                    return;
+                                }
+                                const3Description = const3Entry["descTextMapHash"].ToString();
                                 if (!Mappings.ContainsKey(const3Description))
                                 {
                                     Logger.Warn("Character {0} constellation hash {1} not found in Mappings. It's likely unreleased.", nameGOOD, const3Description);

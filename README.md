@@ -112,7 +112,7 @@ Inventory Kamera Modern uses lists of valid items and characters to assist with 
 
 ### Updating automatically
 
-A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera Modern syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
+A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera Modern syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/animegamedata2) for new game versions. Big thanks for all the hard work done there.
 
 If the update window does not show up when the applications starts, you can select `Update Lookup Tables` under `Options` to run the automatic updater. You may optionally force the updater to run if it does not detect a new Genshin Impact version. 
 
