@@ -346,84 +346,45 @@ namespace InventoryKamera
 
 		public static int ScanMaterialCount(ISRect rectangle, out Bitmap quantity)
 		{
-			Dictionary<int, int> counts = new Dictionary<int, int>();
-			// Anchor from the bottom of the rectangle using a fixed screen-height proportion.
-			// Percentage-from-top drifts when scroll misalignment makes rectangles taller than normal.
-			int captureHeight = (int)(0.015 * Navigation.GetHeight());
-			var region = new RECT(
+			// Capture a taller strip around the bottom of the detected card and crop to the card's
+			// label strip, wherever it is (see MaterialCountReader.FindLabelBand). The old fixed crop,
+			// kept as the fallback, assumed the detected box ends inside the label, which isn't true
+			// for the bottom row of a scrolled-to-the-end last page.
+			double scale = Navigation.GetHeight() / 1080.0;
+			var strip = new RECT(
 				Left: rectangle.X,
-				Top: rectangle.Bottom - captureHeight,
+				Top: rectangle.Bottom - (int)(45 * scale),
 				Right: rectangle.Right,
-				Bottom: rectangle.Bottom + 10);
+				Bottom: rectangle.Bottom + (int)(30 * scale));
 
-            var rRange = new IntRange(0, 150);
-            var bRange = new IntRange(0, 150);
-            var gRange = new IntRange(0, 150);
-
-            using (Bitmap bm = Navigation.CaptureRegion(region))
+			using (Bitmap tall = Navigation.CaptureRegion(strip))
 			{
-				quantity = (Bitmap)bm.Clone();
+				(int Top, int Bottom)? band;
+				using (var image = GenshinProcesor.BitmapToImageSharp(tall))
+					band = MaterialCountReader.FindLabelBand(image,
+						minRows: (int)(18 * scale),
+						maxRows: (int)Math.Ceiling(MaterialCountReader.LabelHeight1080 * scale));
 
-				for (var scale = 1.0; scale <= 3; scale += 0.5)
-                {
-					using (Bitmap rescaled = GenshinProcesor.ResizeImage(bm, (int)(bm.Width * scale), (int)(bm.Height * scale)))
-                    {
-                        Bitmap copy = (Bitmap)rescaled.Clone();
-                        GenshinProcesor.FilterColors(ref copy, rRange, gRange, bRange);
-
-                        // Top 25% whitewash removed: it erased digits when row drift placed them
-                        // at TopY 0-5 within the captured strip. Page-5 success without whitewash
-                        // confirmed the icon-edge noise it suppressed wasn't actually load-bearing.
-
-                        Bitmap n = GenshinProcesor.ConvertToGrayscale(copy);
-
-						GenshinProcesor.SetInvert(ref n);
-
-                        string original = GenshinProcesor.AnalyzeText(n).Trim();
-
-						n.Dispose();
-						copy.Dispose();
-
-                        // Parse: clean integer first; otherwise strip junk chars and retry.
-                        bool cleanParse = int.TryParse(original, out int val);
-                        var cleaned = original;
-                        if (!cleanParse)
-                        {
-                            cleaned = cleaned.Replace("M", "111");
-                            cleaned = Regex.Replace(cleaned, @"[^0-9]", string.Empty);
-                            int.TryParse(cleaned, out val);
-                        }
-
-                        Logger.Debug($"Scanned: {original} -> Regex: {cleaned} -> Parsed: {val}");
-
-                        // Vote: track every parse; short-circuit on confidence.
-                        counts[val] = counts.TryGetValue(val, out var existing) ? existing + 1 : 1;
-
-                        // Confidence rules — return early only when sure:
-                        // (a) two matching parses across scales, OR
-                        // (b) one clean multi-digit parse (single-digit values like "1" need a
-                        //     confirming scale because Tesseract often collapses "11" -> "1").
-                        if (val != 0 && (counts[val] >= 2 || (cleanParse && val >= 10)))
-                            return val;
-                    }
-                }
+				if (band.HasValue)
+				{
+					var (top, bottom) = band.Value;
+					quantity = tall.Clone(new System.Drawing.Rectangle(0, top, tall.Width, bottom - top + 1), tall.PixelFormat);
+					Logger.Debug("Count label strip at rows {0}-{1} of the captured strip", top, bottom);
+				}
+				else
+				{
+					// Previous fixed crop: anchored to the bottom of the detected box
+					int captureHeight = (int)(0.015 * Navigation.GetHeight());
+					int fixedTop = (int)(45 * scale) - captureHeight;
+					int fixedHeight = Math.Min(captureHeight + 10, tall.Height - fixedTop);
+					quantity = tall.Clone(new System.Drawing.Rectangle(0, fixedTop, tall.Width, fixedHeight), tall.PixelFormat);
+					Logger.Debug("No count label strip found; using the fixed crop");
+				}
 			}
-			
-			var nullableMode = SafeExtractMaxCounter(counts);
-			if (nullableMode == null)
-				return 1;
 
-			var mode = nullableMode.Value;
-			if (mode.Key == 0 && counts.Count >= 5)
-				return 1;
-
-			counts.Remove(mode.Key);
-			return SafeExtractMaxCounter(counts)?.Key ?? 1;
+			using (var bm = (Bitmap)quantity.Clone())
+				return MaterialCountReader.ReadCount(bm, Logger);
 		}
 
-		private static KeyValuePair<int, int>? SafeExtractMaxCounter(Dictionary<int, int> counts)
-		{
-            return counts.Count == 0 ? null : (KeyValuePair<int, int>?)counts.Aggregate((l, r) => l.Value > r.Value ? l : r);
-        }
     }
 }
