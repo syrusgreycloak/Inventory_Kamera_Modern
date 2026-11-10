@@ -524,6 +524,35 @@ namespace InventoryKamera
 				Right:  (int)( 100 / 1280.0 * _screenCapture.GetWidth() ),
 				Bottom: (int)( 695 / 720.0 * _screenCapture.GetHeight() ));
 
+			// Fast path (16:9): select the first constellation, then read all six nodes from one
+			// screenshot. Clicking through each one took ~1.6 s per activated constellation.
+			if (_screenCapture.GetAspectRatio() == new ISSize(16, 9))
+			{
+				_inputSimulator.SetCursor((int)( 1130 / 1280.0 * _screenCapture.GetWidth() ), (int)( 180 / yReference * _screenCapture.GetHeight() ));
+				_inputSimulator.Click();
+				_inputSimulator.SystemWaitMs(700);
+
+				using (var screenshot = _screenCapture.CaptureWindow())
+				{
+					if ((_settings != null ? _settings.LogScreenshots : false))
+					{
+						Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
+						screenshot.Save($"./logging/characters/{character.NameGOOD}/constellation.png");
+					}
+
+					int? counted = ConstellationReader.CountActivated(screenshot);
+					if (counted.HasValue)
+					{
+						Logger.Debug("Completed constellation scan for {0}: {1} constellations activated (single screenshot)", character.NameGOOD, counted.Value);
+						Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
+						_userInterface.SetCharacter_Constellation(counted.Value);
+						return counted.Value;
+					}
+
+					Logger.Info("Constellation screenshot for {0} was inconclusive; checking each constellation instead", character.NameGOOD);
+				}
+			}
+
 			for (constellation = 0; constellation < 6; constellation++)
 			{
 				// Select Constellation
