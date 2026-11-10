@@ -353,7 +353,10 @@ namespace InventoryKamera
 			Image<Rgba32> n = _imageProcessor.SetGrayscale(image);
 			n = _imageProcessor.SetInvert(n);
 
-			string text = _ocrEngine.AnalyzeText(n).Trim();
+			// Restrict OCR to digits: unconstrained, Tesseract read every R2 badge as "|?)" (the badge's
+			// edges became "|" and ")" and the 2 became "?"). With the digit whitelist all 155 saved
+			// refinement crops from a full scan (R1-R5) read correctly.
+			string text = _ocrEngine.AnalyzeText(n, PageSegmentationMode.SingleLine, numbersOnly: true).Trim();
 			n.Dispose();
 
 			// Debug logging to see raw OCR output
