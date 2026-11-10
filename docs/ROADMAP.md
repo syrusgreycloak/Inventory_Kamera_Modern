@@ -6,7 +6,7 @@
 
 ---
 
-## Three Milestones
+## Milestones
 
 ### Milestone 1: .NET 8 + Core Extraction
 *Foundation — enables everything else*
@@ -25,6 +25,15 @@
 **Complete (2026-11-10).** New Avalonia UI sharing the Core library. WinForms remained available until Avalonia reached feature parity, then was removed from master (kept on the `history` branch and the `winforms-final` tag). Windows-only scanning; the macOS/Linux build compiles but hasn't been run on those platforms.
 
 → [Full plan](MILESTONE_2_AVALONIA.md)
+
+---
+
+### Milestone 2.5: Linux Scanning
+*Scan from Linux while the game runs under Wine/Proton*
+
+**Planned.** Make the scanner platform-independent (move it to a `net8.0` project, port OCR preprocessing from System.Drawing to ImageSharp, route the last direct Windows calls through the interfaces), then add Linux screen capture, input and window lookup (X11/XTest, or uinput). Independent of Milestone 3; the first step is worth doing anyway.
+
+→ [Full plan](MILESTONE_2_5_LINUX_SCANNING.md)
 
 ---
 
@@ -62,12 +71,12 @@ All four are done:
 
 **Open, not scheduled:**
 
-- Run the macOS/Linux build on those platforms (scanning shows a "Windows only" warning there).
+- Run the Linux build (UI only) on the CachyOS laptop; scanning on Linux is Milestone 2.5.
 - Visual region editor for `ScanProfile.json` (Milestone 2 stretch goal).
 - Ultrawide (21:9) support: express regions relative to the left, right or centre edge, scaled by height.
 - Material count OCR: digit template matching instead of Tesseract, if count misreads return.
 
-**Next:** Milestone 3.
+**Next:** Milestone 2.5 step 1 (platform-independent scanner), then Milestone 3. They're independent, so the order can change.
 
 ---
 

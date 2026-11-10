@@ -2,11 +2,11 @@
 
 ## Overview
 
-Inventory Kamera Modern has moved from a Windows-only WinForms application to an Avalonia app on .NET 8 (Milestones 1 and 2, complete). Next is AI-powered team and meta analysis (Milestone 3). This directory contains the planning documents.
+Inventory Kamera Modern has moved from a Windows-only WinForms application to an Avalonia app on .NET 8 (Milestones 1 and 2, complete). Next are Linux scanning (Milestone 2.5) and AI-powered team and meta analysis (Milestone 3). This directory contains the planning documents.
 
 ## Start Here
 
-**[ROADMAP.md](ROADMAP.md)** — Three-milestone modernization plan, key decisions, and what changed from the previous plans.
+**[ROADMAP.md](ROADMAP.md)** — Milestone plan and current status, key decisions, and what changed from the previous plans.
 
 ## Milestone Plans
 
@@ -14,6 +14,7 @@ Inventory Kamera Modern has moved from a Windows-only WinForms application to an
 |----------|----------|
 | [MILESTONE_1_NET8_CORE.md](MILESTONE_1_NET8_CORE.md) | ✅ .NET 8 migration, Core library extraction, Strangler Fig refactoring |
 | [MILESTONE_2_AVALONIA.md](MILESTONE_2_AVALONIA.md) | ✅ Avalonia UI, MVVM, cross-platform builds, OCR preview panel, WinForms removal |
+| [MILESTONE_2_5_LINUX_SCANNING.md](MILESTONE_2_5_LINUX_SCANNING.md) | Platform-independent scanner, Linux capture/input for scanning under Wine/Proton (planned) |
 | [MILESTONE_3_AI_ANALYSIS.md](MILESTONE_3_AI_ANALYSIS.md) | SQLite scan history, MCP server for Claude Desktop (not started; GOOD v3 done) |
 | [QUICK_WINS.md](QUICK_WINS.md) | ✅ elixirCrafted, ScanProfile.json, Tesseract upgrade, configurable data source |
 
