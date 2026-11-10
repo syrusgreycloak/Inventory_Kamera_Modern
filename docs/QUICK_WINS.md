@@ -2,9 +2,13 @@
 
 These improvements are independent of the 3-milestone sequence and can be done at any time.
 
+> **All four are done (as of 2026-11-10).** File paths below refer to the old WinForms project and are kept as a record of the plan.
+
 ---
 
-## 1. GOOD v3: elixirCrafted (1-2 hours)
+## 1. GOOD v3: elixirCrafted (1-2 hours) ✅
+
+Done 2026-11-10: `ElixirReader` in Infrastructure, exported as `elixirCrafted`.
 
 Detection already exists in `IsSanctified()`. Just needs wiring to the export.
 
@@ -37,7 +41,9 @@ Version = 3;  // was 2
 
 ---
 
-## 2. ScanProfile.json (1-2 days)
+## 2. ScanProfile.json (1-2 days) ✅
+
+Done: `reference_data/ScanProfile.json`, read by every scraper through `IScanProfileService`.
 
 Externalize all hard-coded scan region coordinates so users can adjust them without recompiling.
 
@@ -47,7 +53,9 @@ See [Milestone 1, Step 1.4](MILESTONE_1_NET8_CORE.md) for full implementation de
 
 ---
 
-## 3. Tesseract 5.5.2 Evaluation (1-2 days)
+## 3. Tesseract 5.5.2 Evaluation (1-2 days) ✅
+
+Done: upgraded to `TesseractOCR 5.5.2`; the `TesseractEval` project was removed afterwards.
 
 Validate that `TesseractOCR 5.5.2` fixes the threading deadlocks present in `Tesseract 5.2.0`.
 
@@ -67,7 +75,9 @@ The `TesseractEval` console project (`TesseractEval/`) initializes 8 engines wit
 
 ---
 
-## 4. Configurable Data Sources
+## 4. Configurable Data Sources ✅
+
+Done differently: the game data repository and branch are set in Settings > Advanced > Game data source (`GameDataSource`), with a Test button, instead of a `datasources.json` file.
 
 Move hard-coded GitHub URLs in `DatabaseManager.cs` to a `datasources.json` config file. Users pointing to a different fork (e.g., a community-maintained version) can do so without recompiling.
 
@@ -107,4 +117,4 @@ private Dictionary<string, string> LoadDataSources()
 
 ---
 
-*Last updated: 2026-04-12*
+*Last updated: 2026-11-10*

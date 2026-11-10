@@ -2,7 +2,7 @@
 
 ## Overview
 
-Inventory Kamera is evolving from a Windows-only WinForms application to a cross-platform tool with AI-powered team and meta analysis. This directory contains the current planning documents.
+Inventory Kamera Modern has moved from a Windows-only WinForms application to an Avalonia app on .NET 8 (Milestones 1 and 2, complete). Next is AI-powered team and meta analysis (Milestone 3). This directory contains the planning documents.
 
 ## Start Here
 
@@ -12,14 +12,14 @@ Inventory Kamera is evolving from a Windows-only WinForms application to a cross
 
 | Document | Contents |
 |----------|----------|
-| [MILESTONE_1_NET8_CORE.md](MILESTONE_1_NET8_CORE.md) | .NET 8 migration, Core library extraction, Strangler Fig refactoring |
-| [MILESTONE_2_AVALONIA.md](MILESTONE_2_AVALONIA.md) | Avalonia UI, MVVM, cross-platform builds, OCR preview panel |
-| [MILESTONE_3_AI_ANALYSIS.md](MILESTONE_3_AI_ANALYSIS.md) | SQLite scan history, MCP server for Claude Desktop, GOOD v3 |
-| [QUICK_WINS.md](QUICK_WINS.md) | elixirCrafted, ScanProfile.json, Tesseract evaluation — can be done now |
+| [MILESTONE_1_NET8_CORE.md](MILESTONE_1_NET8_CORE.md) | ✅ .NET 8 migration, Core library extraction, Strangler Fig refactoring |
+| [MILESTONE_2_AVALONIA.md](MILESTONE_2_AVALONIA.md) | ✅ Avalonia UI, MVVM, cross-platform builds, OCR preview panel, WinForms removal |
+| [MILESTONE_3_AI_ANALYSIS.md](MILESTONE_3_AI_ANALYSIS.md) | SQLite scan history, MCP server for Claude Desktop (not started; GOOD v3 done) |
+| [QUICK_WINS.md](QUICK_WINS.md) | ✅ elixirCrafted, ScanProfile.json, Tesseract upgrade, configurable data source |
 
 ## Architecture Diagrams
 
-PlantUML diagrams in `plantuml/` reflect the v1 architecture. They will be updated during Milestone 1.
+PlantUML diagrams in `plantuml/` reflect the v1 architecture and the plan for Milestone 1; they have not been updated since. `CLAUDE.md` at the repository root describes the current projects.
 
 | Diagram | Description |
 |---------|-------------|
@@ -33,5 +33,5 @@ Previous phase-based planning documents are in `docs/archive/`. They contain mor
 
 ---
 
-*Last updated: 2026-04-12*
-*Status: Planning complete, Milestone 1 not yet started*
+*Last updated: 2026-11-10*
+*Status: Milestones 1 and 2 complete, Milestone 3 not started*

@@ -2,9 +2,9 @@
 
 **Goal:** SQLite scan history database enables cross-scan artifact tracking and AI-powered team/meta analysis via MCP server — the differentiator from single-character optimizers.
 
-**Prerequisite:** Milestone 2 complete (Avalonia UI stable, Core library clean).
+**Prerequisite:** Milestone 2 complete (Avalonia UI stable, Core library clean). ✅ Met 2026-11-10.
 
-**Status:** Not started.
+**Status:** Not started. The GOOD v3 fields (Phase 3.3) are already done.
 
 ---
 
@@ -244,6 +244,8 @@ Once configured, users can ask Claude Desktop questions like:
 
 These improve the quality of data available to AI analysis.
 
+> **Done (2026-11-10).** Both fields are exported and the GOOD version is 3. `elixirCrafted` comes from `ElixirReader`; `unactivatedSubstats` from the substat reader. The sketches below were the plan.
+
 ### elixirCrafted (quick win — detection already exists)
 
 `ArtifactScraper.IsSanctified()` already detects the purple elixir indicator. Just needs wiring:
@@ -314,8 +316,8 @@ Reshape scanning is opt-in due to ~2-3 second overhead per eligible artifact.
 - [ ] MCP server starts and registers tools with Claude Desktop
 - [ ] `query_inventory` returns current artifact/weapon/character data
 - [ ] `analyze_team` returns artifact allocation recommendations for a 4-character team
-- [ ] `elixirCrafted` field exported in GOOD v3 JSON
-- [ ] GOOD version updated to 3
+- [x] `elixirCrafted` field exported in GOOD v3 JSON
+- [x] GOOD version updated to 3
 - [ ] Claude Desktop MCP configuration documented in project README
 
 ---

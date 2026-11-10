@@ -4,15 +4,15 @@
 
 **Prerequisite:** Milestone 1 complete — Core library extracted, all interfaces defined.
 
-**Status:** Not started.
+**Status:** Complete (2026-11-10). The Avalonia app is on master; the WinForms project was removed from master and is kept on the `history` branch and the `winforms-final` tag. Not done: running the macOS/Linux build on those platforms, and the visual region editor (a stretch goal). See the checklist at the end.
 
 ## Carry-Overs from Milestone 1
 
-Complete these before starting new M2 work:
+All three are done.
 
-- **ImageSharp migration** — Remove `System.Drawing.Common` from `InventoryKamera.Core`; replace `Bitmap`/`Rectangle`/`Color` in all Core interfaces and models with `SixLabors.ImageSharp` types. Remove `Accord.Imaging` at the same time (tightly coupled).
-- **ScanProfile scraper wiring** — `ScanProfile.json` and `ScanProfileManager` exist; wire scrapers to read region coordinates from the profile instead of hardcoded ratios.
-- **Tesseract 5.5.2 upgrade** — Evaluation confirmed viable; update `PackageReference` from `Tesseract 5.2.0` to `TesseractOCR 5.5.2`, update engine pool initialization, run a full scan to verify.
+- ✅ **ImageSharp migration** (2026-04-29) — Remove `System.Drawing.Common` from `InventoryKamera.Core`; replace `Bitmap`/`Rectangle`/`Color` in all Core interfaces and models with `SixLabors.ImageSharp` types. Remove `Accord.Imaging` at the same time (tightly coupled).
+- ✅ **ScanProfile scraper wiring** — `ScanProfile.json` and `ScanProfileManager` exist; wire scrapers to read region coordinates from the profile instead of hardcoded ratios.
+- ✅ **Tesseract 5.5.2 upgrade** — Evaluation confirmed viable; update `PackageReference` from `Tesseract 5.2.0` to `TesseractOCR 5.5.2`, update engine pool initialization, run a full scan to verify.
 
 ---
 
@@ -23,8 +23,8 @@ InventoryKamera.sln
 ├── InventoryKamera.Core/           # .NET 8 — business logic, interfaces
 ├── InventoryKamera.Infrastructure/ # .NET 8 — Windows implementations
 ├── InventoryKamera.Avalonia/       # .NET 8 — Avalonia UI (primary)
-├── InventoryKamera/                # net8.0-windows — WinForms (deprecated, removed in Phase 2.2)
-└── InventoryKamera.Tests/          # .NET 8 — unit tests
+├── InventoryKamera.Tests/          # .NET 8 — unit tests
+└── InventoryKamera.Infrastructure.Tests/ # reader tests against real screenshot crops
 ```
 
 ---
@@ -182,13 +182,15 @@ Genshin-inspired dark palette for `GenshinTheme.axaml`:
 
 ---
 
-## Phase 2.1: WinForms Deprecation
+## Phase 2.1: WinForms Deprecation ✅
 
 - Mark WinForms project `[DEPRECATED]` in its folder README
 - Critical bug fixes backported to both versions during this phase
 - Community beta testing of Avalonia version
 
-## Phase 2.2: WinForms Removal
+## Phase 2.2: WinForms Removal ✅ (2026-11-10)
+
+Also removed: the WinForms installer project and the `TesseractEval` console app. Trained data moved to `tessdata/`, `ScanProfile.json` and `stat_priorities.json` to `reference_data/`.
 
 - Delete `InventoryKamera/` WinForms project from solution
 - Update solution file and build scripts
@@ -214,17 +216,29 @@ After Avalonia is stable, add a visual region editor for `ScanProfile.json`. Use
 
 ## Milestone 2 Complete When
 
-- [ ] Avalonia app compiles and runs on Windows 10/11
-- [ ] All scanning features work identically to the WinForms version
-- [ ] OCR preview panel is functional during scanning
-- [ ] Settings persist across restarts
-- [ ] GOOD JSON export produces identical output to WinForms version
-- [ ] ViewModel unit tests >80% coverage
-- [ ] macOS and Linux builds compile (scanning shows platform warning)
-- [ ] WinForms project removed from the solution
+- [x] Avalonia app compiles and runs on Windows 10/11
+- [x] All scanning features work identically to the WinForms version (and better: see below)
+- [x] OCR preview panel is functional during scanning
+- [x] Settings persist across restarts (`%AppData%/InventoryKamera/settings.json`)
+- [x] GOOD JSON export produces identical output to WinForms version (now GOOD v3; full scans checked against taiwenlee's exporter)
+- [x] ViewModel unit tests >80% coverage (90.8% when last measured, 2026-04-30)
+- [~] macOS and Linux builds compile (scanning shows platform warning): the `net8.0` target builds and the warning exists, but it has not been run on macOS or Linux
+- [x] WinForms project removed from the solution (2026-11-10)
+
+## Beyond the Plan
+
+Scanner work done during Milestone 2 that wasn't in this plan, verified on a full account (94 characters, 155 weapons, 684 artifacts, ~600 materials) at Fast speed:
+
+- **Talents** read from one screenshot of the Talents tab (`TalentListReader`), with a fallback to clicking; the constellation tab is read as it opens. 94-character scan: 10m 44s → 7m 02s.
+- **Constellations** by ring brightness (`ConstellationReader`), C3/C5 order from game data.
+- **Character level** parsing that handles misread caps (`CharacterLevelReader`); long names such as Kaedehara Kazuha (`CharacterNameReader`).
+- **Material counts** from the card's label strip (`MaterialCountReader`), fixing the last page.
+- **Locks** by the red padlock (`LockReader`), fixing locks missed while the icon fades in on Fast.
+- **GOOD v3**: `unactivatedSubstats`, `elixirCrafted` (`ElixirReader`).
+- OCR engines disposed on exit; debug screenshots saved off the scan thread.
 
 ---
 
 *See `docs/archive/PHASE_2_AVALONIA.md` and `docs/archive/AVALONIA_UI_MOCKUP.md` for the previous detailed plans (superseded by this document).*
 *See `docs/archive/PHASE_2_VISUAL_REGION_CONFIG.md` for the visual region config research.*
-*Last updated: 2026-04-12*
+*Last updated: 2026-11-10*

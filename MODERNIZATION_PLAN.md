@@ -1,5 +1,7 @@
 # Inventory Kamera Modernization Plan
 
+> **Superseded.** This was the first modernization plan. The current plan and status are in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 This document outlines the planned improvements to Inventory Kamera to improve maintainability, resilience, and user experience.
 
 ## Background

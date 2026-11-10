@@ -2,7 +2,7 @@
 
 **Goal:** .NET 8 solution with a clean platform-agnostic Core library. WinForms still works as the UI throughout.
 
-**Status:** COMPLETE (2026-04-27). All scans verified working without regressions. Post-completion fixes applied (same session): Traveler constellation crash (`ConstellationOrder: {}` stale cache + null-deref), scan speed regression (`IInputSimulator.Wait` bypassed the delay multiplier — added `SystemWaitMs`). Carry-overs to Milestone 2: ImageSharp migration (System.Drawing removal from Core), ScanProfile scraper wiring, Tesseract 5.5.2 upgrade.
+**Status:** COMPLETE (2026-04-27). All scans verified working without regressions. Post-completion fixes applied (same session): Traveler constellation crash (`ConstellationOrder: {}` stale cache + null-deref), scan speed regression (`IInputSimulator.Wait` bypassed the delay multiplier — added `SystemWaitMs`). Carry-overs to Milestone 2: ImageSharp migration (System.Drawing removal from Core), ScanProfile scraper wiring, Tesseract 5.5.2 upgrade. All three were completed in Milestone 2.
 
 ---
 
