@@ -33,7 +33,7 @@ namespace InventoryKamera.Tests
             Assert.False(string.IsNullOrWhiteSpace(json));
             var obj = JObject.Parse(json);
             Assert.Equal("GOOD", (string)obj["format"]);
-            Assert.Equal(2, (int)obj["version"]);
+            Assert.Equal(3, (int)obj["version"]);
             Assert.Equal("Inventory_Kamera", (string)obj["source"]);
         }
 

@@ -27,6 +27,13 @@ namespace InventoryKamera
 		[JsonProperty("substats")]
 		public List<SubStat> SubStats { get; private set; }
 
+		/// <summary>
+		/// GOOD v3: a 5-star artifact below +4 can show a 4th substat in grey, marked "(Unactivated)".
+		/// It gives no stats until the artifact reaches +4. Null (omitted from JSON) when there is none.
+		/// </summary>
+		[JsonProperty("unactivatedSubstats", NullValueHandling = NullValueHandling.Ignore)]
+		public List<SubStat> UnactivatedSubStats { get; private set; }
+
 		[JsonProperty("location")]
 		public string EquippedCharacter { get; internal set; }
 
@@ -55,7 +62,15 @@ namespace InventoryKamera
 			Rarity = _rarity;
 			MainStat = string.IsNullOrWhiteSpace(_mainStat) ? "" : _mainStat;
 			Level = _level;
-			SubStats = _subStats.ToList().Where(e => e.value > 0).ToList();
+			var subStats = _subStats.Where(e => e.value > 0).ToList();
+
+			// Only 5-star artifacts below +4 can have an unactivated substat; at +4 it activates.
+			// Ignore the flag anywhere else so a misread can't move an active stat out of "substats".
+			bool canHaveUnactivated = _rarity == 5 && _level < 4;
+			SubStats = subStats.Where(e => !(canHaveUnactivated && e.unactivated))
+				.Select(e => { e.unactivated = false; return e; }).ToList();
+			var unactivated = canHaveUnactivated ? subStats.Where(e => e.unactivated).ToList() : new List<SubStat>();
+			UnactivatedSubStats = unactivated.Count > 0 ? unactivated : null;
 			SetName = string.IsNullOrWhiteSpace(_setName) ? "" : _setName;
 			EquippedCharacter = string.IsNullOrWhiteSpace(_equippedCharacter) ? "" : _equippedCharacter;
 			Lock = _Lock;
@@ -96,7 +111,7 @@ namespace InventoryKamera
 		{
 			bool valid = true;
 
-			SubStats.ForEach(s =>
+			SubStats.Concat(UnactivatedSubStats ?? new List<SubStat>()).ToList().ForEach(s =>
 			{
                 if (!string.IsNullOrWhiteSpace(s.stat) &&
                     (!ModelValidator.IsValidStat(s.stat) || s.value == (decimal)(-1.0)))
@@ -123,6 +138,10 @@ namespace InventoryKamera
 			[JsonProperty("value")]
 			[DefaultValue(-1)]
 			public decimal value;
+
+			/// <summary>Set by the scraper when the substat is shown greyed out as "(Unactivated)".</summary>
+			[JsonIgnore]
+			public bool unactivated;
 
 			public override string ToString()
 			{
@@ -171,6 +190,7 @@ namespace InventoryKamera
 				+ $"Main Stat: {MainStat}\n";
 
 			SubStats.ForEach(s => output += $"Substat {SubStats.IndexOf(s)+1}: {s}\n");
+			UnactivatedSubStats?.ForEach(s => output += $"Unactivated substat: {s}\n");
 
 			output += $"Locked: {Lock}\n";
 

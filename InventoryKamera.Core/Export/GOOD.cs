@@ -44,7 +44,7 @@ namespace InventoryKamera
         {
             // Get rid of VS warning since we are converting this class to JSON
             Format = "GOOD";
-            Version = 2;
+            Version = 3; // v3 adds artifact "unactivatedSubstats"
             AppVersion = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version?.ToString(3) ?? "unknown";
             Source = "Inventory_Kamera";
 

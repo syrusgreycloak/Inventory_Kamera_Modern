@@ -506,75 +506,8 @@ namespace InventoryKamera
 			}
 		}
 
-		private static List<SubStat> ScanArtifactSubStats(Image<Rgba32> artifactImage)
-        {
-            Bitmap bm = GenshinProcesor.ImageSharpToBitmap(artifactImage);
-			List<string> lines = new List<string>();
-			List<SubStat> substats = new List<SubStat>();
-			string text;
-            var oldBm = bm;
-            GenshinProcesor.SetBrightness(-30, ref bm);
-            if (!ReferenceEquals(oldBm, bm)) oldBm.Dispose();
-            // SetContrast mutates in-place (LockBits) — no ref swap, no dispose guard needed.
-            GenshinProcesor.SetContrast(85, ref bm);
-			using (var n = GenshinProcesor.ConvertToGrayscale(bm))
-			{
-				text = GenshinProcesor.AnalyzeText(n, TesseractOCR.Enums.PageSegMode.Auto).ToLower();
-			}
-
-            lines = new List<string>(text.Split('\n'));
-            lines.RemoveAll(line => string.IsNullOrWhiteSpace(line));
-
-            var index = lines.FindIndex(line => line.Contains(":") || line.Contains("piece") || line.Contains("set") || line.Contains("2-"));
-            if (index >= 0)
-            {
-                lines.RemoveRange(index, lines.Count - index);
-            }
-
-            bm.Dispose();
-            for (int i = 0; i < lines.Count; i++)
-            {
-                var line = Regex.Replace(lines[i], @"(?:^[^a-zA-Z]*)", string.Empty).Replace(" ", string.Empty);
-
-				if (line.Any(char.IsDigit))
-				{
-					Logger.Debug("Parsing artifact substat: {0}", line);
-
-					SubStat substat = new SubStat();
-					Regex re = new Regex(@"^(.*?)(\d+.*)");
-					var result = re.Match(line);
-					var stat = Regex.Replace(result.Groups[1].Value, @"[^\w]", string.Empty);
-					var value = result.Groups[2].Value;
-
-					string name = line.Contains("%") ? stat + "%" : stat;
-
-					substat.stat = GenshinProcesor.FindClosestStat(name, 80) ?? "";
-
-					// Remove any non digits.
-					value = Regex.Replace(value, @"[^0-9]", string.Empty);
-
-					// Try to parse number
-					if (!decimal.TryParse(value, out substat.value))
-					{
-						Logger.Debug("Failed to parse stat value from: {0}", line);
-						substat.value = -1;
-					}
-
-					if (substat.value != -1 && substat.stat.Contains("_"))
-					{
-						substat.value /= 10;
-					}
-
-					if (string.IsNullOrWhiteSpace(substat.stat) || substat.value == -1)
-					{
-						Logger.Debug("Failed to parse stat from: {0}", line);
-					}
-
-					substats.Insert(i, substat);
-				}
-            }
-            return substats;
-        }
+		private static List<SubStat> ScanArtifactSubStats(Image<Rgba32> artifactImage) =>
+			ArtifactSubstatReader.Read(artifactImage);
 
 		// Uses the injected game data service: the static GenshinProcesor keeps its own copy of the
 		// game data that never receives the user's custom Traveler/Wanderer names.
