@@ -193,7 +193,18 @@ namespace InventoryKamera.Avalonia.ViewModels
         [RelayCommand(CanExecute = nameof(CanUpdateGameData))]
         private async Task UpdateGameData()
         {
+            // Download from the repository configured in Settings
+            if (!GameDataSource.TryParse(_settings.Current.GameDataRepoUrl, _settings.Current.GameDataBranch, out var source, out var sourceError))
+            {
+                await _dialog.ShowErrorAsync(
+                    "Invalid game data source",
+                    $"{sourceError}\n\nFix the repository URL and branch under Settings > Advanced > Game data source, " +
+                    "or use \"Reset to default\" there.");
+                return;
+            }
+
             IsUpdatingGameData = true;
+            _databaseManager.Source = source;
             _databaseManager.ConfirmWaitForRateLimit = ConfirmWaitForRateLimit;
 
             try
@@ -226,6 +237,9 @@ namespace InventoryKamera.Avalonia.ViewModels
                 IsUpdatingGameData = false;
             }
         }
+
+        /// <summary>"GitLab" or "GitHub", for messages about the configured game data source.</summary>
+        private string HostName => _databaseManager.Source.Host.ToString();
 
         private bool CanUpdateGameData() => !IsUpdatingGameData && !IsCheckingUpdates;
 
@@ -272,14 +286,14 @@ namespace InventoryKamera.Avalonia.ViewModels
                     await _dialog.ShowInfoAsync(
                         "Update stopped",
                         "Game data update stopped. Your existing game data has not been changed.\n\n" +
-                        "GitLab, which hosts the game data, was limiting downloads. " +
+                        $"{HostName}, which hosts the game data, was limiting downloads. " +
                         "Please try again in a few minutes.");
                     break;
 
                 case UpdateStatus.Fail when _databaseManager.LastUpdateRateLimited:
                     await _dialog.ShowInfoAsync(
-                        "GitLab download limit reached",
-                        "GitLab, which hosts the game data, is temporarily limiting downloads. " +
+                        $"{HostName} download limit reached",
+                        $"{HostName}, which hosts the game data, is temporarily limiting downloads. " +
                         "This is not a problem with Inventory Kamera or your game data, " +
                         "and your existing game data has not been changed.\n\n" +
                         "Please wait a few minutes (occasionally up to an hour) and try again.");
@@ -301,8 +315,8 @@ namespace InventoryKamera.Avalonia.ViewModels
         private bool ConfirmWaitForRateLimit()
         {
             return Dispatcher.UIThread.InvokeAsync(() => _dialog.ConfirmAsync(
-                    "GitLab is limiting downloads",
-                    "GitLab, which hosts the game data, is temporarily limiting downloads. " +
+                    $"{HostName} is limiting downloads",
+                    $"{HostName}, which hosts the game data, is temporarily limiting downloads. " +
                     "This is not an error in Inventory Kamera.\n\n" +
                     "Inventory Kamera can keep retrying automatically for about a minute and a half.\n\n" +
                     "Yes: keep waiting and retry.\n" +

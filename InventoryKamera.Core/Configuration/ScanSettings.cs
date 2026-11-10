@@ -104,6 +104,16 @@ namespace InventoryKamera.Configuration
         public bool LogScreenshots { get; set; } = false;
 
         // ------------------------------------------------------------------
+        // Game data source
+        // ------------------------------------------------------------------
+
+        /// <summary>GitLab or GitHub repository the game data updater downloads from.</summary>
+        public string GameDataRepoUrl { get; set; } = GameDataSource.DefaultRepoUrl;
+
+        /// <summary>Branch of <see cref="GameDataRepoUrl"/> to use.</summary>
+        public string GameDataBranch { get; set; } = GameDataSource.DefaultBranch;
+
+        // ------------------------------------------------------------------
         // Named entity overrides (user-customisable in-game names)
         // ------------------------------------------------------------------
 

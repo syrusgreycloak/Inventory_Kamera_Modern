@@ -241,6 +241,59 @@
 
           <Separator />
 
+          <!-- Game data source: where "Update game data" downloads from. Configurable so a repository
+               move (AnimeGameData -> animegamedata2 at 6.6) doesn't need a code change. -->
+          <TextBlock Text="Game data source"
+                     FontSize="12"
+                     FontWeight="SemiBold" />
+
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Repository URL (GitLab/GitHub)"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding GameDataRepoUrl, Mode=TwoWay}"
+                     Watermark="https://gitlab.com/Dimbreath/animegamedata2"
+                     ToolTip.Tip="GitLab or GitHub repository laid out like Dimbreath's game data (ExcelBinOutput/, TextMap/). Paste the URL from your browser."
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Branch"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding GameDataBranch, Mode=TwoWay}"
+                     Watermark="main"
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="200,0,0,0">
+            <Button Content="Test"
+                    Command="{Binding TestGameDataSourceCommand}"
+                    ToolTip.Tip="Check the repository is reachable and show the latest game version in it." />
+            <Button Content="Reset to default"
+                    Command="{Binding ResetGameDataSourceCommand}"
+                    ToolTip.Tip="Use Dimbreath/animegamedata2 on branch main." />
+          </StackPanel>
+
+          <TextBlock Text="{Binding GameDataSourceStatus}"
+                     IsVisible="{Binding GameDataSourceStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Margin="200,0,0,0"
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <Separator />
+
           <!-- Diagnostic logging: dumps every captured region to logging/<category>/.
                Useful for diagnosing OCR misreads; produces hundreds of PNGs per scan. -->
           <CheckBox Content="Log all scan screenshots (diagnostics)"

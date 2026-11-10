@@ -116,6 +116,8 @@ A notification window will appear when starting the application and a new versio
 
 If the update window does not show up when the applications starts, you can select `Update Lookup Tables` under `Options` to run the automatic updater. You may optionally force the updater to run if it does not detect a new Genshin Impact version. 
 
+If the game data repository moves again, you can point the updater at the new one without waiting for an app update: under `Settings` > `Advanced` > `Game data source`, paste the GitLab or GitHub repository URL and branch, then use `Test` to check it. `Reset to default` restores Dimbreath's repository.
+
 ### Updating manually
 
 > **Warning**

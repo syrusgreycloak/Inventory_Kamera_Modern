@@ -15,17 +15,24 @@ namespace InventoryKamera.Avalonia.ViewModels
     {
         private readonly ISettingsService _settings;
         private readonly IFolderPickerService _folderPicker;
+        private readonly Func<GameDataSource, Version> _getRemoteVersion;
 
         // ─────────────────────────────────────────────────────────────────────
         // Constructor
         // ─────────────────────────────────────────────────────────────────────
 
+        /// <param name="getRemoteVersion">
+        /// Looks up the latest game version in a data source (for the "Test" button). Defaults to a
+        /// single, non-retrying request through <see cref="DatabaseManager.GetRemoteVersion"/>.
+        /// </param>
         public SettingsViewModel(
             ISettingsService settings,
-            IFolderPickerService folderPicker)
+            IFolderPickerService folderPicker,
+            Func<GameDataSource, Version> getRemoteVersion = null)
         {
             _settings      = settings      ?? throw new ArgumentNullException(nameof(settings));
             _folderPicker  = folderPicker  ?? throw new ArgumentNullException(nameof(folderPicker));
+            _getRemoteVersion = getRemoteVersion ?? (source => new DatabaseManager().GetRemoteVersion(source));
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -203,6 +210,97 @@ namespace InventoryKamera.Avalonia.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Game data source
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>GitLab or GitHub repository the game data updater downloads from.</summary>
+        public string GameDataRepoUrl
+        {
+            get => _settings.Current.GameDataRepoUrl;
+            set
+            {
+                if (_settings.Current.GameDataRepoUrl == value) return;
+                _settings.Current.GameDataRepoUrl = value;
+                _settings.Save();
+                OnPropertyChanged();
+                GameDataSourceStatus = string.Empty;
+            }
+        }
+
+        /// <summary>Branch of <see cref="GameDataRepoUrl"/> to download from.</summary>
+        public string GameDataBranch
+        {
+            get => _settings.Current.GameDataBranch;
+            set
+            {
+                if (_settings.Current.GameDataBranch == value) return;
+                _settings.Current.GameDataBranch = value;
+                _settings.Save();
+                OnPropertyChanged();
+                GameDataSourceStatus = string.Empty;
+            }
+        }
+
+        private string _gameDataSourceStatus = string.Empty;
+
+        /// <summary>Result of the last "Test" (or validation error), shown under the fields.</summary>
+        public string GameDataSourceStatus
+        {
+            get => _gameDataSourceStatus;
+            private set => SetProperty(ref _gameDataSourceStatus, value);
+        }
+
+        private bool _isTestingGameDataSource;
+
+        public bool IsTestingGameDataSource
+        {
+            get => _isTestingGameDataSource;
+            private set
+            {
+                if (SetProperty(ref _isTestingGameDataSource, value))
+                    TestGameDataSourceCommand.NotifyCanExecuteChanged();
+            }
+        }
+
+        /// <summary>Restores Dimbreath/animegamedata2 on "main".</summary>
+        [RelayCommand]
+        private void ResetGameDataSource()
+        {
+            GameDataRepoUrl = GameDataSource.DefaultRepoUrl;
+            GameDataBranch = GameDataSource.DefaultBranch;
+            GameDataSourceStatus = "Reset to the default repository.";
+        }
+
+        /// <summary>Checks the repository is reachable and reports the latest game version in it.</summary>
+        [RelayCommand(CanExecute = nameof(CanTestGameDataSource))]
+        private async Task TestGameDataSource()
+        {
+            if (!GameDataSource.TryParse(GameDataRepoUrl, GameDataBranch, out var source, out var error))
+            {
+                GameDataSourceStatus = error;
+                return;
+            }
+
+            IsTestingGameDataSource = true;
+            GameDataSourceStatus = $"Checking {source}...";
+            try
+            {
+                var version = await Task.Run(() => _getRemoteVersion(source));
+                GameDataSourceStatus = $"OK: found game data {version} on {source.Host} ({source.RepoPath}, {source.Branch}).";
+            }
+            catch (Exception ex)
+            {
+                GameDataSourceStatus = $"Could not read {source}: {ex.Message}";
+            }
+            finally
+            {
+                IsTestingGameDataSource = false;
+            }
+        }
+
+        private bool CanTestGameDataSource() => !IsTestingGameDataSource;
 
         /// <summary>In-game name of the Traveler character (user-specific).</summary>
         public string TravelerName

@@ -37,24 +37,26 @@ namespace InventoryKamera
 
         private readonly string NewVersion = "version.txt";
 
-        // Dimbreath/AnimeGameData (project 53216109) was deprecated at game version 6.6 after hitting the
-        // GitLab repository size limit; data from 7.0 on is published in Dimbreath/animegamedata2 (branch "main").
-        private const string commitsAPIURL = "https://gitlab.com/api/v4/projects/83871005/repository/commits";
-        private const string repoBaseURL = "https://gitlab.com/Dimbreath/animegamedata2/-/raw/main/";
-        private const string TextMapEnURL = repoBaseURL + "TextMap/TextMapEN.json";
-        private const string TextMapMediumEnURL = repoBaseURL + "TextMap/TextMap_MediumEN.json";
-        private const string CharactersURL = repoBaseURL + "ExcelBinOutput/AvatarExcelConfigData.json";
-        private const string ConstellationsURL = repoBaseURL + "ExcelBinOutput/FetterInfoExcelConfigData.json";
-        private const string TalentsURL = repoBaseURL + "ExcelBinOutput/AvatarTalentExcelConfigData.json";
-        private const string SkillsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillExcelConfigData.json";
-        private const string SkillDepotsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json";
+        /// <summary>
+        /// Repository the updater downloads game data from. Configurable in Settings; defaults to
+        /// Dimbreath/animegamedata2 (AnimeGameData was deprecated at 6.6 after hitting GitLab's size limit).
+        /// </summary>
+        public GameDataSource Source { get; set; } = GameDataSource.Default;
 
-        private const string ArtifactsDisplayItemURL = repoBaseURL + "ExcelBinOutput/DisplayItemExcelConfigData.json";
-        private const string ArtifactsCodex = repoBaseURL + "ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
-        private const string ArtifactSetConfig = repoBaseURL + "ExcelBinOutput/ReliquaryExcelConfigData.json";
+        private string TextMapEnURL => Source.RawBaseUrl + "TextMap/TextMapEN.json";
+        private string TextMapMediumEnURL => Source.RawBaseUrl + "TextMap/TextMap_MediumEN.json";
+        private string CharactersURL => Source.RawBaseUrl + "ExcelBinOutput/AvatarExcelConfigData.json";
+        private string ConstellationsURL => Source.RawBaseUrl + "ExcelBinOutput/FetterInfoExcelConfigData.json";
+        private string TalentsURL => Source.RawBaseUrl + "ExcelBinOutput/AvatarTalentExcelConfigData.json";
+        private string SkillsURL => Source.RawBaseUrl + "ExcelBinOutput/AvatarSkillExcelConfigData.json";
+        private string SkillDepotsURL => Source.RawBaseUrl + "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json";
 
-        private const string WeaponsURL = repoBaseURL + "ExcelBinOutput/WeaponExcelConfigData.json";
-        private const string MaterialsURL = repoBaseURL + "ExcelBinOutput/MaterialExcelConfigData.json";
+        private string ArtifactsDisplayItemURL => Source.RawBaseUrl + "ExcelBinOutput/DisplayItemExcelConfigData.json";
+        private string ArtifactsCodex => Source.RawBaseUrl + "ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
+        private string ArtifactSetConfig => Source.RawBaseUrl + "ExcelBinOutput/ReliquaryExcelConfigData.json";
+
+        private string WeaponsURL => Source.RawBaseUrl + "ExcelBinOutput/WeaponExcelConfigData.json";
+        private string MaterialsURL => Source.RawBaseUrl + "ExcelBinOutput/MaterialExcelConfigData.json";
 
         private ConcurrentDictionary<string, string> Mappings = new ConcurrentDictionary<string, string>();
 
@@ -101,26 +103,20 @@ namespace InventoryKamera
                 : RemoteVersion.CompareTo(LocalVersion) > 0;
         }
 
-        private Version CheckRemoteVersion()
-        {
-            {
-                string pattern = @"(\d+\.\d+\.\d+)";
+        private Version CheckRemoteVersion() => GetRemoteVersion(Source, allowRetry: true);
 
-                string body = DownloadStringWithRetry(commitsAPIURL);
-                var commits = JsonConvert.DeserializeObject<List<JObject>>(body);
-                foreach (var commit in commits)
-                {
-                    var c = commit.ToObject<Dictionary<string, object>>();
-                    var match = Regex.Match(c["title"].ToString(), pattern);
-                    if (match.Success)
-                    {
-                        var v = match.Groups[1].Value;
-                        Debug.WriteLine("Latest version found {0}", v);
-                        return new Version(v);
-                    }
-                }
-            }
-            return null;
+        /// <summary>
+        /// Latest game version published in <paramref name="source"/>, read from the newest commit
+        /// titles. Throws if the repository can't be reached or has no versioned commits.
+        /// Used by Settings' "Test" button with <paramref name="allowRetry"/> false, so a rate limit
+        /// fails fast instead of waiting.
+        /// </summary>
+        public Version GetRemoteVersion(GameDataSource source, bool allowRetry = false)
+        {
+            string body = allowRetry ? DownloadStringWithRetry(source.CommitsApiUrl) : DownloadStringOnce(source.CommitsApiUrl);
+            var version = source.ParseLatestVersion(body);
+            if (version != null) Debug.WriteLine("Latest version found {0}", version);
+            return version ?? throw new FormatException($"No game version found in the latest commits of {source}.");
         }
 
         public Dictionary<string, JObject> LoadCharacters()
@@ -290,7 +286,26 @@ namespace InventoryKamera
         private string LoadJsonFromURLAsync(string url) => DownloadStringWithRetry(url);
 
         // TextMapEN is ~55 MB, so allow far more than HttpClient's default 100 s timeout.
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        private static readonly HttpClient Http = CreateHttpClient();
+
+        private static HttpClient CreateHttpClient()
+        {
+            var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            // GitHub's API rejects requests without a User-Agent
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("InventoryKamera");
+            return client;
+        }
+
+        private static string DownloadStringOnce(string url)
+        {
+            using (var response = Http.GetAsync(url).GetAwaiter().GetResult())
+            {
+                if ((int)response.StatusCode == 429)
+                    throw new HttpRequestException("The server is limiting downloads (HTTP 429). Try again in a few minutes.");
+                response.EnsureSuccessStatusCode();
+                return System.Text.Encoding.UTF8.GetString(response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+            }
+        }
 
         private const int MaxDownloadAttempts = 5;
         private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
@@ -369,7 +384,7 @@ namespace InventoryKamera
                     {
                         if (code == 429) LastUpdateRateLimited = true;
                         throw new HttpRequestException(
-                            $"GitLab returned {code} ({response.ReasonPhrase}) for {url} after {attempt} attempts.");
+                            $"{Source.Host} returned {code} ({response.ReasonPhrase}) for {url} after {attempt} attempts.");
                     }
 
                     // Exponential backoff (5, 10, 20, 40 s) with jitter, unless the server says how long to wait
@@ -380,7 +395,7 @@ namespace InventoryKamera
                     if (delay < TimeSpan.Zero) delay = TimeSpan.FromSeconds(1);
                     if (delay > MaxRetryDelay) delay = MaxRetryDelay;
 
-                    Logger.Warn("GitLab returned {0} for {1}; retrying in {2:F0}s (attempt {3}/{4}).",
+                    Logger.Warn("{0} returned {1} for {2}; retrying in {3:F0}s (attempt {4}/{5}).", Source.Host,
                         code, url, delay.TotalSeconds, attempt + 1, MaxDownloadAttempts);
                     System.Threading.Thread.Sleep(delay);
                 }
