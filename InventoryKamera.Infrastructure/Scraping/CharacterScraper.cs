@@ -313,22 +313,13 @@ namespace InventoryKamera
 					// Try to match character name
 					if (!string.IsNullOrWhiteSpace(text))
 					{
-						// Check for custom character names first
-						string travelerName = (_settings != null ? _settings.TravelerName : null)?.ToLower()?.Trim();
-						string wandererName = (_settings != null ? _settings.WandererName : null)?.ToLower()?.Trim();
-
-						Logger.Debug("Checking custom names - Traveler: '{0}', Wanderer: '{1}'",
-							travelerName ?? "(not set)", wandererName ?? "(not set)");
-
-						if (!string.IsNullOrWhiteSpace(travelerName) && text.Equals(travelerName, StringComparison.OrdinalIgnoreCase))
+						// Names the player chose (Traveler, Wanderer, mannequins) first
+						name = CharacterNameReader.MatchCustomName(text, _settings);
+						if (name != null)
 						{
-							Logger.Debug("Matched custom Traveler name: '{0}'", travelerName);
-							name = "Traveler";
-						}
-						else if (!string.IsNullOrWhiteSpace(wandererName) && text.Equals(wandererName, StringComparison.OrdinalIgnoreCase))
-						{
-							Logger.Debug("Matched custom Wanderer name: '{0}'", wandererName);
-							name = "Wanderer";
+							Logger.Debug("Matched custom name '{0}' as {1}", text, name);
+							// Mannequins have no element; ScanCharacter skips them
+							if (name.StartsWith("Manequin")) return;
 						}
 						else
 						{

@@ -61,5 +61,33 @@ namespace InventoryKamera.Infrastructure.Tests
             Assert.Equal(255, mask[1, 0].R); // background -> white
             Assert.Equal(255, mask[2, 0].R);
         }
+
+        // Custom names: Traveler, Wanderer, mannequins (readings are cleaned: lower case, letters and digits)
+        [Theory]
+        [InlineData("stellaluna", "Traveler")]
+        [InlineData("kabukimono", "Wanderer")]
+        [InlineData("manekina", "Manequin1")]      // in-game default, female
+        [InlineData("manekin", "Manequin2")]       // in-game default, male
+        [InlineData("dollface", "Manequin1")]      // renamed
+        [InlineData("keqing", null)]
+        public void MatchCustomName_ReturnsRole(string reading, string expected)
+        {
+            var settings = new InventoryKamera.Configuration.ScanSettings
+            {
+                TravelerName = "Stella Luna",   // spaces and case don't matter
+                WandererName = "Kabukimono",
+                Manequin1Name = "Doll Face",
+            };
+            Assert.Equal(expected, CharacterNameReader.MatchCustomName(reading, settings));
+        }
+
+        [Fact]
+        public void MatchCustomName_OldPlaceholder_MatchesNothing()
+        {
+            // Older settings files hold "Manequin1"; no in-game name reads like that
+            var settings = new InventoryKamera.Configuration.ScanSettings { Manequin1Name = "Manequin1" };
+            Assert.Null(CharacterNameReader.MatchCustomName("keqing", settings));
+            Assert.Equal("Manequin1", CharacterNameReader.MatchCustomName("manekina", settings));
+        }
     }
 }

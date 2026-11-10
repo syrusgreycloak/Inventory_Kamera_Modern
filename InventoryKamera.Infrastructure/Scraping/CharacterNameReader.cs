@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using InventoryKamera.Configuration;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -86,5 +88,33 @@ namespace InventoryKamera
             }
             return mask;
         }
+
+        /// <summary>In-game names of the Miliastra Wonderland mannequins until the player renames them.</summary>
+        public const string DefaultMannequin1Name = "Manekina", DefaultMannequin2Name = "Manekin";
+
+        /// <summary>
+        /// Matches a cleaned name reading (lower case, letters and digits only) against the names
+        /// the player chose: "Traveler", "Wanderer", "Manequin1" or "Manequin2", or null if it's none
+        /// of them. Mannequins also match their in-game default names.
+        /// </summary>
+        /// <remarks>
+        /// Mannequins aren't in the game data (Genshin Optimizer doesn't support them; the scanner
+        /// skips them), so they can only be recognised by name here.
+        /// </remarks>
+        public static string MatchCustomName(string cleanedText, ScanSettings settings)
+        {
+            if (string.IsNullOrWhiteSpace(cleanedText)) return null;
+
+            bool Is(string name) => !string.IsNullOrWhiteSpace(name) && cleanedText == Clean(name);
+
+            if (Is(settings?.TravelerName)) return "Traveler";
+            if (Is(settings?.WandererName)) return "Wanderer";
+            if (Is(settings?.Manequin1Name) || Is(DefaultMannequin1Name)) return "Manequin1";
+            if (Is(settings?.Manequin2Name) || Is(DefaultMannequin2Name)) return "Manequin2";
+            return null;
+        }
+
+        /// <summary>Lower case, letters and digits only: the form name readings are compared in.</summary>
+        public static string Clean(string name) => Regex.Replace(name.ToLowerInvariant(), "[^a-z0-9]", string.Empty);
     }
 }

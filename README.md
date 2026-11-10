@@ -83,10 +83,11 @@ The app opens on the `Settings` tab on first start, and whenever no output folde
 - Choose a **Scan Speed**: _Fast_, _Normal_ or _Slow_. Start with Fast; if you see misreads on a slower PC, try Normal.
 - Set **Item Filters**: minimum weapon and artifact rarity and level.
 - Choose whether to **update equipped weapons and artifacts** during the scan (needed for the `location` field in the export).
-- Under **Names**, enter your **Traveler's** name (leave blank to read it from the game) and the **Wanderer's** name if you renamed him.
+- Under **Names**, enter your **Traveler's** name (leave blank to read it from the game) and the **Wanderer's** name if you renamed him. If you renamed your Miliastra Wonderland **mannequins**, enter their names too; mannequins are skipped during scans because Genshin Optimizer doesn't support them.
 - Rebind the **Hotkeys** for the inventory, character screen and first character slot.
 - Pick the **Output folder** for exports.
 - Turn on **Log all scan screenshots** to save what the scanner saw to the `logging` folder (useful for bug reports).
+- Under **Advanced**, add a **game executable** name if your game runs under a name other than `GenshinImpact` or `YuanShen`.
 - Under **Advanced**, change the **Game data source** (see [Updating for new game versions](#updating-for-new-game-versions)).
 
 ## How to run Inventory Kamera Modern

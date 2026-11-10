@@ -133,11 +133,18 @@ namespace InventoryKamera.Configuration
         /// </summary>
         public int LastCharacterCount { get; set; } = 0;
 
-        /// <summary>Display name for mannequin preset slot 1. Default: "Manequin1".</summary>
-        public string Manequin1Name { get; set; } = "Manequin1";
+        /// <summary>
+        /// Name of the female Miliastra Wonderland mannequin if the player renamed her; blank if not
+        /// (her in-game name, Manekina, is always recognised). Mannequins are skipped during scans.
+        /// Older settings files hold the placeholder "Manequin1", which matches nothing.
+        /// </summary>
+        public string Manequin1Name { get; set; } = string.Empty;
 
-        /// <summary>Display name for mannequin preset slot 2. Default: "Manequin2".</summary>
-        public string Manequin2Name { get; set; } = "Manequin2";
+        /// <summary>
+        /// Name of the male Miliastra Wonderland mannequin if the player renamed him; blank if not
+        /// (his in-game name, Manekin, is always recognised). Older files hold "Manequin2".
+        /// </summary>
+        public string Manequin2Name { get; set; } = string.Empty;
 
         // ------------------------------------------------------------------
         // Window state (persisted across launches by MainWindow)

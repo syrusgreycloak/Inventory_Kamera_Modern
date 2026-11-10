@@ -103,6 +103,37 @@
                      Padding="8,4" />
           </Grid>
 
+          <!-- Mannequin names -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Mannequin (female) name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding Mannequin1Name, Mode=TwoWay}"
+                     Watermark="Manekina"
+                     ToolTip.Tip="Miliastra Wonderland mannequins are skipped during scans (Genshin Optimizer doesn't support them). Their in-game names are always recognised; enter a name only if you renamed them."
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Mannequin (male) name"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding Mannequin2Name, Mode=TwoWay}"
+                     Watermark="Manekin"
+                     ToolTip.Tip="Miliastra Wonderland mannequins are skipped during scans (Genshin Optimizer doesn't support them). Their in-game names are always recognised; enter a name only if you renamed them."
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
+          </Grid>
+
         </StackPanel>
       </Border>
 
@@ -267,6 +298,22 @@
                            FormatString="0"
                            Background="{StaticResource PrimaryBgBrush}"
                            BorderThickness="1" />
+          </Grid>
+
+          <!-- Game process names (Update Executables in the original app) -->
+          <Grid ColumnDefinitions="200,*">
+            <TextBlock Grid.Column="0"
+                       Text="Game executables"
+                       VerticalAlignment="Center"
+                       FontSize="12" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding Executables, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     Watermark="GenshinImpact, YuanShen"
+                     ToolTip.Tip="Process names the scanner looks for, separated by commas (.exe optional). Add one if your game runs under a different name. Leave blank for the defaults."
+                     Background="{StaticResource PrimaryBgBrush}"
+                     BorderThickness="1"
+                     CornerRadius="4"
+                     Padding="8,4" />
           </Grid>
 
           <Separator />

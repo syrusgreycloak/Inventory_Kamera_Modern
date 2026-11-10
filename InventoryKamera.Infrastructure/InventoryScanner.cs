@@ -138,8 +138,6 @@ namespace InventoryKamera
 		private bool S_LogScreenshots   => _settings.LogScreenshots;
 		private string S_TravelerName   => _settings.TravelerName;
 		private string S_WandererName   => _settings.WandererName;
-		private string S_Manequin1Name  => _settings.Manequin1Name;
-		private string S_Manequin2Name  => _settings.Manequin2Name;
 
 		/// <summary>
 		/// Starts the full inventory scan using CancellationToken.None.
@@ -192,9 +190,7 @@ namespace InventoryKamera
 			// Assign Wanderer's custom name
 			_gameDataService.UpdateCharacterName("wanderer", S_WandererName);
 
-			// Assign Mannequin names
-			_gameDataService.UpdateCharacterName("manequin1", S_Manequin1Name);
-			_gameDataService.UpdateCharacterName("manequin2", S_Manequin2Name);
+			// Mannequins aren't in the game data; CharacterNameReader.MatchCustomName recognises them by name
 
 			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
 

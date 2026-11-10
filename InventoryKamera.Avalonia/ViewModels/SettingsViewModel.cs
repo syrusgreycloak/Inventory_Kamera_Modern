@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using InventoryKamera.Avalonia.Services;
@@ -320,6 +322,69 @@ namespace InventoryKamera.Avalonia.ViewModels
                 _settings.Save();
                 OnPropertyChanged();
             }
+        }
+
+        /// <summary>The female mannequin's name if renamed (blank: her in-game name, Manekina).</summary>
+        public string Mannequin1Name
+        {
+            get => ShownMannequinName(_settings.Current.Manequin1Name, "Manequin1");
+            set
+            {
+                if (_settings.Current.Manequin1Name == value) return;
+                _settings.Current.Manequin1Name = value;
+                _settings.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>The male mannequin's name if renamed (blank: his in-game name, Manekin).</summary>
+        public string Mannequin2Name
+        {
+            get => ShownMannequinName(_settings.Current.Manequin2Name, "Manequin2");
+            set
+            {
+                if (_settings.Current.Manequin2Name == value) return;
+                _settings.Current.Manequin2Name = value;
+                _settings.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        // Older settings files hold placeholders ("Manequin1"/"Manequin2"); show those as not set
+        private static string ShownMannequinName(string stored, string placeholder) =>
+            string.Equals(stored, placeholder, StringComparison.OrdinalIgnoreCase) ? string.Empty : stored;
+
+        /// <summary>
+        /// Game process names to look for, comma-separated (".exe" optional). Blank restores the
+        /// defaults, GenshinImpact and YuanShen.
+        /// </summary>
+        public string Executables
+        {
+            get => string.Join(", ", _settings.Current.Executables ?? new List<string>());
+            set
+            {
+                var names = ParseExecutables(value);
+                if (names.SequenceEqual(_settings.Current.Executables ?? new List<string>())) return;
+                _settings.Current.Executables = names;
+                _settings.Save();
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// Splits on commas, semicolons and line breaks (not spaces: process names can contain them);
+        /// drops ".exe" and duplicates. Blank gives the defaults.
+        /// </summary>
+        public static List<string> ParseExecutables(string text)
+        {
+            var names = (text ?? string.Empty)
+                .Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(n => n.Trim())
+                .Select(n => n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? n.Substring(0, n.Length - 4) : n)
+                .Where(n => n.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return names.Count > 0 ? names : new ScanSettings().Executables;
         }
 
         /// <summary>In-game name of the Wanderer character (user-specific override).</summary>

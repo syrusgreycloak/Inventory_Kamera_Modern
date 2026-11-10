@@ -376,5 +376,52 @@ namespace InventoryKamera.Tests
             Assert.Contains("TravelerName",          changed);
             Assert.Contains("OutputPath",            changed);
         }
+
+        // ---------------------------------------------------------------
+        // Mannequin names and game executables
+        // ---------------------------------------------------------------
+
+        [Fact]
+        public void MannequinName_OldPlaceholder_ShowsBlank()
+        {
+            var (vm, _, _) = MakeVm(new ScanSettings { Manequin1Name = "Manequin1", Manequin2Name = "Manekin Prime" });
+            Assert.Equal("", vm.Mannequin1Name);
+            Assert.Equal("Manekin Prime", vm.Mannequin2Name);
+        }
+
+        [Fact]
+        public void MannequinName_Set_SavesSetting()
+        {
+            var current = new ScanSettings();
+            var (vm, settings, _) = MakeVm(current);
+
+            vm.Mannequin1Name = "Doll Face";
+
+            Assert.Equal("Doll Face", current.Manequin1Name);
+            settings.Verify(s => s.Save(), Times.Once);
+        }
+
+        [Theory]
+        [InlineData("GenshinImpact, YuanShen", new[] { "GenshinImpact", "YuanShen" })]
+        [InlineData("GenshinImpact.exe;Genshin Impact Cloud Game.exe", new[] { "GenshinImpact", "Genshin Impact Cloud Game" })]
+        [InlineData(" GenshinImpact ,, genshinimpact ", new[] { "GenshinImpact" })]
+        [InlineData("", new[] { "GenshinImpact", "YuanShen" })]   // blank restores the defaults
+        public void ParseExecutables_SplitsAndCleans(string text, string[] expected)
+        {
+            Assert.Equal(expected, SettingsViewModel.ParseExecutables(text));
+        }
+
+        [Fact]
+        public void Executables_Set_SavesList()
+        {
+            var current = new ScanSettings();
+            var (vm, settings, _) = MakeVm(current);
+
+            vm.Executables = "GenshinImpact, MyGenshin.exe";
+
+            Assert.Equal(new[] { "GenshinImpact", "MyGenshin" }, current.Executables);
+            Assert.Equal("GenshinImpact, MyGenshin", vm.Executables);
+            settings.Verify(s => s.Save(), Times.Once);
+        }
     }
 }
