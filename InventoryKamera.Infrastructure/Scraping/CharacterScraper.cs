@@ -517,14 +517,13 @@ namespace InventoryKamera
 				Right:  (int)( 100 / 1280.0 * _screenCapture.GetWidth() ),
 				Bottom: (int)( 695 / 720.0 * _screenCapture.GetHeight() ));
 
-			// Fast path (16:9): select the first constellation, then read all six nodes from one
-			// screenshot. Clicking through each one took ~1.6 s per activated constellation.
+			// Fast path (16:9): read all six nodes from one screenshot of the constellation tab as it
+			// opens. The nodes sit where they do after selecting one, and nothing is selected, so
+			// there is no zoom to wait for or undo, and the lit constellation drawing stays in the
+			// middle of the screen instead of behind the nodes. Clicking through each constellation
+			// took ~1.6 s per activated one.
 			if (_screenCapture.GetAspectRatio() == new ISSize(16, 9))
 			{
-				_inputSimulator.SetCursor((int)( 1130 / 1280.0 * _screenCapture.GetWidth() ), (int)( 180 / yReference * _screenCapture.GetHeight() ));
-				_inputSimulator.Click();
-				_inputSimulator.SystemWaitMs(700);
-
 				using (var screenshot = _screenCapture.CaptureWindow())
 				{
 					if ((_settings != null ? _settings.LogScreenshots : false))
@@ -537,7 +536,6 @@ namespace InventoryKamera
 					if (counted.HasValue)
 					{
 						Logger.Debug("Completed constellation scan for {0}: {1} constellations activated (single screenshot)", character.NameGOOD, counted.Value);
-						Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
 						_userInterface.SetCharacter_Constellation(counted.Value);
 						return counted.Value;
 					}
