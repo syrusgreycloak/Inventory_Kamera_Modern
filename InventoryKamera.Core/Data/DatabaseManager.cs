@@ -485,8 +485,9 @@ namespace InventoryKamera
                         // Both travelers are listed but are essentially identical; keep only PlayerBoy.
                         if (iconName.EndsWith("PlayerGirl")) return;
 
-                        // Since 7.x there is also a crossbow PlayerBoy variant with a single non-elemental
-                        // skill depot. Only the original traveler lists one depot per element.
+                        // Since 7.x there is also a crossbow PlayerBoy variant: the gun-based shooter-mode body
+                        // (no elements, skill, burst or constellations; its skill depot is empty). Only the
+                        // original traveler lists one depot per element.
                         if (iconName.EndsWith("PlayerBoy") && ((character["candSkillDepotIds"] as JArray)?.Count ?? 0) < 2) return;
 
                         string PascalCase = CultureInfo.GetCultureInfo("en").TextInfo.ToTitleCase(name);
@@ -524,7 +525,8 @@ namespace InventoryKamera
                                     { "Grass", "dendro" },
                                     { "Rock", "geo"},
                                     { "Water", "hydro"},
-                                    { "Wind", "anemo"}
+                                    { "Wind", "anemo"},
+                                    { "Ice", "cryo"}
                                 };
 
                                 value.Add("Element", new JArray(playerElements.Values));

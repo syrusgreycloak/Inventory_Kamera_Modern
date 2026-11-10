@@ -1393,7 +1393,8 @@
       "dendro",
       "geo",
       "hydro",
-      "anemo"
+      "anemo",
+      "cryo"
     ],
     "ConstellationOrder": {
       "electro": [
@@ -1419,6 +1420,10 @@
       "pyro": [
         "skill",
         "burst"
+      ],
+      "cryo": [
+        "burst",
+        "skill"
       ]
     },
     "WeaponType": 0
