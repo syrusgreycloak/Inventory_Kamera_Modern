@@ -35,6 +35,18 @@ namespace InventoryKamera
 			{
 				var character = ScanCharacter(first);
 
+				// Name couldn't be read after all retries: skip this character rather than crash the
+				// whole character scan (crops are in logging/characters/failures)
+				if (string.IsNullOrWhiteSpace(character.NameGOOD))
+				{
+					Logger.Error("Skipping a character whose name could not be read; see logging/characters/failures");
+					_userInterface.AddError("Skipped a character whose name could not be read");
+					_inputSimulator.SelectNextCharacter();
+					_userInterface.ResetCharacterDisplay();
+					if (++viewed > 3 && Characters.Count < 1) break;
+					continue;
+				}
+
 				// Skip mannequins - Genshin Optimizer doesn't support them and they cause crashes
 				if (character.NameGOOD.ToLower() == "manequin1" || character.NameGOOD.ToLower() == "manequin2")
 				{
@@ -281,24 +293,10 @@ namespace InventoryKamera
 				_inputSimulator.SystemWait(ScanDelay.Fast);
 				using (Image<Rgba32> bm = _screenCapture.CaptureRegion(nameRegion))
 				{
-					Image<Rgba32> n = _imageProcessor.SetGrayscale(bm);
-					// Increase contrast to make white text stand out from lighter backgrounds (fog effects)
-					var contrasted = _imageProcessor.SetContrast(n, 60);
-					n.Dispose();
-					n = contrasted;
-					// High threshold to capture only pure white text, filtering out light backgrounds
-					var thresholded = _imageProcessor.SetThreshold(n, 200);
-					n.Dispose();
-					n = thresholded;
-					var invertedN = _imageProcessor.SetInvert(n);
-					n.Dispose();
-					n = invertedN;
-
-					var resized = _imageProcessor.ResizeImage(n, n.Width * 2, n.Height * 2);
-					n.Dispose();
-					n = resized;
-					string text = _ocrEngine.AnalyzeText(n, (PageSegmentationMode)(int)TesseractOCR.Enums.PageSegMode.SingleLine).ToLower().Trim();
-
+					// White-text mask first, original grayscale pipeline as fallback (see CharacterNameReader)
+					foreach (string reading in CharacterNameReader.ReadCandidates(bm, _imageProcessor, _ocrEngine))
+					{
+					string text = reading.ToLower().Trim();
 					Logger.Debug("Name OCR from right panel: '{0}'", text);
 
 					// Clean up the text - remove non-alphanumeric except spaces
@@ -361,7 +359,6 @@ namespace InventoryKamera
 									bm.Save($"./logging/characters/temp/name_{name}_{DateTime.Now:yyyyMMddHHmmss}.png");
 								}
 
-								n.Dispose();
 								return;
 							}
 							else
@@ -376,7 +373,7 @@ namespace InventoryKamera
 						}
 					}
 
-					n.Dispose();
+					}
 
 					Logger.Debug("Could not parse character name (Attempt {0}/{1}). Retrying...", attempts+1, maxAttempts);
 
