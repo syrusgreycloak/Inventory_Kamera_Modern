@@ -11,6 +11,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using DrawingSize = System.Drawing.Size;
 using ISSize     = SixLabors.ImageSharp.Size;
+using ISRect     = SixLabors.ImageSharp.Rectangle;
+using SixLabors.ImageSharp.Processing;
 
 namespace InventoryKamera
 {
@@ -601,6 +603,43 @@ namespace InventoryKamera
 				{ "skill", -1 },
 				{ "burst", -1 }
 			};
+
+			// Fast path (16:9): read all three levels from the talent list on the tab itself.
+			// Clicking each talent and reading its detail page took ~2 s per character.
+			if (_screenCapture.GetAspectRatio() == new ISSize(16, 9))
+			{
+				using (var screenshot = _screenCapture.CaptureWindow())
+				{
+					if ((_settings != null ? _settings.LogScreenshots : false))
+					{
+						Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
+						screenshot.Save($"./logging/characters/{character.NameGOOD}/talents.png");
+					}
+
+					int[] levels = TalentListReader.ReadLevels(screenshot, _ocrEngine);
+					if (levels != null)
+					{
+						var names = new[] { "auto", "skill", "burst" };
+						var listRegion = TalentListReader.WideRegion1080;
+						double sx = screenshot.Width / 1920.0, sy = screenshot.Height / 1080.0;
+						using (var list = screenshot.Clone(c => c.Crop(new ISRect(
+							(int)(listRegion.X * sx), (int)(listRegion.Y * sy),
+							(int)(listRegion.Width * sx), (int)(listRegion.Height * sy)))))
+						{
+							for (int t = 0; t < 3; t++)
+							{
+								talents[names[t]] = levels[t];
+								_userInterface.SetCharacter_Talent(list, levels[t].ToString(), t);
+							}
+						}
+						Logger.Debug("Completed talent scan for {0}: auto={1}, skill={2}, burst={3} (single screenshot)",
+							character.NameGOOD, levels[0], levels[1], levels[2]);
+						return talents;
+					}
+
+					Logger.Info("Talent screenshot for {0} was inconclusive; checking each talent instead", character.NameGOOD);
+				}
+			}
 
 			int specialOffset = 0;
 
