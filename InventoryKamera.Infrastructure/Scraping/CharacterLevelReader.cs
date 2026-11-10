@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace InventoryKamera
@@ -9,14 +10,18 @@ namespace InventoryKamera
     /// </summary>
     public static class CharacterLevelReader
     {
+        /// <summary>Every max level the level line can show: the ascension caps, then 95 and 100.</summary>
+        public static readonly int[] ValidMaxLevels = { 20, 40, 50, 60, 70, 80, 90, 95, 100 };
+
         /// <summary>
         /// Parses <paramref name="text"/>. Returns false if it doesn't contain a usable
         /// "level / max level" pair, in which case the caller should capture and try again.
         /// </summary>
         /// <remarks>
-        /// Tesseract sometimes reads the trailing 0 of the max level as a bracket: "Level 60 / 7()"
-        /// and "Level 20 / 4(" came from a real scan. Dropping those characters left a max level of
-        /// 7 or 4, so Jahoda at 60/70 and Kaveh at 20/40 were exported one ascension too low.
+        /// Tesseract misreads the max level in both directions. It can read the trailing 0 as a
+        /// bracket ("Level 60 / 7()", "Level 20 / 4(") or drop it ("90 / 9"), and it can add a
+        /// stray bracket after a correct 0 ("Level 40 / 40)"). So the max level is read several
+        /// ways and the first reading that is a real level cap, at or above the level, wins.
         /// </remarks>
         public static bool TryParse(string text, out int level, out int maxLevel, out bool ascended)
         {
@@ -29,24 +34,36 @@ namespace InventoryKamera
             if (slash < 0) return false;
 
             string levelText = Regex.Replace(text.Substring(0, slash), "[^0-9]", string.Empty);
+            if (!int.TryParse(levelText, out level) || level < 1) return false;
 
-            // Brackets and the letter O on the max-level side are a misread 0
-            string maxText = text.Substring(slash + 1).Replace("()", "0");
-            maxText = Regex.Replace(maxText, "[()Oo]", "0");
-            maxText = Regex.Replace(maxText, "[^0-9]", string.Empty);
+            int lvl = level;
+            int? max = MaxLevelReadings(text.Substring(slash + 1))
+                .Cast<int?>()
+                .FirstOrDefault(m => ValidMaxLevels.Contains(m.Value) && m.Value >= lvl);
+            if (max == null) return false;
 
-            if (!int.TryParse(levelText, out level) || !int.TryParse(maxText, out maxLevel))
-                return false;
-
-            // Max levels are multiples of ten (95 rounds up, as before). A single digit means the
-            // trailing 0 was lost entirely ("90/9").
-            if (maxLevel < 10) maxLevel *= 10;
-            maxLevel = (int)Math.Round(maxLevel / 10.0, MidpointRounding.AwayFromZero) * 10;
-
-            if (level < 1 || maxLevel < level) return false;
-
+            maxLevel = max.Value;
             ascended = 20 <= level && level < maxLevel;
             return true;
+        }
+
+        /// <summary>Candidate readings of the max-level text, most literal first.</summary>
+        private static System.Collections.Generic.IEnumerable<int> MaxLevelReadings(string maxText)
+        {
+            // Digits only: brackets and other noise dropped ("40)" -> 40)
+            string digits = Regex.Replace(maxText, "[^0-9]", string.Empty);
+            if (int.TryParse(digits, out int plain))
+            {
+                yield return plain;
+                // Trailing 0 lost entirely ("9" -> 90)
+                yield return plain * 10;
+            }
+
+            // Brackets and the letter O read as the 0 they replaced ("7()" -> 70, "4(" -> 40)
+            string asZero = Regex.Replace(maxText.Replace("()", "0"), "[()Oo]", "0");
+            asZero = Regex.Replace(asZero, "[^0-9]", string.Empty);
+            if (int.TryParse(asZero, out int bracketed))
+                yield return bracketed;
         }
     }
 }
