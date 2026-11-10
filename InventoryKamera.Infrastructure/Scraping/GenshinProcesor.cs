@@ -82,7 +82,10 @@ namespace InventoryKamera.Infrastructure.Scraping
 			"Manequin2"
 		};
 
-		private static readonly OcrPool _ocrPool;
+		// Created on first OCR call, not in the static constructor: other static members (e.g.
+		// BitmapToImageSharp, used for every screen capture) shouldn't load 8 Tesseract engines.
+		private static readonly Lazy<OcrPool> _lazyOcrPool = new Lazy<OcrPool>(() => new OcrPool());
+		private static OcrPool _ocrPool => _lazyOcrPool.Value;
 
 		public static Dictionary<string, string> Weapons, DevItems, Materials, Elements;
 
@@ -111,7 +114,6 @@ namespace InventoryKamera.Infrastructure.Scraping
 
 		static GenshinProcesor()
         {
-            _ocrPool = new OcrPool();
             Logger.Info("Scraper initialized");
         }
 
@@ -147,6 +149,15 @@ namespace InventoryKamera.Infrastructure.Scraping
 		#region OCR
 
 		public static void RestartEngines() => _ocrPool.RestartEngines();
+
+		/// <summary>
+		/// Disposes this class's OCR engines, if any were created. Call on shutdown: undisposed
+		/// Tesseract engines make Tesseract print "WARNING! LEAK!" as the process exits.
+		/// </summary>
+		public static void DisposeOcrEngines()
+		{
+			if (_lazyOcrPool.IsValueCreated) _lazyOcrPool.Value.Dispose();
+		}
 
 		/// <summary> Use Tesseract OCR to find words on picture to string (ImageSharp overload). </summary>
 		public static string AnalyzeText(Image<Rgba32> image, PageSegMode pageMode = PageSegMode.SingleLine, bool numbersOnly = false)

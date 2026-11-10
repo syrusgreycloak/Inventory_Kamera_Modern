@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Collections.Concurrent;
@@ -10,7 +11,12 @@ using InventoryKamera; // IOcrEngine, PageSegmentationMode
 
 namespace InventoryKamera.Infrastructure
 {
-    public class OcrEnginePool : IOcrEngine
+    /// <summary>
+    /// A pool of Tesseract engines shared by the scraper threads. Dispose it on shutdown: Tesseract
+    /// otherwise reports its loaded dictionaries as leaked ("ObjectCache ... WARNING! LEAK!") when the
+    /// process exits.
+    /// </summary>
+    public class OcrEnginePool : IOcrEngine, IDisposable
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -18,6 +24,7 @@ namespace InventoryKamera.Infrastructure
         private readonly string _tessdataPath;
         private readonly string _tessdataLanguage;
         private ConcurrentBag<Engine> _engines;
+        private volatile bool _disposed;
 
         public OcrEnginePool()
         {
@@ -70,6 +77,22 @@ namespace InventoryKamera.Infrastructure
             {
                 engine.SetVariable("tessedit_char_whitelist", ""); // always clear whitelist before returning
                 _engines.Add(engine);
+                if (_disposed) DisposeIdleEngines(); // returned after Dispose: don't leave it behind
+            }
+        }
+
+        /// <summary>Disposes the engines. One still in use is disposed when it is returned.</summary>
+        public void Dispose()
+        {
+            _disposed = true;
+            DisposeIdleEngines();
+        }
+
+        private void DisposeIdleEngines()
+        {
+            lock (_engines)
+            {
+                while (_engines.TryTake(out Engine e)) e.Dispose();
             }
         }
     }

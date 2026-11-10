@@ -36,6 +36,17 @@ namespace InventoryKamera.Avalonia
                 {
                     DataContext = serviceProvider.GetRequiredService<MainViewModel>()
                 };
+
+                // Dispose singletons on exit, notably the OCR engine pool: undisposed Tesseract
+                // engines make Tesseract print "WARNING! LEAK!" as the process ends.
+                desktop.Exit += (_, _) =>
+                {
+                    serviceProvider.Dispose();
+#if WINDOWS
+                    // The artifact and material scrapers still use GenshinProcesor's own static pool
+                    InventoryKamera.Infrastructure.Scraping.GenshinProcesor.DisposeOcrEngines();
+#endif
+                };
             }
 
             base.OnFrameworkInitializationCompleted();
