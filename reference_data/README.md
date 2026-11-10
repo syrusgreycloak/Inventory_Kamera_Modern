@@ -12,28 +12,27 @@ These files serve as:
 ## Files
 
 ### characters.json
-**Version:** 6.4.0 (Apr 2026)
-**Status:** ✅ Manually verified against genshin.gg
-**Validation:** 85+ characters checked, 5 constellation errors fixed
-**Last Updated:** 2026-04-11
+**Version:** 7.2.0 (Nov 2026)
+**Status:** ✅ ConstellationOrder verified against in-game constellation text (TextMapEN)
+**Last Updated:** 2026-11-09
 
 **Critical Fix:** ConstellationOrder for normal attack carries (Arlecchino, Neuvillette, Wriothesley, Lyney) corrected from `["burst", "skill"]` to `["auto", "burst"]`.
 
 Key verified data:
-- ConstellationOrder for all playable characters through 6.4
+- ConstellationOrder for all playable characters through 7.2
 - ConstellationName (constellation system names)
 - Element assignments
 - WeaponType classifications
 
 ### weapons.json
-**Version:** 6.4.0
-**Last Updated:** 2026-04-09
+**Version:** 7.2.0
+**Last Updated:** 2026-11-09
 
 Weapon name mappings for OCR → GOOD format conversion.
 
 ### artifacts.json
-**Version:** 6.4.0
-**Last Updated:** 2026-04-10
+**Version:** 7.2.0
+**Last Updated:** 2026-11-09
 
 Artifact set and piece name mappings, including:
 - Set names (GOOD format)
@@ -41,8 +40,8 @@ Artifact set and piece name mappings, including:
 - Sanctified artifact flags
 
 ### materials.json
-**Version:** 6.4.0
-**Last Updated:** 2026-04-09
+**Version:** 7.2.0
+**Last Updated:** 2026-11-09
 
 Character/weapon ascension material mappings.
 
@@ -81,3 +80,11 @@ Always include validation evidence (validation report, test results) when updati
   - Verified 85+ characters against genshin.gg constellation data
   - Fixed 5 ConstellationOrder errors (5.4% error rate)
   - See: `constellation_validation_report.md`
+- **2026-11-09:** Refreshed to 7.2.0 (data source moved to Dimbreath/animegamedata2)
+  - ConstellationOrder for every character checked against the C3/C5 descriptions in the game's
+    own text (the updater now derives it the same way, from each character's skill depot)
+  - Fixed 11 orders: Valeriy, Sandrone, Varesa, Mitya (Normal Attack cases) and
+    Skirk, Dahlia, Lauma, Flins, Aino, Durin, Jahoda (C3 burst / C5 skill); Lauma, Flins, Aino and
+    Jahoda also confirmed in-game
+  - GOOD keys capitalize every word (e.g. `ReliquaryOfTruth`), matching Genshin Optimizer's keys
+  - ConstellationName corrected to the star-sign names for 22 characters

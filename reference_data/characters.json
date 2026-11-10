@@ -2,11 +2,11 @@
   "aino": {
     "GOOD": "Aino",
     "ConstellationName": [
-      "The Theory of Ash—Field Equilibrium"
+      "Cistellula Mira"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "hydro"
@@ -254,7 +254,7 @@
   "citlali": {
     "GOOD": "Citlali",
     "ConstellationName": [
-      "Radiant Blades of Centzon Mimixcoah"
+      "Patina Anavatlaca"
     ],
     "ConstellationOrder": [
       "skill",
@@ -324,11 +324,11 @@
   "dahlia": {
     "GOOD": "Dahlia",
     "ConstellationName": [
-      "Infallible Procession"
+      "Cantus Choralis"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "hydro"
@@ -394,11 +394,11 @@
   "durin": {
     "GOOD": "Durin",
     "ConstellationName": [
-      "Adamah's Redemption"
+      "Draco Rubedo"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "pyro"
@@ -422,7 +422,7 @@
   "escoffier": {
     "GOOD": "Escoffier",
     "ConstellationName": [
-      "Pre-Dinner Dance for Your Taste Buds"
+      "Dulciaria Structura"
     ],
     "ConstellationOrder": [
       "skill",
@@ -478,11 +478,11 @@
   "flins": {
     "GOOD": "Flins",
     "ConstellationName": [
-      "Part the Veil of Snow"
+      "Laterna Vigilis"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "electro"
@@ -576,7 +576,7 @@
   "iansan": {
     "GOOD": "Iansan",
     "ConstellationName": [
-      "Starting's Never Easy"
+      "Carnotaurus"
     ],
     "ConstellationOrder": [
       "skill",
@@ -590,7 +590,7 @@
   "ifa": {
     "GOOD": "Ifa",
     "ConstellationName": [
-      "Vitiferous Elixir's Concoction"
+      "Catena Opele"
     ],
     "ConstellationOrder": [
       "skill",
@@ -604,7 +604,7 @@
   "illuga": {
     "GOOD": "Illuga",
     "ConstellationName": [
-      "Vigilant Sentinel"
+      "Oriolus"
     ],
     "ConstellationOrder": [
       "burst",
@@ -618,7 +618,7 @@
   "ineffa": {
     "GOOD": "Ineffa",
     "ConstellationName": [
-      "Rectifying Processor"
+      "Vanilla Planifolia"
     ],
     "ConstellationOrder": [
       "skill",
@@ -632,11 +632,11 @@
   "jahoda": {
     "GOOD": "Jahoda",
     "ConstellationName": [
-      "One More Flask!"
+      "Fragum"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "anemo"
@@ -828,7 +828,7 @@
   "lanyan": {
     "GOOD": "LanYan",
     "ConstellationName": [
-      "\"As One Might Stride Betwixt the Clouds\""
+      "Hirundo Lazuli"
     ],
     "ConstellationOrder": [
       "skill",
@@ -842,11 +842,11 @@
   "lauma": {
     "GOOD": "Lauma",
     "ConstellationName": [
-      "\"O Lips, Weave Me Songs and Psalms\""
+      "Cerva Nivea"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "dendro"
@@ -940,7 +940,7 @@
   "mavuika": {
     "GOOD": "Mavuika",
     "ConstellationName": [
-      "The Night-Lord's Explication"
+      "Sol Invictus"
     ],
     "ConstellationOrder": [
       "burst",
@@ -972,7 +972,7 @@
     ],
     "ConstellationOrder": [
       "skill",
-      "burst"
+      "auto"
     ],
     "Element": [
       "electro"
@@ -1038,7 +1038,7 @@
   "nefer": {
     "GOOD": "Nefer",
     "ConstellationName": [
-      "Planning Breeds Success"
+      "Ludus Latrunculorum"
     ],
     "ConstellationOrder": [
       "skill",
@@ -1223,8 +1223,8 @@
       "Narcissorolegium"
     ],
     "ConstellationOrder": [
-      "burst",
-      "skill"
+      "auto",
+      "burst"
     ],
     "Element": [
       "cryo"
@@ -1318,11 +1318,11 @@
   "skirk": {
     "GOOD": "Skirk",
     "ConstellationName": [
-      "Far to Fall"
+      "Crystallina"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "skill"
     ],
     "Element": [
       "cryo"
@@ -1430,7 +1430,7 @@
     ],
     "ConstellationOrder": [
       "auto",
-      "burst"
+      "skill"
     ],
     "Element": [
       "electro"
@@ -1440,11 +1440,11 @@
   "varesa": {
     "GOOD": "Varesa",
     "ConstellationName": [
-      "Undying Passion"
+      "Mascara Luctatori"
     ],
     "ConstellationOrder": [
-      "skill",
-      "burst"
+      "burst",
+      "auto"
     ],
     "Element": [
       "electro"
@@ -1454,7 +1454,7 @@
   "varka": {
     "GOOD": "Varka",
     "ConstellationName": [
-      "\"Come, Friend, Let Us Dance Beneath the Moon's Soft Glow\""
+      "Lupus Majoris"
     ],
     "ConstellationOrder": [
       "skill",
@@ -1692,7 +1692,7 @@
   "yumemizukimizuki": {
     "GOOD": "YumemizukiMizuki",
     "ConstellationName": [
-      "In Mist-Like Waters"
+      "Tapirus Somniator"
     ],
     "ConstellationOrder": [
       "skill",
@@ -1734,7 +1734,7 @@
   "zibai": {
     "GOOD": "Zibai",
     "ConstellationName": [
-      "Burst Forth With Vigor, But Enter in Silence"
+      "Equa Alba"
     ],
     "ConstellationOrder": [
       "skill",

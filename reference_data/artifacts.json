@@ -16,7 +16,7 @@
       },
       "sands": {
         "artifactName": "A Note in Spring's Leich",
-        "GOOD": "ANoteinSpringsLeich",
+        "GOOD": "ANoteInSpringsLeich",
         "normalizedName": "anoteinspringsleich"
       },
       "goblet": {
@@ -26,7 +26,7 @@
       },
       "circlet": {
         "artifactName": "Minnesang of Love and Lament",
-        "GOOD": "MinnesangofLoveandLament",
+        "GOOD": "MinnesangOfLoveAndLament",
         "normalizedName": "minnesangofloveandlament"
       }
     }
@@ -97,7 +97,7 @@
   },
   "aubadeofmorningstarandmoon": {
     "setName": "Aubade of Morningstar and Moon",
-    "GOOD": "AubadeofMorningstarandMoon",
+    "GOOD": "AubadeOfMorningstarAndMoon",
     "normalizedName": "aubadeofmorningstarandmoon",
     "artifacts": {
       "flower": {
@@ -513,7 +513,7 @@
   },
   "finaleofthedeepgalleries": {
     "setName": "Finale of the Deep Galleries",
-    "GOOD": "FinaleoftheDeepGalleries",
+    "GOOD": "FinaleOfTheDeepGalleries",
     "normalizedName": "finaleofthedeepgalleries",
     "artifacts": {
       "flower": {
@@ -528,7 +528,7 @@
       },
       "sands": {
         "artifactName": "Deep Gallery's Moment of Oblivion",
-        "GOOD": "DeepGallerysMomentofOblivion",
+        "GOOD": "DeepGallerysMomentOfOblivion",
         "normalizedName": "deepgallerysmomentofoblivion"
       },
       "goblet": {
@@ -1057,17 +1057,17 @@
   },
   "nightoftheskysunveiling": {
     "setName": "Night of the Sky's Unveiling",
-    "GOOD": "NightoftheSkysUnveiling",
+    "GOOD": "NightOfTheSkysUnveiling",
     "normalizedName": "nightoftheskysunveiling",
     "artifacts": {
       "flower": {
         "artifactName": "Bloom of the Mind's Desire",
-        "GOOD": "BloomoftheMindsDesire",
+        "GOOD": "BloomOfTheMindsDesire",
         "normalizedName": "bloomofthemindsdesire"
       },
       "plume": {
         "artifactName": "Feather of Indelible Sin",
-        "GOOD": "FeatherofIndelibleSin",
+        "GOOD": "FeatherOfIndelibleSin",
         "normalizedName": "featherofindeliblesin"
       },
       "sands": {
@@ -1077,12 +1077,12 @@
       },
       "goblet": {
         "artifactName": "Vessel of Plenty",
-        "GOOD": "VesselofPlenty",
+        "GOOD": "VesselOfPlenty",
         "normalizedName": "vesselofplenty"
       },
       "circlet": {
         "artifactName": "Crown of the Befallen",
-        "GOOD": "CrownoftheBefallen",
+        "GOOD": "CrownOfTheBefallen",
         "normalizedName": "crownofthebefallen"
       }
     }
@@ -1526,12 +1526,12 @@
     "artifacts": {
       "flower": {
         "artifactName": "Crystal Tear of the Wanderer",
-        "GOOD": "CrystalTearoftheWanderer",
+        "GOOD": "CrystalTearOfTheWanderer",
         "normalizedName": "crystaltearofthewanderer"
       },
       "plume": {
         "artifactName": "Pristine Plume of the Blessed",
-        "GOOD": "PristinePlumeoftheBlessed",
+        "GOOD": "PristinePlumeOfTheBlessed",
         "normalizedName": "pristineplumeoftheblessed"
       },
       "sands": {
@@ -1541,12 +1541,12 @@
       },
       "goblet": {
         "artifactName": "Joyous Glory of the Pure",
-        "GOOD": "JoyousGloryofthePure",
+        "GOOD": "JoyousGloryOfThePure",
         "normalizedName": "joyousgloryofthepure"
       },
       "circlet": {
         "artifactName": "Holy Crown of the Believer",
-        "GOOD": "HolyCrownoftheBeliever",
+        "GOOD": "HolyCrownOfTheBeliever",
         "normalizedName": "holycrownofthebeliever"
       }
     }
