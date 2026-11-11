@@ -251,5 +251,17 @@ namespace InventoryKamera.Tests
             Assert.False(string.IsNullOrWhiteSpace(vm.Version));
             Assert.True(vm.UpdateGameDataCommand.CanExecute(null));
         }
+
+        [Theory]
+        [InlineData("v2.0.0", "2.0.0.0")]
+        [InlineData("2.0.1", "2.0.1.0")]
+        [InlineData("v2.0.0-beta.1", "2.0.0.0")]   // used to become "2.0.0-.1" and fail
+        [InlineData("V1.4.5", "1.4.5.0")]
+        [InlineData("release-2.1", "2.1.0.0")]
+        [InlineData("latest", null)]
+        public void ParseReleaseVersion_ReadsVersionFromTag(string tag, string expected)
+        {
+            Assert.Equal(expected, AboutViewModel.ParseReleaseVersion(tag)?.ToString());
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -117,6 +118,20 @@ namespace InventoryKamera.Avalonia.ViewModels
         /// Checks GitHub releases for a newer version and prompts the user to download it.
         /// Mirrors the logic in WinForms <c>MainForm.CheckForKameraUpdates</c>.
         /// </summary>
+        /// <summary>
+        /// The version in a release tag: the first "major.minor[.build[.revision]]" in it, so
+        /// "v2.0.0", "2.0.0" and "v2.0.0-beta.1" all give 2.0.0.0. Null if there is none.
+        /// </summary>
+        public static System.Version ParseReleaseVersion(string tag)
+        {
+            var m = Regex.Match(tag ?? string.Empty, @"\d+(\.\d+){1,3}");
+            return m.Success && System.Version.TryParse(m.Value, out var v) ? Normalize(v) : null;
+        }
+
+        // 2.0.0 and 2.0.0.0 compare as different versions; give both four parts
+        private static System.Version Normalize(System.Version v) =>
+            new System.Version(v.Major, v.Minor, Math.Max(v.Build, 0), Math.Max(v.Revision, 0));
+
         [RelayCommand(CanExecute = nameof(CanCheckAppUpdates))]
         private async Task CheckAppUpdates()
         {
@@ -137,18 +152,22 @@ namespace InventoryKamera.Avalonia.ViewModels
                     return;
                 }
 
-                var latest = releases[0];
-                var tagName = latest.TagName ?? string.Empty;
-                // Strip any alpha prefix such as 'v', 'V', letters only
-                var cleaned = Regex.Replace(tagName, "[a-zA-Z]", string.Empty);
-                if (!System.Version.TryParse(cleaned, out var latestVersion))
+                // Highest version among the published releases (the API doesn't promise an order)
+                var latest = releases
+                    .Where(r => !r.Draft)
+                    .Select(r => (Release: r, Version: ParseReleaseVersion(r.TagName)))
+                    .Where(r => r.Version != null)
+                    .OrderByDescending(r => r.Version)
+                    .FirstOrDefault();
+                if (latest.Release == null)
                 {
-                    Log.Warn("Could not parse release tag: {Tag}", tagName);
+                    Log.Warn("Could not parse any release tag: {Tags}", string.Join(", ", releases.Select(r => r.TagName)));
                     await _dialog.ShowInfoAsync("Check complete", "Could not determine the latest version.");
                     return;
                 }
+                var latestVersion = latest.Version;
 
-                var currentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new System.Version();
+                var currentVersion = Normalize(Assembly.GetExecutingAssembly().GetName().Version ?? new System.Version());
 
                 if (currentVersion.CompareTo(latestVersion) < 0)
                 {
@@ -158,7 +177,7 @@ namespace InventoryKamera.Avalonia.ViewModels
                                   $"Would you like to download the update?";
 
                     if (await _dialog.ConfirmAsync("Update available", message))
-                        _url.Open(latest.HtmlUrl);
+                        _url.Open(latest.Release.HtmlUrl);
                 }
                 else
                 {
