@@ -175,5 +175,18 @@ namespace InventoryKamera.Tests
             Assert.NotNull(main.ExportVm);
             Assert.NotNull(main.AboutVm);
         }
+
+        [Fact]
+        public void SetupNote_FirstRun_HidesWhenOutputFolderIsChosen()
+        {
+            // First start: opens on Settings with the note; choosing a folder clears the note
+            var (main, _, settings, _, _) = MakeMainVm(outputPath: "", firstRun: true);
+            Assert.Same(settings, main.SelectedTab);
+            Assert.True(settings.ShowSetupNote);
+
+            settings.OutputPath = @"C:\Exports";
+
+            Assert.False(settings.ShowSetupNote);
+        }
     }
 }

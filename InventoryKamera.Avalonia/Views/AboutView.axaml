@@ -43,7 +43,7 @@
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextSecondaryBrush}" />
             <TextBlock Grid.Column="1"
-                       Text="{Binding LastUpdateCheck, StringFormat='yyyy-MM-dd HH:mm'}"
+                       Text="{Binding LastUpdateCheckText}"
                        FontSize="13"
                        VerticalAlignment="Center" />
           </Grid>

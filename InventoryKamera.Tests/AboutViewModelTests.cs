@@ -132,6 +132,15 @@ namespace InventoryKamera.Tests
             var s = new ScanSettings { LastUpdateCheck = expected };
             var (vm, _, _, _) = MakeVm(s);
             Assert.Equal(expected, vm.LastUpdateCheck);
+            Assert.Equal("2025-01-15 12:00", vm.LastUpdateCheckText);
+        }
+
+        [Fact]
+        public void LastUpdateCheckText_NeverChecked_SaysNever()
+        {
+            // The setting defaults to DateTime.MinValue, which used to show as 0001-01-01 00:00
+            var (vm, _, _, _) = MakeVm(new ScanSettings());
+            Assert.Equal("never", vm.LastUpdateCheckText);
         }
 
         // ─────────────────────────────────────────────────────────────────────

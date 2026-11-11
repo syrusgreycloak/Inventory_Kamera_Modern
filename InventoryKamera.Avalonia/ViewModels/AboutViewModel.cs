@@ -61,6 +61,10 @@ namespace InventoryKamera.Avalonia.ViewModels
         /// <summary>Date/time of the most recent update check (from settings).</summary>
         public DateTime LastUpdateCheck => _settings.Current.LastUpdateCheck;
 
+        /// <summary>When updates were last checked, or "never" (the setting defaults to DateTime.MinValue).</summary>
+        public string LastUpdateCheckText =>
+            LastUpdateCheck == DateTime.MinValue ? "never" : LastUpdateCheck.ToString("yyyy-MM-dd HH:mm");
+
         /// <summary>URLs exposed for binding so the View doesn't hardcode link targets.</summary>
         public string RepoUrl     => $"https://github.com/{GitHubOwner}/{GitHubRepo}/";
         public string ReleasesUrl => $"https://github.com/{GitHubOwner}/{GitHubRepo}/releases";
@@ -141,6 +145,7 @@ namespace InventoryKamera.Avalonia.ViewModels
             _settings.Current.LastUpdateCheck = DateTime.Now;
             _settings.Save();
             OnPropertyChanged(nameof(LastUpdateCheck));
+            OnPropertyChanged(nameof(LastUpdateCheckText));
 
             try
             {
@@ -238,6 +243,7 @@ namespace InventoryKamera.Avalonia.ViewModels
                     _settings.Current.LastUpdateCheck = DateTime.Now;
                     _settings.Save();
                     OnPropertyChanged(nameof(LastUpdateCheck));
+                    OnPropertyChanged(nameof(LastUpdateCheckText));
                 }
 
                 await HandleUpdateStatus(status, forced: false);

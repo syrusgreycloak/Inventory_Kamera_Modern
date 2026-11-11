@@ -52,6 +52,7 @@ namespace InventoryKamera.Avalonia.ViewModels
                 _settings.Save();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(NeedsSetup));
+                OnPropertyChanged(nameof(ShowSetupNote));
             }
         }
 
@@ -60,6 +61,12 @@ namespace InventoryKamera.Avalonia.ViewModels
         /// one). The app then opens on the Settings tab and shows a setup note.
         /// </summary>
         public bool NeedsSetup => _settings.IsFirstRun || string.IsNullOrWhiteSpace(OutputPath);
+
+        /// <summary>
+        /// Show the "Before your first scan" note until an output folder is chosen. (On the first
+        /// start there's never one yet, so this matches <see cref="NeedsSetup"/> until then.)
+        /// </summary>
+        public bool ShowSetupNote => string.IsNullOrWhiteSpace(OutputPath);
 
         // ─────────────────────────────────────────────────────────────────────
         // Item filters

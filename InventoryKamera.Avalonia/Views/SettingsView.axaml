@@ -15,7 +15,7 @@
                 Margin="16,16,16,32">
 
       <!-- First start, or no output folder: what to set before scanning -->
-      <Border Classes="panel" Padding="16" IsVisible="{Binding NeedsSetup}"
+      <Border Classes="panel" Padding="16" IsVisible="{Binding ShowSetupNote}"
               BorderBrush="{StaticResource WarningBrush}" BorderThickness="1">
         <StackPanel Spacing="6">
           <TextBlock Text="Before your first scan"
