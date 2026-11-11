@@ -28,6 +28,9 @@ namespace InventoryKamera
         /// on the scrolled-to-the-end last page it covered the whole card, so the crop started 5 px
         /// below the top of the digits and the bottom row of fish misread (9 as 4, 3 as 9, ...).
         /// Finding the strip itself doesn't depend on the box.
+        /// The label is beige (about 233, 229, 220). A selected card has a pure white frame just
+        /// below it, which isn't label: counted as label, it lengthened the band, trimming to
+        /// <paramref name="maxRows"/> then cut the top off the digits (259 read as 9).
         /// </remarks>
         public static (int Top, int Bottom)? FindLabelBand(Image<Rgba32> strip, int minRows, int maxRows)
         {
@@ -43,7 +46,8 @@ namespace InventoryKamera
                 {
                     var p = strip[x, y];
                     int max = Math.Max(p.R, Math.Max(p.G, p.B)), min = Math.Min(p.R, Math.Min(p.G, p.B));
-                    if (min >= 190 && max - min <= 35) beige++;
+                    // Light and greyish, but not the near-white selection frame
+                    if (min >= 190 && min < 245 && max - min <= 35) beige++;
                 }
                 isLabel[y] = beige * 2 >= x1 - x0;
             }

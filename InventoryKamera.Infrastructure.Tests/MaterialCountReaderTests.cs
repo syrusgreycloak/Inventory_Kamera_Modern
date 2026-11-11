@@ -85,6 +85,25 @@ namespace InventoryKamera.Infrastructure.Tests
             Assert.Equal(2, MaterialCountReader.ReadCount(bitmap));
         }
 
+        /// <summary>
+        /// A selected card is drawn slightly larger with a pure white frame just below its label.
+        /// Counting the frame as label made the band 32 rows; keeping the bottom 28 then cut the top
+        /// off the digits, and Mystic Enhancement Ore 259 read as 9. Strips cut from a 1080p weapon
+        /// page (y 655-729): the selected card's label ends at row 48, the unselected one's at 45.
+        /// </summary>
+        [Theory]
+        [InlineData("selected_card.png", 48)]
+        [InlineData("unselected_card.png", 45)]
+        public void FindLabelBand_SelectionFrame_IsNotLabel(string file, int labelBottom)
+        {
+            using var strip = Load(file);
+
+            var band = MaterialCountReader.FindLabelBand(strip, minRows: 18, maxRows: MaterialCountReader.LabelHeight1080);
+
+            Assert.NotNull(band);
+            Assert.Equal(labelBottom, band.Value.Bottom);
+        }
+
         private static Image<Rgba32> Load(string file) =>
             Image.Load<Rgba32>(Path.Combine(System.AppContext.BaseDirectory, "TestData", "MaterialCounts", file));
 
