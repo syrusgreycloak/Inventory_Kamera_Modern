@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -101,6 +102,49 @@ namespace InventoryKamera.Avalonia.ViewModels
         // ─────────────────────────────────────────────────────────────────────
         // Link commands
         // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// GitHub accounts that contributed to Inventory Kamera (Andrewthe13th/Inventory_Kamera and
+        /// taiwenlee/Inventory_Kamera), from GitHub's contributor lists as of 2026-11-11.
+        /// </summary>
+        public static readonly IReadOnlyList<string> Contributors = new[]
+        {
+            "amklinv",
+            "Andrewthe13th",
+            "b4lesh",
+            "baconeko",
+            "blowin",
+            "BlueSpaceCanary",
+            "BrandonXLF",
+            "Cupcak3",
+            "doxxx",
+            "FichteFoll",
+            "hastarin",
+            "man90es",
+            "Marchewcia",
+            "mineminemine",
+            "nguyentvan7",
+            "nikinack",
+            "Nikolas-VIII",
+            "paranoid945",
+            "pconKd",
+            "rafsawicki",
+            "sagelga",
+            "taiwenlee",
+            "TitaniumLexa",
+            "vivienicepig"
+        };
+
+        /// <summary>The contributors as one wrapped line for the About tab.</summary>
+        public string ContributorsText => string.Join(", ", Contributors);
+
+        [RelayCommand]
+        private void OpenOriginalProject() =>
+            _url.Open("https://github.com/Andrewthe13th/Inventory_Kamera");
+
+        [RelayCommand]
+        private void OpenTaiwenleeFork() =>
+            _url.Open("https://github.com/taiwenlee/Inventory_Kamera");
 
         [RelayCommand]
         private void OpenGitHub() =>

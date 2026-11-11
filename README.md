@@ -38,6 +38,7 @@ On the maintainer's account (94 characters, 155 weapons, 684 artifacts, about 60
   - [Requesting a new feature](#requesting-a-new-feature)
   - [Asking a question](#asking-a-question)
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+  - [Credits](#credits)
   - [License](#license)
 
 ## Installing Inventory Kamera Modern
@@ -268,6 +269,12 @@ However, that does not mean it will stay that way forever! We are at the mercy o
 #### What Languages does Inventory Kamera Modern support?
 
 Inventory Kamera Modern only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Language" option must be set to English. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
+
+## Credits
+
+Inventory Kamera Modern builds on [Inventory Kamera](https://github.com/Andrewthe13th/Inventory_Kamera), created by Andrewthe13th and later maintained by [taiwenlee](https://github.com/taiwenlee/Inventory_Kamera). Thanks to everyone who contributed to it:
+
+[amklinv](https://github.com/amklinv), [Andrewthe13th](https://github.com/Andrewthe13th), [b4lesh](https://github.com/b4lesh), [baconeko](https://github.com/baconeko), [blowin](https://github.com/blowin), [BlueSpaceCanary](https://github.com/BlueSpaceCanary), [BrandonXLF](https://github.com/BrandonXLF), [Cupcak3](https://github.com/Cupcak3), [doxxx](https://github.com/doxxx), [FichteFoll](https://github.com/FichteFoll), [hastarin](https://github.com/hastarin), [man90es](https://github.com/man90es), [Marchewcia](https://github.com/Marchewcia), [mineminemine](https://github.com/mineminemine), [nguyentvan7](https://github.com/nguyentvan7), [nikinack](https://github.com/nikinack), [Nikolas-VIII](https://github.com/Nikolas-VIII), [paranoid945](https://github.com/paranoid945), [pconKd](https://github.com/pconKd), [rafsawicki](https://github.com/rafsawicki), [sagelga](https://github.com/sagelga), [taiwenlee](https://github.com/taiwenlee), [TitaniumLexa](https://github.com/TitaniumLexa), [vivienicepig](https://github.com/vivienicepig)
 
 ## License
 

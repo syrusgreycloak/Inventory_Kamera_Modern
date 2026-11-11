@@ -272,5 +272,25 @@ namespace InventoryKamera.Tests
         {
             Assert.Equal(expected, AboutViewModel.ParseReleaseVersion(tag)?.ToString());
         }
+
+        [Fact]
+        public void Contributors_CreditOriginalAuthorsOnly()
+        {
+            Assert.Contains("Andrewthe13th", AboutViewModel.Contributors);
+            Assert.Contains("taiwenlee", AboutViewModel.Contributors);
+            Assert.Contains("Cupcak3", AboutViewModel.Contributors);
+            // This fork's own accounts aren't "prior contributors"
+            Assert.DoesNotContain("syrusgreycloak", AboutViewModel.Contributors);
+            Assert.DoesNotContain("karlnickels-c2a", AboutViewModel.Contributors);
+            Assert.Equal(AboutViewModel.Contributors.Count, new System.Collections.Generic.HashSet<string>(AboutViewModel.Contributors).Count);
+        }
+
+        [Fact]
+        public void OpenOriginalProject_OpensAndrewthe13thRepo()
+        {
+            var (vm, _, url, _) = MakeVm(new ScanSettings());
+            vm.OpenOriginalProjectCommand.Execute(null);
+            url.Verify(u => u.Open("https://github.com/Andrewthe13th/Inventory_Kamera"), Times.Once);
+        }
     }
 }

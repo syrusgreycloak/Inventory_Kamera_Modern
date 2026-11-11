@@ -110,6 +110,38 @@
         </StackPanel>
       </Border>
 
+      <!-- ══════════════════════════════════════════════════
+           CREDITS
+      ══════════════════════════════════════════════════ -->
+      <Border Classes="panel" Padding="16">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Credits"
+                     FontWeight="Bold"
+                     FontSize="14"
+                     Foreground="{StaticResource TextSecondaryBrush}" />
+
+          <TextBlock TextWrapping="Wrap"
+                     FontSize="13"
+                     Text="Inventory Kamera Modern builds on Inventory Kamera, created by Andrewthe13th and later maintained by taiwenlee. Thanks to everyone who contributed to it:" />
+
+          <TextBlock TextWrapping="Wrap"
+                     FontSize="13"
+                     Foreground="{StaticResource TextSecondaryBrush}"
+                     Text="{Binding ContributorsText}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Original project"
+                    Command="{Binding OpenOriginalProjectCommand}"
+                    ToolTip.Tip="https://github.com/Andrewthe13th/Inventory_Kamera" />
+            <Button Content="taiwenlee's version"
+                    Command="{Binding OpenTaiwenleeForkCommand}"
+                    ToolTip.Tip="https://github.com/taiwenlee/Inventory_Kamera" />
+          </StackPanel>
+
+        </StackPanel>
+      </Border>
+
     </StackPanel>
   </ScrollViewer>
 
