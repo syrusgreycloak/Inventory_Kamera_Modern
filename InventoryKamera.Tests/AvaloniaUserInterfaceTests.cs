@@ -77,7 +77,9 @@ namespace InventoryKamera.Tests
                 action();
                 // Flush all pending UIThread.Post calls (Background priority or higher).
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            }, CancellationToken.None)
+                // A deadlock with the headless UI thread fails the test instead of hanging the run
+                .WaitAsync(TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
         }
 
         // ------------------------------------------------------------------

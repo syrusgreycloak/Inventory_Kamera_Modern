@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Headless;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -297,7 +298,9 @@ namespace InventoryKamera.Tests
             {
                 action();
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            }, CancellationToken.None)
+                // A deadlock with the headless UI thread fails the test instead of hanging the run
+                .WaitAsync(TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
         }
 
         // LogLevelToBrushConverter.Convert() requires SolidColorBrush allocation on UI thread
@@ -380,7 +383,7 @@ namespace InventoryKamera.Tests
         // ObservableCollectionLogTarget — on-UI-thread path (CheckAccess() == true)
 
         [Fact]
-        public void ObservableCollectionLogTarget_OnUIThread_AppendsEntry()
+        public async Task ObservableCollectionLogTarget_OnUIThread_AppendsEntry()
         {
             var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
             var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
@@ -398,11 +401,11 @@ namespace InventoryKamera.Tests
             var logger = LogManager.GetLogger(loggerName);
 
             // Log from inside the session.Dispatch callback — this IS the UI thread.
-            _session.Dispatch(() =>
+            await _session.Dispatch(() =>
             {
                 logger.Info("On-UI-thread entry");
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            }, CancellationToken.None);
 
             Assert.NotEmpty(collection);
         }
@@ -410,7 +413,7 @@ namespace InventoryKamera.Tests
         // ObservableCollectionLogTarget — MaxEntries trimming (line 44)
 
         [Fact]
-        public void ObservableCollectionLogTarget_TrimsAtMaxEntries()
+        public async Task ObservableCollectionLogTarget_TrimsAtMaxEntries()
         {
             var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
             var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
@@ -429,13 +432,13 @@ namespace InventoryKamera.Tests
             var logger = LogManager.GetLogger(loggerName);
 
             // Write 3 entries on the UI thread — third should trigger trimming.
-            _session.Dispatch(() =>
+            await _session.Dispatch(() =>
             {
                 logger.Info("Entry 1");
                 logger.Info("Entry 2");
                 logger.Info("Entry 3"); // triggers RemoveAt(0), then Add
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            }, CancellationToken.None);
 
             // Collection should have at most MaxEntries items.
             Assert.True(collection.Count <= 2);
@@ -446,7 +449,7 @@ namespace InventoryKamera.Tests
         // from a background thread, exercising the Dispatcher.Post branch.
 
         [Fact]
-        public void ObservableCollectionLogTarget_PostPath_AppendsEntry()
+        public async Task ObservableCollectionLogTarget_PostPath_AppendsEntry()
         {
             var collection = new System.Collections.ObjectModel.ObservableCollection<InventoryKamera.Avalonia.Services.ConsoleEntry>();
             var target = new InventoryKamera.Avalonia.Services.ObservableCollectionLogTarget(collection)
@@ -475,10 +478,10 @@ namespace InventoryKamera.Tests
             logged.Wait(TimeSpan.FromSeconds(5));
 
             // Flush: the Post should arrive on the UI thread now.
-            _session.Dispatch(() =>
+            await _session.Dispatch(() =>
             {
                 Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            }, CancellationToken.None);
 
             Assert.NotEmpty(collection);
         }

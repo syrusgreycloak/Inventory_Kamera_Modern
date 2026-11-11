@@ -38,8 +38,9 @@ jobs:
 
       - name: Test
         run: |
-          dotnet test InventoryKamera.Tests/InventoryKamera.Tests.csproj -c Release
-          dotnet test InventoryKamera.Infrastructure.Tests/InventoryKamera.Infrastructure.Tests.csproj -c Release
+          # A hung test fails after 5 minutes (with a dump) instead of holding up the release
+          dotnet test InventoryKamera.Tests/InventoryKamera.Tests.csproj -c Release --blame-hang-timeout 5m
+          dotnet test InventoryKamera.Infrastructure.Tests/InventoryKamera.Infrastructure.Tests.csproj -c Release --blame-hang-timeout 5m
 
       - name: Publish (self-contained, win-x64)
         shell: pwsh
