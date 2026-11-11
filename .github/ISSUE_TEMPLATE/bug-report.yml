@@ -51,19 +51,12 @@ body:
     id: deviceOS
     attributes:
       label: "Device OS"
-      description: "What operating system are you using? (e.g. Windows, Mac, Linux)"
+      description: "What operating system are you using?"
       multiple: false
       options:
         - "Windows 11"
         - "Windows 10"
-        - "Windows 8"
-        - "Windows 7"
-        - "Other Windows (please specify the version in additional notes)"
-        - "macOS Ventura (macOS 13)"
-        - "macOS Monterey (macOS 12)"
-        - "macOS Big Sur (macOS 11)"
-        - "Other macOS (please specify the version in additional notes)"
-        - "Linux (please specify the version in additional notes)"
+        - "Other (please specify in additional notes; scanning currently needs Windows)"
     validations:
       required: true
   - type: input
@@ -71,15 +64,15 @@ body:
     attributes:
       label: Genshin Impact Version
       description: Which Genshin Impact version did your issue affect?
-      placeholder: Please enter the Genshin Impact version (e.g. 2.8)..."
+      placeholder: "Please enter the Genshin Impact version (e.g. 7.2)..."
     validations:
       required: true
   - type: input
     id: scanner_version
     attributes:
-      label: Inventory Kamera Version
-      description: Which Inventory Kamera version are you using?
-      placeholder: Please enter the Inventory Kamera version (e.g. 1.2.7)..."
+      label: Inventory Kamera Modern Version
+      description: Which version are you using? It's shown in the About tab.
+      placeholder: "Please enter the version (e.g. 2.0.0)..."
     validations:
       required: true
   - type: input
@@ -106,7 +99,7 @@ body:
     attributes:
       label: Evidence
       description: Do you have any error logs, scanner logs, scanner export files (.good), screenshots, screen recordings, or other evidence?
-      placeholder: "Add any evidence here by dragging and dropping the files here. Log files are located in the scanner's log folder."
+      placeholder: "Drag and drop files here. Logs are in the logging folder next to InventoryKamera.Avalonia.exe; turn on 'Log all scan screenshots' in Settings and zip the folder after a scan. Please check screenshots don't show your UID."
     validations:
       required: false
   - type: checkboxes
@@ -119,7 +112,7 @@ body:
           required: true
         - label: "I am using the latest version of the scanner."
           required: false
-        - label: "I tried setting the scanning delay to maximum, and it still doesn't work."
+        - label: "I tried the Normal or Slow scan speed (Settings), and it still doesn't work."
           required: false
         - label: "I have attached the video recording to the bug report."
           required: false

@@ -2,6 +2,8 @@
 
 Fan-made Genshin Impact tool that scans characters, weapons, artifacts, materials and character development items in your inventory using the OCR technique.
 
+**[⬇ Download the latest release](https://github.com/syrusgreycloak/Inventory_Kamera_Modern/releases/latest)** (Windows, 64-bit) · [Installation](#installing-inventory-kamera-modern)
+
 This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you to use it with compatible online Genshin Impact tools. These tools include artifact optimizing tools including [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), [SEELIE.me](https://seelie.me/) and [Aspirine's Genshin Impact Calculator](https://genshin.aspirine.su/).
 
 ## About this project
@@ -40,13 +42,31 @@ On the maintainer's account (94 characters, 155 weapons, 684 artifacts, about 60
 
 ## Installing Inventory Kamera Modern
 
-Before installing Inventory Kamera Modern, please have **the following things installed on your device**:
+You need:
 
-- [GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/) launcher
-- [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x86 or x64)](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022), _**A computer restart may be required after installing this package for the first time**_
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) to build the app (the .NET 8 Desktop Runtime is enough to run a build)
+- Windows 10 or 11 (64-bit), with Genshin Impact ([GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/))
+- [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist), used by the OCR engine. Most PCs already have it; _**a restart may be needed after installing it for the first time**_.
 
-Inventory Kamera Modern does not currently publish prebuilt binaries. To run it, build from source:
+.NET does not need to be installed: the release includes it.
+
+1. Download `InventoryKameraModern-<version>-win-x64.zip` from the [latest release](https://github.com/syrusgreycloak/Inventory_Kamera_Modern/releases/latest).
+2. Unzip it to a folder of your own, e.g. `Documents\InventoryKameraModern`. Avoid `Program Files`: the app keeps its game data (`inventorylists`) and logs (`logging`) next to the exe.
+3. Run `InventoryKamera.Avalonia.exe`.
+
+On first start:
+
+- **"Windows protected your PC"**: the app isn't code-signed (certificates cost money every year), so Windows SmartScreen warns about it. Click **More info**, then **Run anyway**.
+- **Administrator prompt**: the app needs administrator rights to send keyboard and mouse input to the game, which runs elevated.
+- **Antivirus**: tools that capture the screen and simulate input are sometimes flagged. The source is all here, and the release is built from it by GitHub Actions ([workflow](.github/workflows/release.yml)).
+- The app opens on the `Settings` tab; see [configuring](#how-to-configure-inventory-kamera-modern).
+
+To update, unzip the new release into a new folder and delete the old one. Settings are kept in `%AppData%\InventoryKamera`, so they carry over. The About tab can check for new releases.
+
+Scanning is Windows-only, because it captures and controls the game window.
+
+### Building from source
+
+Needs the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```bash
 git clone https://github.com/syrusgreycloak/Inventory_Kamera_Modern.git
@@ -56,9 +76,7 @@ dotnet build InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj -c Release
 InventoryKamera.Avalonia/bin/Release/net8.0-windows/InventoryKamera.Avalonia.exe
 ```
 
-The app asks for administrator rights when it starts. It needs them to send keyboard and mouse input to the game, which runs elevated. (If you run it from an IDE such as Rider, start the IDE as administrator and use the `net8.0-windows` target.)
-
-Scanning is Windows-only, because it captures and controls the game window.
+If you run it from an IDE such as Rider, start the IDE as administrator and use the `net8.0-windows` target.
 
 ## Setting up Genshin Impact
 
