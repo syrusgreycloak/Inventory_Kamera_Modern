@@ -341,6 +341,12 @@ namespace InventoryKamera.Avalonia.ViewModels
                 // Do not write export for partial scans
                 LastScan = null;
             }
+            catch (ScanSetupException ex)
+            {
+                Log.Warn(ex.Message);
+                LastScan = null;
+                await _dialog.ShowInfoAsync("Can't start the scan", ex.Message);
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Scan failed with unexpected error");

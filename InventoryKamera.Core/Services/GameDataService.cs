@@ -74,7 +74,18 @@ namespace InventoryKamera
             Weapons    = TryLoad(_db.LoadWeapons,    nameof(Weapons))    ?? new Dictionary<string, string>();
             DevItems   = TryLoad(_db.LoadDevItems,   nameof(DevItems))   ?? new Dictionary<string, string>();
             Materials  = TryLoad(_db.LoadMaterials,  nameof(Materials))  ?? new Dictionary<string, string>();
+
+            var missing = new List<string>();
+            if (Characters.Count == 0) missing.Add("characters");
+            if (Weapons.Count == 0)    missing.Add("weapons");
+            if (Artifacts.Count == 0)  missing.Add("artifacts");
+            if (Materials.Count == 0)  missing.Add("materials");
+            if (DevItems.Count == 0)   missing.Add("character development items");
+            MissingData = missing;
         }
+
+        /// <inheritdoc />
+        public IReadOnlyList<string> MissingData { get; private set; } = new List<string>();
 
         private static T TryLoad<T>(Func<T> loader, string name) where T : class
         {

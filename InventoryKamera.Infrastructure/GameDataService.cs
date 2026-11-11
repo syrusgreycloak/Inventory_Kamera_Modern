@@ -28,6 +28,7 @@ namespace InventoryKamera.Infrastructure
         public HashSet<string> EnhancementMaterials => _core.EnhancementMaterials;
 
         public void ReloadData() => _core.ReloadData();
+        public IReadOnlyList<string> MissingData => _core.MissingData;
         public void UpdateCharacterName(string t, string n) => _core.UpdateCharacterName(t, n);
 
         public bool IsValidWeapon(string s) => _core.IsValidWeapon(s);

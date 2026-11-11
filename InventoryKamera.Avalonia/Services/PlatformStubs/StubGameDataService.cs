@@ -25,6 +25,7 @@ namespace InventoryKamera.Avalonia.Services.PlatformStubs
         public HashSet<string> EnhancementMaterials       { get { Throw(); return null; } }
 
         public void ReloadData()                          { Throw(); }
+        public IReadOnlyList<string> MissingData          => System.Array.Empty<string>();
         public void UpdateCharacterName(string target, string name) { Throw(); }
 
         public bool IsValidWeapon(string weapon)          { Throw(); return false; }

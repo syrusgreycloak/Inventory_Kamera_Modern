@@ -56,6 +56,13 @@ namespace InventoryKamera.Infrastructure
 
         public Task RunAsync(ScanSettings settings, CancellationToken token = default)
         {
+            // Without game data nothing can be matched; say what to do instead of scanning for nothing
+            var missing = _gameDataService.MissingData;
+            if (missing != null && missing.Count > 0)
+                throw new ScanSetupException(
+                    $"Game data is missing or unreadable ({string.Join(", ", missing)}). " +
+                    "Click \"Update game data\" in the About tab, then scan again.");
+
             // Locate the Genshin process and capture its window dimensions BEFORE reading
             // aspect ratio or capturing screenshots. Without this, Navigation's static
             // width/height are 0 and GetAspectRatio() throws DivideByZeroException.

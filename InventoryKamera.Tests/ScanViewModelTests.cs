@@ -820,6 +820,24 @@ namespace InventoryKamera.Tests
             Assert.Equal(95, vm.CharactersTotal);
             Assert.Equal("95 / 95", vm.CharactersProgressText);
         }
+
+        [Fact]
+        public async Task StartScan_SetupProblem_ShowsMessage()
+        {
+            var settings = new Mock<ISettingsService>(MockBehavior.Loose);
+            settings.Setup(s => s.Current).Returns(new ScanSettings());
+            var runner = new Mock<IScanRunner>(MockBehavior.Loose);
+            runner.Setup(r => r.RunAsync(It.IsAny<ScanSettings>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new ScanSetupException("Game data is missing. Click Update game data."));
+            var dialog = new Mock<IDialogService>(MockBehavior.Loose);
+            dialog.Setup(d => d.ShowInfoAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+            var vm = new ScanViewModel(settings.Object, runner.Object, dialog.Object);
+
+            await vm.StartScanCommand.ExecuteAsync(null);
+
+            dialog.Verify(d => d.ShowInfoAsync("Can't start the scan", "Game data is missing. Click Update game data."), Times.Once);
+            Assert.False(vm.IsScanning);
+        }
     }
 
     // -----------------------------------------------------------------------

@@ -175,5 +175,12 @@ namespace InventoryKamera.Tests
             Assert.Contains("goblet", _svc.GearSlots);
             Assert.Contains("circlet", _svc.GearSlots);
         }
+
+        [Fact]
+        public void MissingData_WithShippedData_IsEmpty()
+        {
+            // The reference data the release ships must load completely
+            Assert.Empty(_svc.MissingData);
+        }
     }
 }

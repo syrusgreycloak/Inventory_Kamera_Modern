@@ -18,6 +18,12 @@ namespace InventoryKamera
 
         // Lifecycle
         void ReloadData();
+
+        /// <summary>
+        /// Data sets (e.g. "characters") that are missing, unreadable or empty after the last load.
+        /// Scanning can't work without them; "Update game data" (About tab) rebuilds them.
+        /// </summary>
+        IReadOnlyList<string> MissingData { get; }
         void UpdateCharacterName(string target, string name);
 
         // Validation
