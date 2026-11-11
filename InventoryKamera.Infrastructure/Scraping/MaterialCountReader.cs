@@ -81,8 +81,17 @@ namespace InventoryKamera
         /// Development Items scan correctly (1x: 2 wrong). The digits-only whitelist did worse
         /// (2 and 3 wrong), so it isn't used.
         /// </remarks>
-        public static int ReadCount(Bitmap bm, NLog.Logger logger = null)
+        public static int ReadCount(Bitmap bm, NLog.Logger logger = null) => ReadCount(bm, out _, logger);
+
+        /// <summary>
+        /// As <see cref="ReadCount(Bitmap, NLog.Logger)"/>; <paramref name="confident"/> is false
+        /// when no reading was trustworthy (no two scales agreed and no clean multi-digit reading)
+        /// and the count is the vote's best guess, which can be far off: unreadable "&lt;0&quot;"
+        /// and "&lt;9&quot;" once gave 9 for 259. Callers should flag such counts.
+        /// </summary>
+        public static int ReadCount(Bitmap bm, out bool confident, NLog.Logger logger = null)
         {
+            confident = true;
             Dictionary<int, int> counts = new Dictionary<int, int>();
             var rRange = new IntRange(0, 150);
             var bRange = new IntRange(0, 150);
@@ -127,6 +136,8 @@ namespace InventoryKamera
                 }
             }
 
+            // No reading settled it: a best guess from here on
+            confident = false;
             var nullableMode = SafeExtractMaxCounter(counts);
             if (nullableMode == null)
                 return 1;

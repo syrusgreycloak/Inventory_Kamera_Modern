@@ -109,13 +109,14 @@ namespace InventoryKamera
 						if (!string.IsNullOrEmpty(material.name))
 						{
 							// Scan Material Quantity
-							material.count = ScanMaterialCount(rectangle, out Bitmap quantity);
+							material.count = ScanMaterialCount(rectangle, out Bitmap quantity, out bool confident);
 							if (material.count == 0)
 							{
 								_userInterface.AddError($"Failed to parse quantity for {material.name}");
 								SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 							}
-							if ((_settings != null ? _settings.LogScreenshots : false) || material.count == 0)
+							else if (!confident) FlagUncertainCount(material.name, material.count);
+							if ((_settings != null ? _settings.LogScreenshots : false) || material.count == 0 || !confident)
                             {
 								SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
                             }
@@ -204,16 +205,17 @@ namespace InventoryKamera
 					if (!string.IsNullOrEmpty(material.name))
 					{
 						// Scan Material Number
-						material.count = ScanMaterialCount(rectangle, out Bitmap quantity);
+						material.count = ScanMaterialCount(rectangle, out Bitmap quantity, out bool confident);
 						if (material.count == 0)
 						{
 							_userInterface.AddError($"Failed to parse quantity for {material.name}");
 							SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 						}
-						else if ((_settings != null ? _settings.LogScreenshots : false))
+						else if ((_settings != null ? _settings.LogScreenshots : false) || !confident)
 						{
 							SaveInventoryBitmapGdi(quantity, $"{material.name}_Quantity.png");
 						}
+						if (material.count != 0 && !confident) FlagUncertainCount(material.name, material.count);
 						Logger.Debug("Final (LastPage): {0} : {1}", material.name, material.count);
 						inventory.Materials.Add(material);
 						_userInterface.ResetCharacterDisplay();
@@ -344,7 +346,10 @@ namespace InventoryKamera
 			return match;
 		}
 
-		public static int ScanMaterialCount(ISRect rectangle, out Bitmap quantity)
+		public static int ScanMaterialCount(ISRect rectangle, out Bitmap quantity) => ScanMaterialCount(rectangle, out quantity, out _);
+
+		/// <summary>As above; <paramref name="confident"/> is false for a best-guess count (see MaterialCountReader.ReadCount).</summary>
+		public static int ScanMaterialCount(ISRect rectangle, out Bitmap quantity, out bool confident)
 		{
 			// Capture a taller strip around the bottom of the detected card and crop to the card's
 			// label strip, wherever it is (see MaterialCountReader.FindLabelBand). The old fixed crop,
@@ -383,7 +388,7 @@ namespace InventoryKamera
 			}
 
 			using (var bm = (Bitmap)quantity.Clone())
-				return MaterialCountReader.ReadCount(bm, Logger);
+				return MaterialCountReader.ReadCount(bm, out confident, Logger);
 		}
 
     }

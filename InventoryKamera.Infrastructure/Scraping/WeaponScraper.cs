@@ -228,10 +228,10 @@ namespace InventoryKamera
                     break;
                 }
 
-                int quantity = MaterialScraper.ScanMaterialCount(rectangle, out System.Drawing.Bitmap countImage);
+                int quantity = MaterialScraper.ScanMaterialCount(rectangle, out System.Drawing.Bitmap countImage, out bool confident);
                 using (countImage)
                 {
-                    if ((_settings != null && _settings.LogScreenshots) || quantity == 0)
+                    if ((_settings != null && _settings.LogScreenshots) || quantity == 0 || !confident)
                         SaveInventoryBitmapGdi(countImage, $"{ore}_Quantity.png");
                     using (var preview = InventoryKamera.Infrastructure.Scraping.GenshinProcesor.BitmapToImageSharp(countImage))
                         _userInterface.SetMaterial(preview, ore, quantity);
@@ -243,6 +243,7 @@ namespace InventoryKamera
                     continue;
                 }
 
+                if (!confident) FlagUncertainCount(ore, quantity);
                 Logger.Info("{0}: {1}", ore, quantity);
                 ores.Add(new Material(ore, quantity));
             }

@@ -672,6 +672,17 @@ namespace InventoryKamera
             image.SaveAsPng(path + filename);
         }
 
+        /// <summary>
+        /// Reports a count the OCR couldn't settle (see MaterialCountReader.ReadCount), so a wrong
+        /// number stands out in the console instead of going into the export unnoticed. The caller
+        /// saves the count image as {name}_Quantity.png.
+        /// </summary>
+        internal void FlagUncertainCount(string name, int count)
+        {
+            NLog.LogManager.GetCurrentClassLogger().Warn("Uncertain count for {0}: read {1}", name, count);
+            _userInterface.AddError($"Uncertain count for {name}: read {count}. Please check it in-game (image: logging, {name}_Quantity.png).");
+        }
+
         internal void SaveInventoryBitmapGdi(Bitmap bmp, string filename)
         {
             var path = "./logging/";

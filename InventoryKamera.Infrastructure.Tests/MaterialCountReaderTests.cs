@@ -104,6 +104,28 @@ namespace InventoryKamera.Infrastructure.Tests
             Assert.Equal(labelBottom, band.Value.Bottom);
         }
 
+        [Fact]
+        public void ReadCount_CleanLabel_IsConfident()
+        {
+            using var label = Load("label_2_small.png");
+            using var bitmap = GenshinProcesor.ImageSharpToBitmap(label);
+
+            Assert.Equal(2, MaterialCountReader.ReadCount(bitmap, out bool confident));
+            Assert.True(confident);
+        }
+
+        [Fact]
+        public void ReadCount_Unreadable_IsNotConfident()
+        {
+            // A label with no digits: no reading agrees, so the result is only a guess
+            using var label = new Image<Rgba32>(126, 28, new Rgba32(233, 229, 220, 255));
+            using var bitmap = GenshinProcesor.ImageSharpToBitmap(label);
+
+            MaterialCountReader.ReadCount(bitmap, out bool confident);
+
+            Assert.False(confident);
+        }
+
         private static Image<Rgba32> Load(string file) =>
             Image.Load<Rgba32>(Path.Combine(System.AppContext.BaseDirectory, "TestData", "MaterialCounts", file));
 
