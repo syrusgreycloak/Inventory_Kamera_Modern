@@ -458,6 +458,7 @@ namespace InventoryKamera
                 : JToken.Parse(LoadJsonFromFile(CharactersJson)).ToObject<ConcurrentDictionary<string, JObject>>();
 
             var newData = new ConcurrentDictionary<string, JObject>(data);
+            var unresolvedOrder = new ConcurrentDictionary<string, byte>();
 
             try
             {
@@ -576,7 +577,13 @@ namespace InventoryKamera
                                 }
 
                                 // Characters without readable constellations (e.g. Aloy) never reach C3, so any order is harmless
-                                var constellationOrder = ResolveConstellationOrder(depot, nameGOOD) ?? new JArray { "skill", "burst" };
+                                var constellationOrder = ResolveConstellationOrder(depot, nameGOOD);
+                                if (constellationOrder == null)
+                                {
+                                    // Kept from the existing data if it has one (GameDataMerge)
+                                    unresolvedOrder[nameKey] = 0;
+                                    constellationOrder = new JArray { "skill", "burst" };
+                                }
                                 value.Add("ConstellationOrder", constellationOrder);
 
                                 value.Add("Element", new JArray(GetElementFromID(characterID)));
@@ -690,6 +697,9 @@ namespace InventoryKamera
             // Validate the new data before saving
             if (status == UpdateStatus.Success)
             {
+                // Don't lose verified data the update couldn't rebuild (see GameDataMerge)
+                LogKept(CharactersJson, GameDataMerge.MergeCharacters(newData, ReadExisting<JObject>(CharactersJson), new HashSet<string>(unresolvedOrder.Keys)));
+
                 if (ValidateCharacterData(newData))
                 {
                     Logger.Info("Character data validation passed. Saving {0} characters.", newData.Count);
@@ -851,6 +861,9 @@ namespace InventoryKamera
             // Validate the new data before saving
             if (status == UpdateStatus.Success)
             {
+                // Don't lose verified data the update couldn't rebuild (see GameDataMerge)
+                LogKept(ArtifactsJson, GameDataMerge.KeepMissing(newData, ReadExisting<JObject>(ArtifactsJson)));
+
                 if (ValidateArtifactData(newData))
                 {
                     Logger.Info("Artifact data validation passed. Saving {0} artifact sets.", newData.Count);
@@ -950,6 +963,9 @@ namespace InventoryKamera
             // Validate the new data before saving
             if (status == UpdateStatus.Success)
             {
+                // Don't lose verified data the update couldn't rebuild (see GameDataMerge)
+                LogKept(WeaponsJson, GameDataMerge.KeepMissing(newData, ReadExisting<string>(WeaponsJson)));
+
                 if (ValidateWeaponData(newData))
                 {
                     Logger.Info("Weapon data validation passed. Saving {0} weapons.", newData.Count);
@@ -1043,6 +1059,9 @@ namespace InventoryKamera
             // Validate the new data before saving
             if (status == UpdateStatus.Success)
             {
+                // Don't lose verified data the update couldn't rebuild (see GameDataMerge)
+                LogKept(MaterialsJson, GameDataMerge.KeepMissing(newData, ReadExisting<string>(MaterialsJson)));
+
                 if (ValidateMaterialData(newData))
                 {
                     Logger.Info("Material data validation passed. Saving {0} materials.", newData.Count);
@@ -1089,6 +1108,24 @@ namespace InventoryKamera
             }
             catch { throw; }
 
+        }
+
+        /// <summary>The current contents of a data file, or null if it can't be read.</summary>
+        private Dictionary<string, T> ReadExisting<T>(string fileName)
+        {
+            try { return JToken.Parse(LoadJsonFromFile(fileName)).ToObject<Dictionary<string, T>>(); }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Could not read existing {0}; nothing to keep from it.", fileName);
+                return null;
+            }
+        }
+
+        private static void LogKept(string fileName, List<string> kept)
+        {
+            if (kept.Count > 0)
+                Logger.Info("Kept {0} item(s) in {1} from the existing data that the update couldn't rebuild: {2}",
+                    kept.Count, fileName, string.Join(", ", kept));
         }
 
         private string LoadJsonFromFile(string fileName)
