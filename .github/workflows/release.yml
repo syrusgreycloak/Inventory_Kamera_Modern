@@ -49,6 +49,24 @@ jobs:
           dotnet publish InventoryKamera.Avalonia/InventoryKamera.Avalonia.csproj `
             -c Release -f net8.0-windows -r win-x64 --self-contained true -o publish @versionArgs
 
+      - name: Add the Visual C++ runtime
+        shell: pwsh
+        run: |
+          # The OCR engine's native DLLs (x64/leptonica, x64/tesseract55) need these, and a clean
+          # Windows doesn't have them: the app then can't start ("Failed to find library
+          # 'leptonica-1.85.0.dll'"). Windows looks for a DLL's dependencies in the exe's folder
+          # first, so ship them there (app-local deployment, allowed by the VC++ redistributable
+          # license), from Visual Studio's redistributable folder on the build machine.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -property installationPath
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT" -Directory |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $crt) { throw "Visual C++ redistributable folder not found under $vs" }
+          Write-Host "Copying the runtime from $($crt.FullName)"
+          foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll') {
+            Copy-Item (Join-Path $crt.FullName $dll) publish\ -ErrorAction Stop
+          }
+
       - name: Zip
         shell: pwsh
         run: |

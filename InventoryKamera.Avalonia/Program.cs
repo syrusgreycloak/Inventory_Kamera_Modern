@@ -3,6 +3,7 @@ using InventoryKamera.Configuration;
 using NLog;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace InventoryKamera.Avalonia
 {
@@ -41,11 +42,24 @@ namespace InventoryKamera.Avalonia
             }
             catch (Exception ex)
             {
+                // Usually before any window exists: say so instead of vanishing without a trace
                 Logger.Fatal(ex, "Avalonia app crashed");
-                throw;
+                LogManager.Flush();
+                ShowStartupError(ex);
+                Environment.ExitCode = 1;
             }
             LogManager.Shutdown();
         }
+
+        private static void ShowStartupError(Exception ex)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            try { MessageBoxW(IntPtr.Zero, Services.StartupError.Message(ex), "Inventory Kamera Modern", 0x10 /* MB_ICONERROR */); }
+            catch { /* nothing more we can do */ }
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 
         public static AppBuilder BuildAvaloniaApp() =>
             AppBuilder.Configure<App>()

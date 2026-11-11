@@ -42,12 +42,7 @@ On the maintainer's account (94 characters, 155 weapons, 684 artifacts, about 60
 
 ## Installing Inventory Kamera Modern
 
-You need:
-
-- Windows 10 or 11 (64-bit), with Genshin Impact ([GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/))
-- [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist), used by the OCR engine. Most PCs already have it; _**a restart may be needed after installing it for the first time**_.
-
-.NET does not need to be installed: the release includes it.
+You need Windows 10 or 11 (64-bit) with Genshin Impact ([GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/)). Nothing else needs to be installed: the release includes .NET and the Visual C++ runtime the OCR engine uses.
 
 1. Download `InventoryKameraModern-<version>-win-x64.zip` from the [latest release](https://github.com/syrusgreycloak/Inventory_Kamera_Modern/releases/latest).
 2. Unzip it to a folder of your own, e.g. `Documents\InventoryKameraModern`. Avoid `Program Files`: the app keeps its game data (`inventorylists`) and logs (`logging`) next to the exe.
@@ -59,6 +54,7 @@ On first start:
 - **Administrator prompt**: the app needs administrator rights to send keyboard and mouse input to the game, which runs elevated.
 - **Antivirus**: tools that capture the screen and simulate input are sometimes flagged. The source is all here, and the release is built from it by GitHub Actions ([workflow](.github/workflows/release.yml)).
 - The app opens on the `Settings` tab; see [configuring](#how-to-configure-inventory-kamera-modern).
+- If it says it **couldn't start** because a library couldn't be loaded, install the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) and try again (a restart may be needed).
 
 To update, unzip the new release into a new folder and delete the old one. Settings are kept in `%AppData%\InventoryKamera`, so they carry over. The About tab can check for new releases.
 
