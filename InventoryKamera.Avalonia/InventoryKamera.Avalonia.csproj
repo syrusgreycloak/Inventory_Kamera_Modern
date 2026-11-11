@@ -12,9 +12,8 @@
     <ApplicationIcon>Item_Special_Kamera.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>Inventory Kamera Modern</AssemblyTitle>
-    <Version>2.0.0.0</Version>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <!-- AssemblyVersion and FileVersion follow Version; the release workflow sets it from the tag -->
+    <Version>2.0.0</Version>
   </PropertyGroup>
   <!-- Define WINDOWS preprocessor symbol for the Windows TFM so DI registration
        of platform-specific types can be gated at compile time. -->
