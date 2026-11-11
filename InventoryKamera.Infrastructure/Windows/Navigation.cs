@@ -78,7 +78,12 @@ namespace InventoryKamera.Infrastructure.Windows
 				Logger.Debug("Could not find {0}.exe", processName);
 			}
 
-			throw new NullReferenceException("Cannot find Genshin Impact process");
+			// Something the user fixes, so ScanViewModel shows it in a dialog
+			throw new ScanSetupException(
+				"Genshin Impact isn't running (looked for " +
+				string.Join(", ", executables.Select(e => e + ".exe")) + "). " +
+				"Start the game, open the Paimon menu, then start the scan. " +
+				"If your game runs under another name, add it under Settings > Advanced > Game executables.");
 		}
 
 		public static void Reset()
