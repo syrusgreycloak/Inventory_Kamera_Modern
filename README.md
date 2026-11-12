@@ -107,7 +107,7 @@ The app opens on the `Settings` tab on first start, and whenever no output folde
 
 ## How to run Inventory Kamera Modern
 
-1. Open the game and **leave it on the Paimon Menu**.
+1. Open the game and stand in the **open world** (or open the [Paimon menu](https://genshin-impact.fandom.com/wiki/Paimon_Menu)); the scan opens the menu itself if needed. Don't be in a dialogue, cutscene or other menu.
 2. In the `Scan` tab, choose the categories to scan (Weapons, Artifacts, Character Dev Items, Materials, Characters; they're scanned in that order) and click **Start Scan**. Weapon enhancement ores are only shown on the weapon page, so they're read at the end of the weapon scan when both Weapons and Character Dev Items are selected.
 > **Warning**
 >

@@ -167,6 +167,9 @@ namespace InventoryKamera
 
 			_gameDataService.ReloadData();
 
+			// Start from the Paimon menu, opening it if the game is in the open world
+			EnsurePaimonMenu();
+
 			// Initialize Image Processors
 			for (int i = 0; i < NumWorkers; i++)
 			{
@@ -335,6 +338,41 @@ namespace InventoryKamera
 				Logger.Info("Scan cancelled via CancellationToken");
 				// Signal workers to stop if they haven't already
 				b_threadCancel = true;
+			}
+		}
+
+		/// <summary>
+		/// Makes sure the Paimon menu is open, where the scan's navigation starts (and where the
+		/// Traveler's name is read when it isn't set). Pressing Start Scan from the open world works too:
+		/// if the menu isn't showing, press Escape once and check again.
+		/// </summary>
+		/// <exception cref="ScanSetupException">Neither the menu nor the open world was showing.</exception>
+		private void EnsurePaimonMenu()
+		{
+			Navigation.EnsureForeground();
+			if (IsPaimonMenuOpen()) return;
+
+			Logger.Info("Paimon menu not open; opening it");
+			Navigation.OpenPaimonMenu();
+			if (IsPaimonMenuOpen()) return;
+
+			// Not the open world either (dialogue, cutscene, another menu): don't press keys blindly
+			throw new ScanSetupException(
+				"Couldn't open the Paimon menu. Go to the open world (out of any dialogue, cutscene or menu), " +
+				"then start the scan again.");
+		}
+
+		private bool IsPaimonMenuOpen()
+		{
+			try
+			{
+				using (var screenshot = _screenCapture.CaptureWindow())
+					return PaimonMenuReader.IsOpen(screenshot, _ocrEngine);
+			}
+			catch (Exception ex)
+			{
+				Logger.Warn(ex, "Could not check for the Paimon menu");
+				return false;
 			}
 		}
 

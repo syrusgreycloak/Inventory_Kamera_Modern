@@ -82,7 +82,7 @@ namespace InventoryKamera.Infrastructure.Windows
 			throw new ScanSetupException(
 				"Genshin Impact isn't running (looked for " +
 				string.Join(", ", executables.Select(e => e + ".exe")) + "). " +
-				"Start the game, open the Paimon menu, then start the scan. " +
+				"Start the game, go to the open world, then start the scan. " +
 				"If your game runs under another name, add it under Settings > Advanced > Game executables.");
 		}
 
@@ -278,6 +278,14 @@ namespace InventoryKamera.Infrastructure.Windows
 			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
 			sim.Keyboard.KeyPress(inventoryKey);
+			SystemWait(Speed.UI);
+		}
+
+		/// <summary>From the open world, opens the Paimon menu (Escape).</summary>
+		public static void OpenPaimonMenu()
+		{
+			EnsureForeground();
+			sim.Keyboard.KeyPress(escapeKey);
 			SystemWait(Speed.UI);
 		}
 
