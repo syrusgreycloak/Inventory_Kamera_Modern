@@ -284,7 +284,7 @@ namespace InventoryKamera.Infrastructure.Windows
 			SystemWait(Speed.UI);
 		}
 
-		/// <summary>From the open world, opens the Paimon menu (Escape).</summary>
+		/// <summary>Presses Escape: from the open world it opens the Paimon menu, from other screens it goes one step back.</summary>
 		public static void OpenPaimonMenu()
 		{
 			EnsureForeground();

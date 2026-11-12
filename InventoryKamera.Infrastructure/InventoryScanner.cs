@@ -343,10 +343,16 @@ namespace InventoryKamera
 
 		/// <summary>
 		/// Makes sure the Paimon menu is open, where the scan's navigation starts (and where the
-		/// Traveler's name is read when it isn't set). Pressing Start Scan from the open world works too:
-		/// if the menu isn't showing, press Escape once and check again.
+		/// Traveler's name is read when it isn't set). Start Scan works from the open world and from
+		/// other screens too: Escape always goes one step back toward the open world, and from the
+		/// open world it opens the menu, so press Escape and check, up to three times.
 		/// </summary>
-		/// <exception cref="ScanSetupException">Neither the menu nor the open world was showing.</exception>
+		/// <remarks>
+		/// One press covers the open world and screens that Escape closes into the menu (shops, the
+		/// character screen opened from the menu); Party Setup and the character screen opened from
+		/// the HUD go to the open world first and need two.
+		/// </remarks>
+		/// <exception cref="ScanSetupException">The menu didn't appear after three presses.</exception>
 		private void EnsurePaimonMenu()
 		{
 			Navigation.EnsureForeground();
@@ -354,13 +360,16 @@ namespace InventoryKamera
 			// was already open went undetected, so Escape closed it. Check a few times before deciding.
 			if (WaitForPaimonMenu(attempts: 4, delayMs: 250)) return;
 
-			Logger.Info("Paimon menu not open; opening it");
-			Navigation.OpenPaimonMenu();
-			// Opening it takes a variable time (measured 1.7 s, and over 2 s with the card still
-			// dark), so keep checking for up to 6 s; it only waits as long as the menu takes
-			if (WaitForPaimonMenu(attempts: 20, delayMs: 300)) return;
+			for (int press = 1; press <= 3; press++)
+			{
+				Logger.Info("Paimon menu not open; pressing Escape ({0} of 3)", press);
+				Navigation.OpenPaimonMenu();
+				// The menu takes a variable time to open (1.2 to 2.5 s measured, card dark meanwhile),
+				// and from here a menu still opening looks like a screen without one: wait up to 4.5 s
+				if (WaitForPaimonMenu(attempts: 15, delayMs: 300)) return;
+			}
 
-			// Not the open world either (dialogue, cutscene, another menu): don't press keys blindly
+			// Somewhere Escape doesn't lead out of (e.g. a cutscene): stop rather than keep pressing
 			throw new ScanSetupException(
 				"Couldn't open the Paimon menu. Go to the open world (out of any dialogue, cutscene or menu), " +
 				"then start the scan again.");
