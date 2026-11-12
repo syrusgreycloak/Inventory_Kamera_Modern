@@ -194,15 +194,18 @@ namespace InventoryKamera
 
 			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
 
+			// Inventory first, in one visit: open it once and go tab to tab in the game's order
+			// (Weapons, Artifacts, Character Development Items, Materials), then characters. Each tab
+			// starts at the top the first time it's opened after entering the inventory.
+			bool inventoryOpen = false;
+
 			if (S_ScanWeapons)
 			{
 				Logger.Info("Scanning weapons...");
-				// Get Weapons
-				Navigation.InventoryScreen();
-				Navigation.SelectWeaponInventory();
+				OpenInventoryTab(InventoryPage.Weapons, ref inventoryOpen);
 				try
 				{
-                    weaponScraper.ScanWeapons();
+					weaponScraper.ScanWeapons();
 				}
 				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
 				catch (Exception ex)
@@ -224,8 +227,6 @@ namespace InventoryKamera
 						_userInterface.AddError("Could not read enhancement ores: " + ex.Message);
 					}
 				}
-
-				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning weapons");
 			}
 
@@ -234,10 +235,7 @@ namespace InventoryKamera
 			if (S_ScanArtifacts)
 			{
 				Logger.Info("Scanning artifacts...");
-
-				// Get Artifacts
-				Navigation.InventoryScreen();
-				Navigation.SelectArtifactInventory();
+				OpenInventoryTab(InventoryPage.Artifacts, ref inventoryOpen);
 				try
 				{
 					artifactScraper.ScanArtifacts();
@@ -247,18 +245,58 @@ namespace InventoryKamera
 				{
 					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
-				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning artifacts");
 			}
 
+			// Weapons and artifacts are the only queued items; the workers finish them meanwhile
 			workerQueue.Enqueue(new OCRImageCollection(null, "END", 0));
+
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
+			if (S_ScanCharDevItems)
+			{
+				Logger.Info("Scanning character development materials...");
+				OpenInventoryTab(InventoryPage.CharacterDevelopmentItems, ref inventoryOpen);
+				try
+				{
+					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
+					materialScraper.Scan_Materials(ref Inventory);
+				}
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
+				catch (Exception ex)
+				{
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+				}
+				Logger.Info("Done scanning character development materials");
+			}
+
+			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
+
+			if (S_ScanMaterials)
+			{
+				Logger.Info("Scanning materials...");
+				OpenInventoryTab(InventoryPage.Materials, ref inventoryOpen);
+				try
+				{
+					materialScraper.SetInventoryPage(InventoryPage.Materials);
+					materialScraper.Scan_Materials(ref Inventory);
+				}
+				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
+				catch (Exception ex)
+				{
+					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
+				}
+				Logger.Info("Done scanning materials");
+			}
+
+			// Back to the Paimon menu once, after the last tab
+			if (inventoryOpen) Navigation.MainMenuScreen();
 
 			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
 
 			if (S_ScanCharacters)
 			{
 				Logger.Info("Scanning characters...");
-				// Get characters
 				Navigation.CharacterScreen();
 				try
 				{
@@ -272,64 +310,17 @@ namespace InventoryKamera
 				Logger.Info("Done scanning characters");
 			}
 
-			// Wait for Image Processors to finish
+			// Wait for the OCR workers (weapons and artifacts), then link equipped items
 			AwaitProcessors();
 
 			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
 
 			if (S_ScanCharacters)
 			{
-				// Assign Artifacts to Characters
 				if (S_ScanArtifacts)
 					AssignArtifacts();
 				if (S_ScanWeapons)
 					AssignWeapons();
-			}
-
-			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
-
-			// Scan Character Development Items
-			if (S_ScanCharDevItems)
-			{
-				Logger.Info("Scanning character development materials...");
-				// Get Materials
-				Navigation.InventoryScreen();
-				Navigation.SelectCharacterDevelopmentInventory();
-				try
-				{
-					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
-					materialScraper.Scan_Materials(ref Inventory);
-				}
-				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
-				catch (Exception ex)
-				{
-					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
-				}
-				Navigation.MainMenuScreen();
-				Logger.Info("Done scanning character development materials");
-			}
-
-			if (token.IsCancellationRequested || b_threadCancel) goto Cleanup;
-
-			// Scan Materials
-			if (S_ScanMaterials)
-			{
-				Logger.Info("Scanning materials...");
-				// Get Materials
-				Navigation.InventoryScreen();
-				Navigation.SelectMaterialInventory();
-				try
-				{
-					materialScraper.SetInventoryPage(InventoryPage.Materials);
-					materialScraper.Scan_Materials(ref Inventory);
-				}
-				catch (FormatException ex) { _userInterface.AddError(ex.Message); }
-				catch (Exception ex)
-				{
-					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
-				}
-				Navigation.MainMenuScreen();
-				Logger.Info("Done scanning materials");
 			}
 
 			Cleanup:
@@ -338,6 +329,63 @@ namespace InventoryKamera
 				Logger.Info("Scan cancelled via CancellationToken");
 				// Signal workers to stop if they haven't already
 				b_threadCancel = true;
+			}
+		}
+
+		/// <summary>
+		/// Opens an inventory tab: opens the inventory if it isn't open yet, clicks the tab and
+		/// checks its title (InventoryTabReader).
+		/// </summary>
+		/// <remarks>
+		/// Going tab to tab replaces the old round trip through the Paimon menu for every category.
+		/// If the title doesn't match, the inventory is reopened (Escape closes it, B reopens it with
+		/// every tab back at the top) and the tab clicked again; a revisited tab would otherwise
+		/// keep its scroll position. If the title still can't be confirmed, the scan goes ahead as
+		/// it always did before titles were checked, with a warning.
+		/// </remarks>
+		private void OpenInventoryTab(InventoryPage page, ref bool inventoryOpen)
+		{
+			if (!inventoryOpen)
+			{
+				Navigation.InventoryScreen();
+				inventoryOpen = true;
+			}
+
+			SelectTab(page);
+			var shown = ReadOpenTab();
+			if (shown == page) return;
+
+			Logger.Warn("Expected the {0} tab but found {1}; reopening the inventory", page, shown?.ToString() ?? "no tab title");
+			Navigation.InventoryScreen();
+			SelectTab(page);
+			shown = ReadOpenTab();
+			if (shown != page)
+				Logger.Warn("Still can't confirm the {0} tab (found {1}); scanning anyway", page, shown?.ToString() ?? "no tab title");
+		}
+
+		private static void SelectTab(InventoryPage page)
+		{
+			switch (page)
+			{
+				case InventoryPage.Weapons: Navigation.SelectWeaponInventory(); break;
+				case InventoryPage.Artifacts: Navigation.SelectArtifactInventory(); break;
+				case InventoryPage.CharacterDevelopmentItems: Navigation.SelectCharacterDevelopmentInventory(); break;
+				case InventoryPage.Materials: Navigation.SelectMaterialInventory(); break;
+				default: throw new ArgumentOutOfRangeException(nameof(page), page, "Not a scanned inventory tab");
+			}
+		}
+
+		private InventoryPage? ReadOpenTab()
+		{
+			try
+			{
+				using (var screenshot = _screenCapture.CaptureWindow())
+					return InventoryTabReader.ReadTab(screenshot, _ocrEngine);
+			}
+			catch (Exception ex)
+			{
+				Logger.Warn(ex, "Could not read the inventory tab title");
+				return null;
 			}
 		}
 
