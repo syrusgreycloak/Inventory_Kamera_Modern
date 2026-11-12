@@ -352,11 +352,13 @@ namespace InventoryKamera
 			Navigation.EnsureForeground();
 			// Right after it gets focus the game can still show a stale frame for a moment: a menu that
 			// was already open went undetected, so Escape closed it. Check a few times before deciding.
-			if (WaitForPaimonMenu()) return;
+			if (WaitForPaimonMenu(attempts: 4, delayMs: 250)) return;
 
 			Logger.Info("Paimon menu not open; opening it");
 			Navigation.OpenPaimonMenu();
-			if (WaitForPaimonMenu()) return;
+			// Opening it takes a variable time (measured 1.7 s, and over 2 s with the card still
+			// dark), so keep checking for up to 6 s; it only waits as long as the menu takes
+			if (WaitForPaimonMenu(attempts: 20, delayMs: 300)) return;
 
 			// Not the open world either (dialogue, cutscene, another menu): don't press keys blindly
 			throw new ScanSetupException(
@@ -364,13 +366,13 @@ namespace InventoryKamera
 				"then start the scan again.");
 		}
 
-		/// <summary>Checks for the Paimon menu up to four times, 250 ms apart.</summary>
-		private bool WaitForPaimonMenu()
+		/// <summary>Checks for the Paimon menu up to <paramref name="attempts"/> times.</summary>
+		private bool WaitForPaimonMenu(int attempts, int delayMs)
 		{
-			for (int attempt = 1; attempt <= 4; attempt++)
+			for (int attempt = 1; attempt <= attempts; attempt++)
 			{
-				if (IsPaimonMenuOpen(saveIfMissing: attempt == 4)) return true;
-				if (attempt < 4) Thread.Sleep(250);
+				if (IsPaimonMenuOpen(saveIfMissing: attempt == attempts)) return true;
+				if (attempt < attempts) Thread.Sleep(delayMs);
 			}
 			return false;
 		}
