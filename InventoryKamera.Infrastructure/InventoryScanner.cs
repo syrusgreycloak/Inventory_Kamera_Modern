@@ -45,7 +45,12 @@ namespace InventoryKamera
 		// Settings snapshot used by the injected-services constructor; null when using WinForms path.
 		private readonly ScanSettings _settings;
 
+		// Set only when the scan is cancelled (user stop or token)
 		private volatile bool b_threadCancel;
+		// Set when a worker reaches the END marker: tells the other workers to stop. Must not be
+		// b_threadCancel, which the scan checks between categories: reusing it made the scan stop
+		// after whichever category was running when the workers finished.
+		private volatile bool b_workersDone;
 		// CancellationToken support — set by the GatherData(CancellationToken) overload.
 		private CancellationToken _cancellationToken;
 		public bool WasCancelled => b_threadCancel;
@@ -93,6 +98,7 @@ namespace InventoryKamera
 			_characterScraper  = new CharacterScraper(_screenCapture, _ocrEngine, _imageProcessor, _userInterface, _gameDataService, _inputSimulator, _scanProfile, _settings);
 
 			b_threadCancel     = false;
+			b_workersDone      = false;
 			_cancellationToken = CancellationToken.None;
 
 			NumWorkers = settings.ScannerDelay == 0 ? 3 : 2;
@@ -395,7 +401,6 @@ namespace InventoryKamera
 			{
 				ImageProcessors.RemoveAll(process => !process.IsAlive);
 			}
-			b_threadCancel = false;
 		}
 
 		public void ImageProcessorWorker()
@@ -403,7 +408,7 @@ namespace InventoryKamera
 			Logger.Debug("Thread #{0} priority: {1}", Thread.CurrentThread.ManagedThreadId, Thread.CurrentThread.Priority);
 			while (true)
 			{
-				if (_cancellationToken.IsCancellationRequested || b_threadCancel)
+				if (_cancellationToken.IsCancellationRequested || b_threadCancel || b_workersDone)
 				{
 					while (workerQueue.TryDequeue(out _)) { /* drain */ }
 					break;
@@ -571,7 +576,7 @@ namespace InventoryKamera
 							break;
 
 						case "END":
-							b_threadCancel = true;
+							b_workersDone = true;
 							break;
 
 						default:
