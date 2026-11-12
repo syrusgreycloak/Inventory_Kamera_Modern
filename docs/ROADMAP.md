@@ -78,13 +78,15 @@ All four are done:
 
 **Released:** v2.0.0 and v2.0.1 (2026-11-11).
 
-**Next version (2.1): scan order and navigation**
+**Version 2.1: scan order and navigation** (done on `feat/2.1-scan-order`, verified with full scans)
 
-- **Scan the inventory in one visit, characters last.** Open the inventory once and go tab to tab in the game's order: Weapons → Artifacts → Character Dev Items → Materials, then Characters, then link equipped weapons and artifacts. Today the scan goes back to the Paimon menu and reopens the inventory for every category, and characters sit between artifacts and Character Dev Items. That position was meant to overlap character scanning with artifact OCR, but a logged full scan showed no backlog: the last artifact was read 0.4 s after it was captured.
-- **Switch tabs directly.** Each tab starts at the top the first time it's opened after entering the inventory (checked in-game), and the scan reads each tab once top to bottom. After clicking a tab, read the tab title (top-left, e.g. "Weapons") to confirm; if it doesn't match, fall back to Escape → B → tab. A retried tab always goes the long way, so it starts at the top again (a revisited tab remembers its scroll position).
-- **UI in scan order.** Scan category checkboxes and progress bars in the same order as the scan: Weapons, Artifacts, Character Dev Items, Materials, Characters (today the checkboxes and progress bars aren't even in the same order).
-- **Smaller release zip.** Ship English resources only (`SatelliteResourceLanguages`) and leave out the unused 32-bit OCR libraries (`x86/`).
-- **ImageSharp 3.2** once the free Six Labors community key is in place (fixes the 2026-10-07 advisories; 3.2 needs the key for Release builds).
+- ✅ **Inventory in one visit, characters last.** The scan opens the inventory once and goes tab to tab in the game's order: Weapons → Artifacts → Character Dev Items → Materials, then Characters, then links equipped weapons and artifacts. It used to go back to the Paimon menu and reopen the inventory for every category, with characters between artifacts and Character Dev Items to overlap artifact OCR; a logged full scan showed no backlog (last artifact read 0.4 s after capture). Same export as the old order, about 20 s faster.
+- ✅ **Direct tab switching.** Each tab starts at the top the first time it's opened after entering the inventory (checked in-game). After clicking a tab, the scan reads its title (`InventoryTabReader`); on a mismatch it reopens the inventory (Escape → B) so every tab starts at the top again.
+- ✅ **Start from almost any screen.** No need to open the Paimon menu first: the scan checks for it (`PaimonMenuReader`, the profile card's "Adventure Rank"/"World Level" labels) and presses Escape up to three times until it appears. Tested from the open world, the menu, Party Setup, the character screen, Battle Pass, the map and shops.
+- ✅ **UI in scan order.** Checkboxes and progress bars: Weapons, Artifacts, Character Dev Items, Materials, Characters.
+- ✅ **Smaller release zip.** English resources only, no 32-bit OCR libraries: 3 folders instead of 17, 202 MB instead of 224 MB unzipped.
+- ✅ **Fixes found on the way:** OCR workers finishing set the scan's cancel flag (the scan stopped after Character Dev Items once characters moved last); every scan after the first in an app session captured the wrong screen area (window position doubled).
+- ⏳ **ImageSharp 3.2**: not in 2.1. Waits for the free Six Labors community key (fixes the 2026-10-07 advisories; 3.2 needs the key for Release builds).
 
 **After that:** Milestone 2.5 step 1 (platform-independent scanner), then Milestone 3. They're independent, so the order can change.
 
