@@ -54,7 +54,10 @@ namespace InventoryKamera.Infrastructure.Windows
 				Logger.Debug("Checking for {0}.exe", processName);
 				if (InitializeProcess(processName, out IntPtr handle))
 				{
-					// Get area and position
+					// Get area and position. ClientToScreen adds the window's screen position to the point
+					// passed in, so start from (0, 0): passing the previous scan's position doubled it on
+					// every scan after the first (1512 -> 3024), and captures came from the wrong place.
+					WindowPosition = new RECT();
 					ClientToScreen(handle, ref WindowPosition);
 					GetClientRect(handle, ref WindowSize);
 					
