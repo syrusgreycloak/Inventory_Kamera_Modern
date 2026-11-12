@@ -16,6 +16,19 @@ namespace InventoryKamera.Avalonia.ViewModels
         [ObservableProperty]
         private AboutViewModel _aboutVm;
 
+        /// <summary>
+        /// The window title with the app version, e.g. "Inventory Kamera Modern v2.1.0" (the release
+        /// build sets the version from the tag).
+        /// </summary>
+        public string WindowTitle
+        {
+            get
+            {
+                var v = typeof(MainViewModel).Assembly.GetName().Version;
+                return "Inventory Kamera Modern v" + (v != null ? v.ToString(3) : "0.0.0");
+            }
+        }
+
         /// <summary>The selected tab's view model.</summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(SelectedTabIndex))]

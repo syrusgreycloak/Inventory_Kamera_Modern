@@ -188,5 +188,12 @@ namespace InventoryKamera.Tests
 
             Assert.False(settings.ShowSetupNote);
         }
+
+        [Fact]
+        public void WindowTitle_HasNameAndVersion()
+        {
+            var (main, _, _, _, _) = MakeMainVm();
+            Assert.Matches(@"^Inventory Kamera Modern v\d+\.\d+\.\d+$", main.WindowTitle);
+        }
     }
 }

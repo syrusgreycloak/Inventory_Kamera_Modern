@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:InventoryKamera.Avalonia.ViewModels"
         xmlns:views="clr-namespace:InventoryKamera.Avalonia.Views"
         x:Class="InventoryKamera.Avalonia.Views.MainWindow"
-        Title="Inventory Kamera"
+        Title="{Binding WindowTitle}"
         Width="960" Height="780"
         MinWidth="720" MinHeight="520">
 
