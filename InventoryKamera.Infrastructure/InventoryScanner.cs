@@ -350,11 +350,13 @@ namespace InventoryKamera
 		private void EnsurePaimonMenu()
 		{
 			Navigation.EnsureForeground();
-			if (IsPaimonMenuOpen()) return;
+			// Right after it gets focus the game can still show a stale frame for a moment: a menu that
+			// was already open went undetected, so Escape closed it. Check a few times before deciding.
+			if (WaitForPaimonMenu()) return;
 
 			Logger.Info("Paimon menu not open; opening it");
 			Navigation.OpenPaimonMenu();
-			if (IsPaimonMenuOpen()) return;
+			if (WaitForPaimonMenu()) return;
 
 			// Not the open world either (dialogue, cutscene, another menu): don't press keys blindly
 			throw new ScanSetupException(
@@ -362,12 +364,37 @@ namespace InventoryKamera
 				"then start the scan again.");
 		}
 
-		private bool IsPaimonMenuOpen()
+		/// <summary>Checks for the Paimon menu up to four times, 250 ms apart.</summary>
+		private bool WaitForPaimonMenu()
+		{
+			for (int attempt = 1; attempt <= 4; attempt++)
+			{
+				if (IsPaimonMenuOpen(saveIfMissing: attempt == 4)) return true;
+				if (attempt < 4) Thread.Sleep(250);
+			}
+			return false;
+		}
+
+		private bool IsPaimonMenuOpen(bool saveIfMissing)
 		{
 			try
 			{
 				using (var screenshot = _screenCapture.CaptureWindow())
-					return PaimonMenuReader.IsOpen(screenshot, _ocrEngine);
+				{
+					string text = PaimonMenuReader.ReadLabels(screenshot, _ocrEngine, out var crop);
+					using (crop)
+					{
+						bool open = PaimonMenuReader.HasMenuLabels(text);
+						Logger.Debug("Paimon menu check: {0} (read '{1}')", open, text.Replace("\n", " | ").Trim());
+						if (!open && saveIfMissing)
+						{
+							// Only the label region: no UID or name
+							System.IO.Directory.CreateDirectory("./logging");
+							crop.SaveAsPng("./logging/paimon_menu_check.png");
+						}
+						return open;
+					}
+				}
 			}
 			catch (Exception ex)
 			{

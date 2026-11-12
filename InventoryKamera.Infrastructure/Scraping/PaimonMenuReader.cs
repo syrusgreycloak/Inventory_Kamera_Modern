@@ -21,15 +21,26 @@ namespace InventoryKamera
         /// <summary>True if the Paimon menu's profile labels are showing.</summary>
         public static bool IsOpen(Image<Rgba32> screenshot, IOcrEngine ocrEngine)
         {
+            string text = ReadLabels(screenshot, ocrEngine, out var crop);
+            crop.Dispose();
+            return HasMenuLabels(text);
+        }
+
+        /// <summary>
+        /// The OCR text of the label region, and the region itself (<paramref name="crop"/>, owned by
+        /// the caller) for saving when the check fails. The crop contains no UID or name.
+        /// </summary>
+        public static string ReadLabels(Image<Rgba32> screenshot, IOcrEngine ocrEngine, out Image<Rgba32> crop)
+        {
             double sx = screenshot.Width / 1920.0, sy = screenshot.Height / 1080.0;
             var r = LabelRegion1080;
             var region = new Rectangle((int)(r.X * sx), (int)(r.Y * sy), (int)(r.Width * sx), (int)(r.Height * sy));
 
-            using (var crop = screenshot.Clone(c => c.Crop(region)))
+            crop = screenshot.Clone(c => c.Crop(region));
             using (var mask = CharacterNameReader.WhiteTextMask(crop, 200))
             {
                 mask.Mutate(c => c.Resize(mask.Width * 2, mask.Height * 2));
-                return HasMenuLabels(ocrEngine.AnalyzeText(mask, PageSegmentationMode.SingleBlock));
+                return ocrEngine.AnalyzeText(mask, PageSegmentationMode.SingleBlock) ?? string.Empty;
             }
         }
 
