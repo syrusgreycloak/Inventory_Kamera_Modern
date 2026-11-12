@@ -76,9 +76,9 @@ All four are done:
 - Ultrawide (21:9) support: express regions relative to the left, right or centre edge, scaled by height.
 - Material count OCR: digit template matching instead of Tesseract, if count misreads return.
 
-**Released:** v2.0.0 and v2.0.1 (2026-11-11).
+**Released:** v2.0.0 and v2.0.1 (2026-11-11), v2.1.0 (2026-11-12).
 
-**Version 2.1: scan order and navigation** (done on `feat/2.1-scan-order`, verified with full scans)
+**Version 2.1: scan order and navigation** (released as v2.1.0, verified with full scans)
 
 - ✅ **Inventory in one visit, characters last.** The scan opens the inventory once and goes tab to tab in the game's order: Weapons → Artifacts → Character Dev Items → Materials, then Characters, then links equipped weapons and artifacts. It used to go back to the Paimon menu and reopen the inventory for every category, with characters between artifacts and Character Dev Items to overlap artifact OCR; a logged full scan showed no backlog (last artifact read 0.4 s after capture). Same export as the old order, about 20 s faster.
 - ✅ **Direct tab switching.** Each tab starts at the top the first time it's opened after entering the inventory (checked in-game). After clicking a tab, the scan reads its title (`InventoryTabReader`); on a mismatch it reopens the inventory (Escape → B) so every tab starts at the top again.
@@ -117,4 +117,4 @@ The previous 7 phase documents are archived in `docs/archive/`. Key changes:
 
 ---
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-12*
