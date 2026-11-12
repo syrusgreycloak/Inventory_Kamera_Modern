@@ -61,7 +61,7 @@ All four are done:
 
 ## Where We Are
 
-*As of 2026-11-10*
+*As of 2026-11-12*
 
 **Done beyond the original plan** (scanner accuracy and speed, verified on a full account at Fast speed against the game and another exporter):
 
@@ -76,7 +76,17 @@ All four are done:
 - Ultrawide (21:9) support: express regions relative to the left, right or centre edge, scaled by height.
 - Material count OCR: digit template matching instead of Tesseract, if count misreads return.
 
-**Next:** Milestone 2.5 step 1 (platform-independent scanner), then Milestone 3. They're independent, so the order can change.
+**Released:** v2.0.0 and v2.0.1 (2026-11-11).
+
+**Next version (2.1): scan order and navigation**
+
+- **Scan the inventory in one visit, characters last.** Open the inventory once and go tab to tab in the game's order: Weapons → Artifacts → Character Dev Items → Materials, then Characters, then link equipped weapons and artifacts. Today the scan goes back to the Paimon menu and reopens the inventory for every category, and characters sit between artifacts and Character Dev Items. That position was meant to overlap character scanning with artifact OCR, but a logged full scan showed no backlog: the last artifact was read 0.4 s after it was captured.
+- **Switch tabs directly.** Each tab starts at the top the first time it's opened after entering the inventory (checked in-game), and the scan reads each tab once top to bottom. After clicking a tab, read the tab title (top-left, e.g. "Weapons") to confirm; if it doesn't match, fall back to Escape → B → tab. A retried tab always goes the long way, so it starts at the top again (a revisited tab remembers its scroll position).
+- **UI in scan order.** Scan category checkboxes and progress bars in the same order as the scan: Weapons, Artifacts, Character Dev Items, Materials, Characters (today the checkboxes and progress bars aren't even in the same order).
+- **Smaller release zip.** Ship English resources only (`SatelliteResourceLanguages`) and leave out the unused 32-bit OCR libraries (`x86/`).
+- **ImageSharp 3.2** once the free Six Labors community key is in place (fixes the 2026-10-07 advisories; 3.2 needs the key for Release builds).
+
+**After that:** Milestone 2.5 step 1 (platform-independent scanner), then Milestone 3. They're independent, so the order can change.
 
 ---
 
