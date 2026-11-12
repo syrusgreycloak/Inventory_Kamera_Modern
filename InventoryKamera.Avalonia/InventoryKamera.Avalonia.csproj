@@ -53,4 +53,14 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <PropertyGroup>
+    <!-- English only: the app's UI is English, and the bundled Windows desktop runtime would
+         otherwise add translated error messages for 13 languages (cs, de, ... zh-Hant folders) -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- The OCR package copies its 32-bit native libraries too; a win-x64 publish never uses them -->
+  <Target Name="RemoveUnusedX86OcrLibraries" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <RemoveDir Directories="$(PublishDir)x86" />
+  </Target>
 </Project>
