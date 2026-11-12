@@ -39,18 +39,18 @@
                      FontSize="13"
                      Foreground="{StaticResource TextSecondaryBrush}" />
 
-          <!-- Category toggles -->
+          <!-- Category toggles, in scan order -->
           <CheckBox Content="Weapons"
                     IsChecked="{Binding ScanWeapons, Mode=TwoWay}" />
           <CheckBox Content="Artifacts"
                     IsChecked="{Binding ScanArtifacts, Mode=TwoWay}" />
-          <CheckBox Content="Characters"
-                    IsChecked="{Binding ScanCharacters, Mode=TwoWay}" />
           <CheckBox Content="Character Dev Items"
                     IsChecked="{Binding ScanCharDevItems, Mode=TwoWay}"
                     ToolTip.Tip="Also reads the weapon enhancement ores, which are shown after the weapons. Needs Weapons selected too." />
           <CheckBox Content="Materials"
                     IsChecked="{Binding ScanMaterials, Mode=TwoWay}" />
+          <CheckBox Content="Characters"
+                    IsChecked="{Binding ScanCharacters, Mode=TwoWay}" />
 
           <Separator />
 
@@ -165,10 +165,10 @@
                        Foreground="{StaticResource TextSecondaryBrush}" />
           </Grid>
 
-          <!-- Characters row -->
+          <!-- Char Dev Items row -->
           <Grid ColumnDefinitions="120,*,Auto">
             <TextBlock Grid.Column="0"
-                       Text="Characters"
+                       Text="Char Dev Items"
                        VerticalAlignment="Center" />
             <ProgressBar Grid.Column="1"
                          Margin="8,0"
@@ -177,13 +177,13 @@
                          VerticalAlignment="Center">
               <ProgressBar.Value>
                 <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
-                  <Binding Path="CharactersScanned" />
-                  <Binding Path="CharactersTotal" />
+                  <Binding Path="CharDevItemsScanned" />
+                  <Binding Path="CharDevItemsTotal" />
                 </MultiBinding>
               </ProgressBar.Value>
             </ProgressBar>
             <TextBlock Grid.Column="2"
-                       Text="{Binding CharactersProgressText}"
+                       Text="{Binding CharDevItemsProgressText}"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextSecondaryBrush}" />
           </Grid>
@@ -211,10 +211,10 @@
                        Foreground="{StaticResource TextSecondaryBrush}" />
           </Grid>
 
-          <!-- Char Dev Items row -->
+          <!-- Characters row -->
           <Grid ColumnDefinitions="120,*,Auto">
             <TextBlock Grid.Column="0"
-                       Text="Char Dev Items"
+                       Text="Characters"
                        VerticalAlignment="Center" />
             <ProgressBar Grid.Column="1"
                          Margin="8,0"
@@ -223,13 +223,13 @@
                          VerticalAlignment="Center">
               <ProgressBar.Value>
                 <MultiBinding Converter="{StaticResource ProgressFractionConverter}">
-                  <Binding Path="CharDevItemsScanned" />
-                  <Binding Path="CharDevItemsTotal" />
+                  <Binding Path="CharactersScanned" />
+                  <Binding Path="CharactersTotal" />
                 </MultiBinding>
               </ProgressBar.Value>
             </ProgressBar>
             <TextBlock Grid.Column="2"
-                       Text="{Binding CharDevItemsProgressText}"
+                       Text="{Binding CharactersProgressText}"
                        VerticalAlignment="Center"
                        Foreground="{StaticResource TextSecondaryBrush}" />
           </Grid>
