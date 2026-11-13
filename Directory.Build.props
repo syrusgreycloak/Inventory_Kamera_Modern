@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Six Labors community license for ImageSharp 3.2+ (checked at build time; Release builds fail
+    without it). Assembly-scoped to this repo's projects, so it's safe to commit. One file at the
+    repository root for every project. Expires 2028-02-11: renew at licensing.sixlabors.com.
+  -->
+  <PropertyGroup>
+    <SixLaborsLicenseFile>$(MSBuildThisFileDirectory)sixlabors.lic</SixLaborsLicenseFile>
+  </PropertyGroup>
+</Project>
