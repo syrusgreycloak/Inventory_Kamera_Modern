@@ -1023,6 +1023,7 @@ namespace InventoryKamera
                 "MATERIAL_WOOD",
                 "MATERIAL_FISH_BAIT",
                 "MATERIAL_WEAPON_EXP_STONE",
+                "MATERIAL_RELIQUARY_MATERIAL", // artifact EXP: Sanctifying Unction, Essence
             };
 
             // Load existing data (or empty dict if file doesn't exist or force mode)

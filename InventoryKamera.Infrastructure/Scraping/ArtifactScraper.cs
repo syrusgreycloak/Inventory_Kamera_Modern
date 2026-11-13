@@ -29,10 +29,23 @@ namespace InventoryKamera
             SortByLevel = settings != null ? settings.MinimumArtifactLevel > 0 : false;
         }
 
+        /// <summary>Artifact EXP items shown after the artifacts, highest rarity first (Droplet is in the game data but likely unobtainable; listed so the backward read doesn't stop at it).</summary>
+        internal static readonly string[] ArtifactExpItems = { "SanctifyingEssence", "SanctifyingUnction", "SanctifyingDroplet" };
+
+        // Artifacts counted by the last ScanArtifacts, for scrolling to the end afterwards
+        private int _artifactCount;
+
+        /// <summary>
+        /// Reads the artifact EXP items at the end of the artifact inventory. Call on the artifact
+        /// page after <see cref="ScanArtifacts"/>; see <see cref="InventoryScraper.ScanTrailingMaterials"/>.
+        /// </summary>
+        public List<Material> ScanArtifactExpItems() => ScanTrailingMaterials(ArtifactExpItems, _artifactCount);
+
         public void ScanArtifacts(int count = 0)
 		{
 			// Get Max artifacts from screen
 			int artifactCount = count == 0 ? ScanItemCount() : count;
+			_artifactCount = artifactCount;
 			int page = 1;
 			var (rectangles, cols, rows) = GetPageOfItems(page);
 			int fullPage = cols * rows;

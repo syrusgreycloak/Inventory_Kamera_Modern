@@ -694,5 +694,98 @@ namespace InventoryKamera
             bmp.Save(path + filename);
         }
 
+        /// <summary>
+        /// Reads the materials shown after the last item on the weapon or artifact page: enhancement
+        /// ores after the weapons, artifact EXP items (Sanctifying Essence, Sanctifying Unction) after
+        /// the artifacts. Call after the page's own scan.
+        /// </summary>
+        /// <remarks>
+        /// One card per material you have (so 0 to <paramref name="names"/>.Length cards), and the
+        /// count the game shows for the page doesn't include them, so the item scan never reaches
+        /// them. Scroll to the end, then read the last cards backwards (skipping empty cells) until
+        /// one isn't one of <paramref name="names"/>. A weapon or artifact can't be taken for one of
+        /// them: its name has to match a material name closely (95%).
+        /// </remarks>
+        /// <param name="names">GOOD keys of the materials that can follow the items.</param>
+        /// <param name="itemCount">Items on the page (the game's count), for scrolling to the end.</param>
+        internal List<Material> ScanTrailingMaterials(IReadOnlyList<string> names, int itemCount)
+        {
+            var log = NLog.LogManager.GetCurrentClassLogger();
+            var found = new List<Material>();
+
+            // Scroll to the end; scrolling past it does nothing. 10 notches per row, 8 columns.
+            _inputSimulator.SetCursor(
+                (int)(_screenCapture.GetWidth() * 0.35),
+                (int)(_screenCapture.GetHeight() * 0.5));
+            int rows = (int)Math.Ceiling((itemCount + names.Count) / 8.0) + 1;
+            for (int i = 0; i < 10 * rows; i++)
+            {
+                _inputSimulator.MouseVerticalScroll(-1);
+                _inputSimulator.Wait(1);
+            }
+            _inputSimulator.SystemWait(ScanDelay.Normal);
+
+            var (rectangles, _, _) = GetPageOfItems(999, acceptLess: true);
+            log.Debug("{0}: {1} items on the last page, looking for {2}", inventoryPage, rectangles.Count, string.Join(", ", names));
+
+            // The boxes are a full grid, so the last row can end in empty cells; clicking one doesn't
+            // change the selection. Skip cells without an item card.
+            foreach (var rectangle in Enumerable.Reverse(rectangles))
+            {
+                if (found.Count == names.Count) break;
+                if (!HasItemCard(rectangle)) continue;
+
+                _inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
+                _inputSimulator.Click();
+                _inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
+
+                string read;
+                using (var card = GetItemCard())
+                using (var nameplate = GetItemNameBitmap(card))
+                    read = _gameDataService.FindClosestMaterialName(ScanItemName(nameplate), minConfidence: 95);
+
+                string name = names.FirstOrDefault(n => string.Equals(n, read, StringComparison.OrdinalIgnoreCase));
+                if (name == null)
+                {
+                    log.Debug("{0}: trailing materials stopped at '{1}'", inventoryPage, read ?? "(no match)");
+                    break;
+                }
+
+                int quantity = MaterialScraper.ScanMaterialCount(rectangle, out Bitmap countImage, out bool confident);
+                using (countImage)
+                {
+                    if ((_settings != null && _settings.LogScreenshots) || quantity == 0 || !confident)
+                        SaveInventoryBitmapGdi(countImage, $"{name}_Quantity.png");
+                    using (var preview = GenshinProcesor.BitmapToImageSharp(countImage))
+                        _userInterface.SetMaterial(preview, name, quantity);
+                }
+
+                if (quantity == 0)
+                {
+                    _userInterface.AddError($"Failed to parse quantity for {name}");
+                    continue;
+                }
+
+                if (!confident) FlagUncertainCount(name, quantity);
+                log.Info("{0}: {1}", name, quantity);
+                found.Add(new Material(name, quantity));
+            }
+
+            return found;
+        }
+
+        /// <summary>True if an item card fills this grid cell: its light label strip is there.</summary>
+        private bool HasItemCard(ISRect cell)
+        {
+            double scale = _screenCapture.GetHeight() / 1080.0;
+            int top = cell.Bottom - (int)(45 * scale);
+            using (var strip = _screenCapture.CaptureRegion(cell.X, top, cell.Width, (int)(75 * scale)))
+            {
+                return MaterialCountReader.FindLabelBand(strip,
+                    minRows: (int)(18 * scale),
+                    maxRows: (int)Math.Ceiling(MaterialCountReader.LabelHeight1080 * scale)) != null;
+            }
+        }
+
     }
 }

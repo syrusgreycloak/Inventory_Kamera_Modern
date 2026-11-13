@@ -254,6 +254,21 @@ namespace InventoryKamera
 				{
 					_userInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
+				// Sanctifying Essence and Unction sit after the artifacts and level artifacts, so like
+				// the ores they come with the Character Development Items
+				if (S_ScanCharDevItems && !token.IsCancellationRequested && !b_threadCancel)
+				{
+					try
+					{
+						foreach (var item in artifactScraper.ScanArtifactExpItems())
+							Inventory.Materials.Add(item);
+					}
+					catch (Exception ex)
+					{
+						Logger.Error(ex, "Artifact EXP item scan failed");
+						_userInterface.AddError("Could not read artifact EXP items: " + ex.Message);
+					}
+				}
 				Logger.Info("Done scanning artifacts");
 			}
 
