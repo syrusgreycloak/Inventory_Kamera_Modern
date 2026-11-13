@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>Inventory Kamera Modern</AssemblyTitle>
     <!-- AssemblyVersion and FileVersion follow Version; the release workflow sets it from the tag -->
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
   </PropertyGroup>
   <!-- Define WINDOWS preprocessor symbol for the Windows TFM so DI registration
        of platform-specific types can be gated at compile time. -->
