@@ -76,7 +76,7 @@ All four are done:
 - Ultrawide (21:9) support: express regions relative to the left, right or centre edge, scaled by height.
 - Material count OCR: digit template matching instead of Tesseract, if count misreads return.
 
-**Released:** v2.0.0 and v2.0.1 (2026-11-11), v2.1.0 (2026-11-12).
+**Released:** v2.0.0 and v2.0.1 (2026-11-11), v2.1.0 (2026-11-12), v2.1.1 (2026-11-13; reads Sanctifying Essence and Unction after the artifacts).
 
 **Version 2.1: scan order and navigation** (released as v2.1.0, verified with full scans)
 
@@ -86,7 +86,7 @@ All four are done:
 - ✅ **UI in scan order.** Checkboxes and progress bars: Weapons, Artifacts, Character Dev Items, Materials, Characters.
 - ✅ **Smaller release zip.** English resources only, no 32-bit OCR libraries: 3 folders instead of 17, 202 MB instead of 224 MB unzipped.
 - ✅ **Fixes found on the way:** OCR workers finishing set the scan's cancel flag (the scan stopped after Character Dev Items once characters moved last); every scan after the first in an app session captured the wrong screen area (window position doubled).
-- ⏳ **ImageSharp 3.2**: not in 2.1. Waits for the free Six Labors community key (fixes the 2026-10-07 advisories; 3.2 needs the key for Release builds).
+- ✅ **ImageSharp 3.2** (2026-11-13, after 2.1.1): fixes the 2026-10-07 advisories. Uses the free Six Labors community license (`sixlabors.lic`, committed; scoped to this repo's assemblies; expires 2028-02-11).
 
 **After that:** Milestone 2.5 step 1 (platform-independent scanner), then Milestone 3. They're independent, so the order can change.
 
@@ -117,4 +117,4 @@ The previous 7 phase documents are archived in `docs/archive/`. Key changes:
 
 ---
 
-*Last updated: 2026-11-12*
+*Last updated: 2026-11-13*
