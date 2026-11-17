@@ -358,7 +358,7 @@ namespace InventoryKamera
 			bool _lock = false;
 			bool elixirCrafted = false;
 
-			if (bm.Count >= 6)
+			if (bm.Count >= 7) // reads bm[0]..bm[6]
 			{
 				Logger.Debug("  Processing artifact #{0} with {1} bitmaps", id, bm.Count);
 				int a_name = 0; int a_gearSlot = 1; int a_mainStat = 2; int a_level = 3; int a_subStats = 4; int a_equippedCharacter = 5; int a_lock = 6; 

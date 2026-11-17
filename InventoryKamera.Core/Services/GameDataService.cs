@@ -219,11 +219,9 @@ namespace InventoryKamera
             return !string.IsNullOrWhiteSpace(value) ? value : FindClosestInDict(name, Materials, minConfidence);
         }
 
-        public string FindClosestMaterialName(string name, int minConfidence = 90)
-        {
-            string value = FindClosestInDict(name, Materials, minConfidence);
-            return !string.IsNullOrWhiteSpace(value) ? value : FindClosestInDict(name, Materials, minConfidence);
-        }
+        // DevItems and Materials both come from materials.json, so one search covers both.
+        public string FindClosestMaterialName(string name, int minConfidence = 90) =>
+            FindClosestInDict(name, Materials, minConfidence);
 
         // --- Character helpers ---
 

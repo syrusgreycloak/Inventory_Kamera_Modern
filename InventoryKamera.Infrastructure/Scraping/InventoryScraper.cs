@@ -44,20 +44,6 @@ namespace InventoryKamera
         FIVESTAR
     }
 
-    internal static class InventoryPageExtension
-    {
-        public static string ToString(this InventoryPage page)
-        {
-            switch (page)
-            {
-                case InventoryPage.CharacterDevelopmentItems:
-                    return "CharDevItems";
-                default:
-                    return page.ToString();
-            }
-        }
-    }
-
     internal class InventoryScraper
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
