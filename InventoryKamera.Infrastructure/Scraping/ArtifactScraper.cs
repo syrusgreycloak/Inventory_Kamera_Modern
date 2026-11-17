@@ -187,9 +187,9 @@ namespace InventoryKamera
             }
         }
 
-        public async void QueueScan(int id)
+        public async void QueueScan(int id, bool isRetry = false)
 		{
-			Logger.Debug("QueueScan starting for artifact #{0}", id);
+			Logger.Debug("QueueScan starting for artifact #{0}{1}", id, isRetry ? " (second look)" : "");
 			Logger.Debug("  Capturing item card...");
 			var card = GetItemCard();
 			Logger.Debug("  Item card captured successfully");
@@ -235,13 +235,36 @@ namespace InventoryKamera
 			};
 
 			Logger.Debug("  Checking rarity and level filters...");
-            bool belowRarity = GetRarity(name) < (_settings != null ? _settings.MinimumArtifactRarity : 4);
-            bool belowLevel = ScanArtifactLevel(level) < (_settings != null ? _settings.MinimumArtifactLevel : 0);
-            StopScanning = (SortByLevel && belowLevel) || (!SortByLevel && belowRarity);
+            int minRarity = _settings != null ? _settings.MinimumArtifactRarity : 4;
+            int minLevel = _settings != null ? _settings.MinimumArtifactLevel : 0;
+            int rarityRead = GetRarity(name);
+            int levelRead = ScanArtifactLevel(level);
+            bool belowRarity = rarityRead < minRarity;
+            bool belowLevel = levelRead < minLevel;
+            bool stop = (SortByLevel && belowLevel) || (!SortByLevel && belowRarity);
 
+            // One misread stops the whole artifact scan, and on Fast the card can still be changing
+            // when it's captured (11/15: stopped at #597 of 839 and dropped ~119 4-star artifacts).
+            // Before stopping, look at the card again; if it now passes, scan it from a fresh capture.
+            if (stop && !isRetry)
+            {
+                Logger.Debug("  Artifact #{0} looks below the filter (rarity {1}, level {2}); checking again", id, rarityRead, levelRead);
+                artifactImages.ForEach(i => i.Dispose());
+                _inputSimulator.Wait(400);
+                QueueScan(id, isRetry: true);
+                return;
+            }
+
+            StopScanning = stop;
 			if (StopScanning || belowRarity || belowLevel)
             {
-				Logger.Debug("  Artifact #{0} filtered out (belowRarity={1}, belowLevel={2})", id, belowRarity, belowLevel);
+				Logger.Debug("  Artifact #{0} filtered out (belowRarity={1}, belowLevel={2}, rarity read {3}, level read {4})",
+					id, belowRarity, belowLevel, rarityRead, levelRead);
+				if (StopScanning)
+				{
+					try { SaveInventoryBitmap(card, $"stop_artifact{id}_card.png"); }
+					catch (Exception e) { Logger.Debug(e, "Couldn't save the stop card image"); }
+				}
 				artifactImages.ForEach(i => i.Dispose());
 				return;
             }

@@ -730,24 +730,37 @@ namespace InventoryKamera
 
             // The boxes are a full grid, so the last row can end in empty cells; clicking one doesn't
             // change the selection. Skip cells without an item card.
+            int misses = 0;
+            int cardIndex = 0;
             foreach (var rectangle in Enumerable.Reverse(rectangles))
             {
                 if (found.Count == names.Count) break;
                 if (!HasItemCard(rectangle)) continue;
+                cardIndex++;
 
                 _inputSimulator.SetCursor(rectangle.Center().X, rectangle.Center().Y);
                 _inputSimulator.Click();
                 _inputSimulator.SystemWait(ScanDelay.SelectNextInventoryItem);
 
-                string read;
-                using (var card = GetItemCard())
-                using (var nameplate = GetItemNameBitmap(card))
-                    read = _gameDataService.FindClosestMaterialName(ScanItemName(nameplate), minConfidence: 95);
+                var (raw, read) = ReadTrailingName(cardIndex, saveImage: false);
+                string name = MatchTrailingName(names, read);
 
-                string name = names.FirstOrDefault(n => string.Equals(n, read, StringComparison.OrdinalIgnoreCase));
+                // On Fast the item card can still be fading in when it's read (11/14: both pages
+                // stopped at an empty read on the first card). Look once more before giving up.
                 if (name == null)
                 {
-                    log.Debug("{0}: trailing materials stopped at '{1}'", inventoryPage, read ?? "(no match)");
+                    _inputSimulator.Wait(300);
+                    (raw, read) = ReadTrailingName(cardIndex, saveImage: true);
+                    name = MatchTrailingName(names, read);
+                }
+
+                if (name == null)
+                {
+                    log.Debug("{0}: trailing materials stopped at '{1}' (OCR '{2}', card {3} from the end)",
+                        inventoryPage, string.IsNullOrEmpty(read) ? "(no match)" : read, raw, cardIndex);
+                    // Before any material is found, a miss may be an empty cell taken for a card (the
+                    // selection doesn't change) rather than the last weapon/artifact: try one more card.
+                    if (found.Count == 0 && ++misses < 2) continue;
                     break;
                 }
 
@@ -773,6 +786,29 @@ namespace InventoryKamera
 
             return found;
         }
+
+        /// <summary>
+        /// OCRs the selected item card's name for <see cref="ScanTrailingMaterials"/>. Returns the raw
+        /// OCR text and the matched material key ("" when nothing matches at 95%).
+        /// </summary>
+        private (string raw, string read) ReadTrailingName(int cardIndex, bool saveImage)
+        {
+            using (var card = GetItemCard())
+            using (var nameplate = GetItemNameBitmap(card))
+            {
+                string raw = ScanItemName(nameplate);
+                string read = _gameDataService.FindClosestMaterialName(raw, minConfidence: 95);
+                if (saveImage)
+                {
+                    try { SaveInventoryBitmap(nameplate, $"trailing_card{cardIndex}_name.png"); }
+                    catch (Exception e) { NLog.LogManager.GetCurrentClassLogger().Debug(e, "Couldn't save trailing name image"); }
+                }
+                return (raw, read);
+            }
+        }
+
+        private static string MatchTrailingName(IReadOnlyList<string> names, string read) =>
+            names.FirstOrDefault(n => string.Equals(n, read, StringComparison.OrdinalIgnoreCase));
 
         /// <summary>True if an item card fills this grid cell: its light label strip is there.</summary>
         private bool HasItemCard(ISRect cell)
